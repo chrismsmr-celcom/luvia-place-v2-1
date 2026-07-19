@@ -313,14 +313,16 @@ function searchHotels(searchParams) {
   var countryCode = searchParams.countryCode || 'CD';
 
   var queryParams = new URLSearchParams({
-    checkin: checkin,
-    checkout: checkout,
-    adults: adults,
-    city: destination,
-    countryCode: countryCode,
-    environment: 'production',
-    limit: 200
-  });
+  checkin: checkin,
+  checkout: checkout,
+  adults: adults,
+  city: destination,
+  countryCode: countryCode,
+  environment: 'production',
+  limit: 2000,        // ← Max de l'API
+  maxHotels: 500,     // ← Retourner jusqu'à 500
+  expandSearch: true  // ← Activer les stratégies élargies
+});
 
   var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
   

@@ -39,16 +39,100 @@ app.use((req, res, next) => {
 });
 
 // ============================================
-// 1. RECHERCHE HÔTELS - AVEC PLACE ID (COMME LE WHITELABEL)
+// FONCTION : Récupérer le placeId depuis LiteAPI
+// ============================================
+async function getPlaceIdFromLiteAPI(cityName, apiKey) {
+  if (!cityName || cityName.length < 2) return null;
+  
+  try {
+    const url = `https://api.liteapi.travel/v3.0/data/places?textQuery=${encodeURIComponent(cityName)}&language=fr`;
+    console.log(`📍 Appel LiteAPI Places: ${url}`);
+    
+    const response = await fetch(url, {
+      headers: {
+        'X-API-Key': apiKey,
+        'Accept': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    console.log(`📦 Réponse Places: ${data.data?.length || 0} résultats`);
+    
+    if (data.data && data.data.length > 0) {
+      // Prendre le premier résultat (le plus pertinent)
+      const place = data.data[0];
+      console.log(`✅ PlaceId trouvé: ${place.placeId} pour "${place.name}"`);
+      return place.placeId;
+    }
+    
+    console.warn(`⚠️ Aucun placeId trouvé pour: ${cityName}`);
+    return null;
+  } catch (error) {
+    console.warn(`⚠️ Erreur LiteAPI Places: ${error.message}`);
+    return null;
+  }
+}
+
+// ============================================
+// 1. RECHERCHE DE LIEUX (CORRIGÉ)
+// ============================================
+app.get("/search-places", async (req, res) => {
+  console.log("\n📍 ===== SEARCH PLACES ===== 📍");
+  const { query, environment } = req.query;
+  const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
+
+  if (!query || query.length < 2) {
+    return res.json({ success: true, data: [] });
+  }
+
+  try {
+    // ✅ Appel direct à l'API LiteAPI /places
+    const response = await fetch(
+      `https://api.liteapi.travel/v3.0/data/places?textQuery=${encodeURIComponent(query)}&language=fr`,
+      {
+        headers: {
+          'X-API-Key': apiKey,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    const data = await response.json();
+    console.log(`✅ ${data.data?.length || 0} lieux trouvés`);
+
+    // Transformer les données pour le frontend
+    const places = (data.data || []).map(function(place) {
+      return {
+        placeId: place.placeId,
+        name: place.name,
+        address: place.address,
+        country: place.country,
+        coordinates: place.coordinates
+      };
+    });
+
+    res.json({ success: true, data: places });
+  } catch (error) {
+    console.error("❌ Error searching places:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to search places",
+      message: error.message
+    });
+  }
+});
+
+// ============================================
+// 2. RECHERCHE HÔTELS - AVEC PLACE ID
 // ============================================
 app.get("/search-hotels", async (req, res) => {
-  console.log("\n🔍 ===== SEARCH HOTELS (AVEC PLACE ID) ===== 🔍");
+  console.log("\n🔍 ===== SEARCH HOTELS ===== 🔍");
   const { 
     checkin, 
     checkout, 
     adults, 
-    placeId,        // ← PRIORITAIRE
-    city,           // ← Fallback pour géocodage
+    placeId,        // ← Reçu du frontend ou trouvé via /search-places
+    city,           // ← Fallback
     environment, 
     limit = 500 
   } = req.query;
@@ -56,7 +140,7 @@ app.get("/search-hotels", async (req, res) => {
   const apiKey = environment == "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  console.log(`📍 Place ID fourni: ${placeId || 'NON'}`);
+  console.log(`📍 Place ID: ${placeId || 'NON'}`);
   console.log(`📍 Ville: ${city || 'NON'}`);
   console.log(`📅 Arrivée: ${checkin}, Départ: ${checkout}`);
   console.log(`👤 Adultes: ${adults}`);
@@ -65,48 +149,11 @@ app.get("/search-hotels", async (req, res) => {
     let finalPlaceId = placeId;
 
     // ============================================
-    // ÉTAPE 1: Si pas de placeId, le récupérer via la ville
+    // ÉTAPE 1: Si pas de placeId, le récupérer via LiteAPI Places
     // ============================================
     if (!finalPlaceId && city) {
-      console.log(`⏳ Étape 1: Récupération du placeId pour "${city}"...`);
-      
-      try {
-        // Appel à l'API LiteAPI /places si disponible
-        // Sinon, utiliser Google Places API
-        const placesResponse = await sdk.getPlaces({
-          textQuery: city,
-          language: "fr",
-          type: "locality"
-        });
-        
-        if (placesResponse.data && placesResponse.data.length > 0) {
-          finalPlaceId = placesResponse.data[0].placeId;
-          console.log(`✅ PlaceId trouvé: ${finalPlaceId}`);
-        }
-      } catch (error) {
-        console.warn(`⚠️ Erreur getPlaces: ${error.message}`);
-        
-        // Fallback: Google Places API
-        try {
-          const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
-          if (googleApiKey) {
-            const response = await fetch(
-              `https://maps.googleapis.com/maps/api/place/findplacefromtext/json` +
-              `?input=${encodeURIComponent(city)}` +
-              `&inputtype=textquery` +
-              `&fields=place_id` +
-              `&key=${googleApiKey}`
-            );
-            const data = await response.json();
-            if (data.candidates && data.candidates.length > 0) {
-              finalPlaceId = data.candidates[0].place_id;
-              console.log(`✅ PlaceId (Google) trouvé: ${finalPlaceId}`);
-            }
-          }
-        } catch (googleError) {
-          console.warn(`⚠️ Erreur Google Places: ${googleError.message}`);
-        }
-      }
+      console.log(`⏳ Récupération du placeId pour "${city}" via LiteAPI Places...`);
+      finalPlaceId = await getPlaceIdFromLiteAPI(city, apiKey);
     }
 
     // ============================================
@@ -114,19 +161,19 @@ app.get("/search-hotels", async (req, res) => {
     // ============================================
     if (!finalPlaceId) {
       console.error('❌ Aucun placeId trouvé pour cette ville');
-      return res.status(400).json({ 
-        success: false,
-        error: "Impossible de localiser cette ville",
-        message: "Veuillez vérifier le nom de la ville ou fournir un placeId"
+      
+      // ⚠️ FALLBACK : Recherche avec city + countryCode
+      console.log('🔄 Fallback: recherche avec city + countryCode');
+      return searchHotelsWithCity(req, res, {
+        checkin, checkout, adults, city, environment, limit
       });
     }
 
     // ============================================
     // ÉTAPE 3: Récupérer les hôtels avec placeId
     // ============================================
-    console.log(`⏳ Étape 3: Recherche des hôtels avec placeId: ${finalPlaceId}...`);
+    console.log(`⏳ Recherche des hôtels avec placeId: ${finalPlaceId}...`);
     
-    // ✅ On enlève currency - ce paramètre n'existe pas pour getHotels
     const hotelsResponse = await sdk.getHotels({
       placeId: finalPlaceId,
       limit: Math.min(parseInt(limit) || 500, 2000),
@@ -154,7 +201,7 @@ app.get("/search-hotels", async (req, res) => {
     }
 
     // ============================================
-    // ÉTAPE 4: Récupérer les tarifs (par lots de 50)
+    // ÉTAPE 4: Récupérer les tarifs
     // ============================================
     const hotelIds = hotelList.map(h => h.hotelId || h.id).filter(id => id);
     console.log(`📋 ${hotelIds.length} IDs d'hôtels extraits`);
@@ -165,7 +212,7 @@ app.get("/search-hotels", async (req, res) => {
       batches.push(hotelIds.slice(i, i + BATCH_SIZE));
     }
     
-    console.log(`📦 ${batches.length} lots de ${BATCH_SIZE} hôtels à traiter`);
+    console.log(`📦 ${batches.length} lots de ${BATCH_SIZE} hôtels`);
 
     const rateMap = {};
     let totalWithRates = 0;
@@ -176,7 +223,7 @@ app.get("/search-hotels", async (req, res) => {
       
       try {
         const ratesResponse = await sdk.getFullRates({
-          hotelIds: batch.join(','),  // ← Format CSV pour éviter les problèmes
+          hotelIds: batch.join(','),
           occupancies: [{ adults: parseInt(adults, 10) || 2 }],
           currency: "USD",
           guestNationality: "US",
@@ -216,26 +263,16 @@ app.get("/search-hotels", async (req, res) => {
     // ============================================
     // ÉTAPE 5: Fusionner les données
     // ============================================
-    console.log(`⏳ Étape 5: Fusion des données...`);
-
     const hotels = hotelList.map(function(hotel) {
       const hotelId = hotel.hotelId || hotel.id;
       const rateItem = rateMap[hotelId] || {};
       const bestRate = rateItem.roomTypes?.[0]?.rates?.[0];
       
-      // Extraire le nom
       let name = 'Hôtel sans nom';
       const nameCandidates = [
-        hotel.name,
-        hotel.hotelName,
-        hotel.hotel_name,
-        hotel.title,
-        hotel.fullName,
-        hotel.establishmentName,
-        hotel.propertyName,
-        hotel['Hotel Name'],
-        hotel.name_en,
-        hotel.name_fr
+        hotel.name, hotel.hotelName, hotel.hotel_name, hotel.title,
+        hotel.fullName, hotel.establishmentName, hotel.propertyName,
+        hotel['Hotel Name'], hotel.name_en, hotel.name_fr
       ];
       for (let n of nameCandidates) {
         if (n && typeof n === 'string' && n.trim().length > 0) {
@@ -244,19 +281,11 @@ app.get("/search-hotels", async (req, res) => {
         }
       }
 
-      // Extraire la photo
       let photo = '';
       const photoCandidates = [
-        hotel.main_photo,
-        hotel.mainPhoto,
-        hotel.photo,
-        hotel.image,
-        hotel.picture,
-        hotel.thumbnail,
-        hotel.images?.[0],
-        hotel.photos?.[0],
-        hotel.hotelImage,
-        hotel.imageUrl
+        hotel.main_photo, hotel.mainPhoto, hotel.photo, hotel.image,
+        hotel.picture, hotel.thumbnail, hotel.images?.[0], hotel.photos?.[0],
+        hotel.hotelImage, hotel.imageUrl
       ];
       for (let p of photoCandidates) {
         if (p && typeof p === 'string' && p.trim().length > 0) {
@@ -264,20 +293,14 @@ app.get("/search-hotels", async (req, res) => {
           break;
         }
       }
-
       if (!photo) {
         photo = `https://picsum.photos/seed/${hotelId || Math.random()}/460/380`;
       }
 
-      // Extraire l'adresse
       let address = '';
       const addressCandidates = [
-        hotel.address,
-        hotel.streetAddress,
-        hotel.street,
-        hotel.addressLine1,
-        hotel.fullAddress,
-        hotel.location?.address
+        hotel.address, hotel.streetAddress, hotel.street,
+        hotel.addressLine1, hotel.fullAddress, hotel.location?.address
       ];
       for (let a of addressCandidates) {
         if (a && typeof a === 'string' && a.trim().length > 0) {
@@ -286,14 +309,10 @@ app.get("/search-hotels", async (req, res) => {
         }
       }
 
-      // Extraire la note
       let rating = 0;
       const ratingCandidates = [
-        hotel.rating,
-        hotel.score,
-        hotel.averageRating,
-        hotel.overallRating,
-        hotel.starRating
+        hotel.rating, hotel.score, hotel.averageRating,
+        hotel.overallRating, hotel.starRating
       ];
       for (let r of ratingCandidates) {
         if (r && !isNaN(parseFloat(r)) && parseFloat(r) > 0) {
@@ -302,14 +321,10 @@ app.get("/search-hotels", async (req, res) => {
         }
       }
 
-      // Extraire le nombre d'étoiles
       let starRating = 0;
       const starCandidates = [
-        hotel.starRating,
-        hotel.stars,
-        hotel.star_rating,
-        hotel.hotelClass,
-        hotel.category
+        hotel.starRating, hotel.stars, hotel.star_rating,
+        hotel.hotelClass, hotel.category
       ];
       for (let s of starCandidates) {
         if (s && !isNaN(parseFloat(s)) && parseFloat(s) > 0) {
@@ -336,7 +351,6 @@ app.get("/search-hotels", async (req, res) => {
       };
     });
 
-    // Filtrer les hôtels sans prix et trier par prix
     const validHotels = hotels
       .filter(h => h.minPrice > 0)
       .sort((a, b) => a.minPrice - b.minPrice);
@@ -348,10 +362,6 @@ app.get("/search-hotels", async (req, res) => {
     console.log(`  - Total hôtels: ${hotelList.length}`);
     console.log(`  - Hôtels avec tarifs: ${validHotels.length}`);
     console.log(`  - Hôtels retournés: ${finalHotels.length}`);
-    if (finalHotels.length > 0) {
-      console.log(`  - Premier hôtel: "${finalHotels[0].name}"`);
-      console.log(`  - Prix min: $${finalHotels[0].minPrice}`);
-    }
 
     res.json({ 
       success: true,
@@ -362,8 +372,7 @@ app.get("/search-hotels", async (req, res) => {
       availableWithPrice: validHotels.length
     });
   } catch (error) {
-    console.error("❌ Error searching for hotels:", error);
-    console.error("📦 Détails:", error.response?.data || error.message);
+    console.error("❌ Error:", error);
     res.status(500).json({ 
       success: false,
       error: "Internal server error", 
@@ -373,7 +382,123 @@ app.get("/search-hotels", async (req, res) => {
 });
 
 // ============================================
-// 2. TARIFS DÉTAILLÉS HÔTEL
+// FALLBACK : Recherche avec city + countryCode
+// ============================================
+async function searchHotelsWithCity(req, res, params) {
+  const { checkin, checkout, adults, city, environment, limit = 500 } = params;
+  const apiKey = environment == "sandbox" ? sandbox_apiKey : prod_apiKey;
+  const sdk = liteApi(apiKey);
+
+  console.log(`🔄 FALLBACK: Recherche avec city="${city}"`);
+
+  try {
+    const hotelsResponse = await sdk.getHotels({
+      countryCode: "FR",  // Fallback sur la France
+      cityName: city,
+      limit: Math.min(parseInt(limit) || 500, 2000),
+      language: "fr"
+    });
+
+    let hotelList = [];
+    if (Array.isArray(hotelsResponse.data)) {
+      hotelList = hotelsResponse.data;
+    } else if (hotelsResponse.data && Array.isArray(hotelsResponse.data.hotels)) {
+      hotelList = hotelsResponse.data.hotels;
+    } else if (hotelsResponse.data && Array.isArray(hotelsResponse.data.data)) {
+      hotelList = hotelsResponse.data.data;
+    }
+
+    console.log(`✅ FALLBACK: ${hotelList.length} hôtels trouvés`);
+
+    if (hotelList.length === 0) {
+      return res.json({ 
+        success: true,
+        hotels: [],
+        total: 0,
+        message: "Aucun hôtel trouvé pour cette ville"
+      });
+    }
+
+    // Limiter à 50 pour les rates
+    const limitedHotels = hotelList.slice(0, 50);
+    const hotelIds = limitedHotels.map(h => h.hotelId || h.id).filter(id => id);
+
+    const ratesResponse = await sdk.getFullRates({
+      hotelIds: hotelIds.join(','),
+      occupancies: [{ adults: parseInt(adults, 10) || 2 }],
+      currency: "USD",
+      guestNationality: "US",
+      checkin: checkin,
+      checkout: checkout,
+      maxRatesPerHotel: 1,
+      timeout: 15,
+      includeHotelData: true
+    });
+
+    let rateData = [];
+    if (Array.isArray(ratesResponse.data)) {
+      rateData = ratesResponse.data;
+    } else if (ratesResponse.data && Array.isArray(ratesResponse.data.data)) {
+      rateData = ratesResponse.data.data;
+    } else if (ratesResponse.data && Array.isArray(ratesResponse.data.hotels)) {
+      rateData = ratesResponse.data.hotels;
+    }
+
+    const rateMap = {};
+    rateData.forEach(function(item) {
+      const hotelId = item.hotelId || item.id;
+      if (hotelId) rateMap[hotelId] = item;
+    });
+
+    const hotels = limitedHotels.map(function(hotel) {
+      const hotelId = hotel.hotelId || hotel.id;
+      const rateItem = rateMap[hotelId] || {};
+      const bestRate = rateItem.roomTypes?.[0]?.rates?.[0];
+      
+      let name = hotel.name || hotel.hotelName || 'Hôtel sans nom';
+      let photo = hotel.main_photo || hotel.photo || hotel.image || 
+        `https://picsum.photos/seed/${hotelId}/460/380`;
+
+      return {
+        id: hotelId || `hotel-${Math.random()}`,
+        name: name,
+        address: hotel.address || hotel.city || city,
+        city: hotel.city || city,
+        country: hotel.country || 'FR',
+        main_photo: photo,
+        rating: hotel.rating || 0,
+        reviewCount: hotel.reviewCount || 0,
+        starRating: hotel.starRating || 0,
+        minPrice: bestRate?.retailRate?.total?.[0]?.amount || 0,
+        currency: bestRate?.retailRate?.total?.[0]?.currency || 'USD',
+        offerId: rateItem.roomTypes?.[0]?.offerId || null,
+        roomName: bestRate?.name || 'Chambre standard',
+        refundable: bestRate?.cancellationPolicies?.refundableTag === 'RFN'
+      };
+    });
+
+    const validHotels = hotels.filter(h => h.minPrice > 0).sort((a, b) => a.minPrice - b.minPrice);
+    const finalHotels = validHotels.slice(0, 500);
+
+    res.json({ 
+      success: true,
+      hotels: finalHotels,
+      total: finalHotels.length,
+      rawTotal: hotelList.length,
+      fallbackUsed: true
+    });
+  } catch (error) {
+    console.error("❌ Fallback error:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Internal server error", 
+      message: error.message
+    });
+  }
+}
+
+// ============================================
+// 3. TARIFS DÉTAILLÉS HÔTEL
 // ============================================
 app.get("/search-rates", async (req, res) => {
   console.log("\n💰 ===== SEARCH RATES ===== 💰");
@@ -381,13 +506,7 @@ app.get("/search-rates", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  console.log(`🏨 Hotel ID: ${hotelId}`);
-  console.log(`📅 Arrivée: ${checkin}, Départ: ${checkout}`);
-  console.log(`👤 Adultes: ${adults}`);
-
   try {
-    console.log(`⏳ Récupération des tarifs pour l'hôtel ${hotelId}...`);
-    
     const response = await sdk.getFullRates({
       hotelIds: [hotelId],
       occupancies: [{ adults: parseInt(adults, 10) }],
@@ -410,13 +529,8 @@ app.get("/search-rates", async (req, res) => {
       rates = response.data.hotels;
     }
 
-    console.log(`✅ ${rates.length} hôtels dans la réponse`);
-
     if (rates.length === 0) {
-      return res.json({ 
-        success: false,
-        error: "No availability found" 
-      });
+      return res.json({ success: false, error: "No availability found" });
     }
 
     const hotel = rates[0];
@@ -447,9 +561,6 @@ app.get("/search-rates", async (req, res) => {
       }
     });
 
-    console.log(`✅ ${rateInfo.length} tarifs disponibles`);
-    console.log(`💰 Prix minimum: $${minPrice}`);
-
     res.json({ 
       success: true,
       hotelInfo: {
@@ -467,155 +578,73 @@ app.get("/search-rates", async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error fetching rates:", error);
-    res.status(500).json({ 
-      success: false,
-      error: "No availability found",
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: "No availability found", message: error.message });
   }
 });
 
 // ============================================
-// 3. PRÉ-RÉSERVATION HÔTEL
+// 4. PRÉ-RÉSERVATION HÔTEL
 // ============================================
 app.post("/prebook", async (req, res) => {
   console.log("\n📋 ===== PREBOOK ===== 📋");
   const { offerId, environment, voucherCode } = req.body;
   
   if (!offerId) {
-    return res.status(400).json({ 
-      success: false,
-      error: "offerId is required" 
-    });
+    return res.status(400).json({ success: false, error: "offerId is required" });
   }
 
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  console.log(`🔑 Offer ID: ${offerId}`);
-  console.log(`🎫 Voucher: ${voucherCode || 'Aucun'}`);
-
-  const bodyData = {
-    offerId: offerId,
-    usePaymentSdk: true,
-  };
-
-  if (voucherCode) {
-    bodyData.voucherCode = voucherCode;
-  }
+  const bodyData = { offerId, usePaymentSdk: true };
+  if (voucherCode) bodyData.voucherCode = voucherCode;
 
   try {
-    console.log(`⏳ Pré-réservation en cours...`);
     const response = await sdk.preBook(bodyData);
-    
-    console.log(`✅ Pré-réservation réussie!`);
-    console.log(`🆔 Prebook ID: ${response.data?.prebookId}`);
-    
-    res.json({ 
-      success: true, 
-      data: response.data 
-    });
+    res.json({ success: true, data: response.data });
   } catch (err) {
     console.error("❌ Prebook error:", err);
-    res.status(500).json({ 
-      success: false,
-      error: "Prebook failed",
-      message: err.message
-    });
+    res.status(500).json({ success: false, error: "Prebook failed", message: err.message });
   }
 });
 
 // ============================================
-// 4. RÉSERVATION FINALE HÔTEL
+// 5. RÉSERVATION FINALE HÔTEL
 // ============================================
 app.post("/book", async (req, res) => {
   console.log("\n📝 ===== BOOK ===== 📝");
-  const { 
-    prebookId, 
-    guestFirstName, 
-    guestLastName, 
-    guestEmail, 
-    guestPhone,
-    transactionId, 
-    environment 
-  } = req.body;
+  const { prebookId, guestFirstName, guestLastName, guestEmail, guestPhone, transactionId, environment } = req.body;
 
-  if (!prebookId) {
-    return res.status(400).json({ 
-      success: false,
-      error: "prebookId is required" 
-    });
+  if (!prebookId || !guestFirstName || !guestLastName || !guestEmail || !transactionId) {
+    return res.status(400).json({ success: false, error: "Missing required fields" });
   }
-  if (!guestFirstName || !guestLastName || !guestEmail) {
-    return res.status(400).json({ 
-      success: false,
-      error: "guestFirstName, guestLastName and guestEmail are required" 
-    });
-  }
-  if (!transactionId) {
-    return res.status(400).json({ 
-      success: false,
-      error: "transactionId is required" 
-    });
-  }
-
-  console.log(`🆔 Prebook ID: ${prebookId}`);
-  console.log(`👤 Guest: ${guestFirstName} ${guestLastName}`);
-  console.log(`📧 Email: ${guestEmail}`);
-  console.log(`📱 Phone: ${guestPhone}`);
-  console.log(`💳 Transaction ID: ${transactionId}`);
 
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
   const bodyData = {
-    prebookId: prebookId,
+    prebookId,
     holder: {
       firstName: guestFirstName,
       lastName: guestLastName,
       email: guestEmail,
       phone: guestPhone || '+1234567890'
     },
-    payment: {
-      method: "TRANSACTION_ID",
-      transactionId: transactionId
-    },
-    guests: [
-      {
-        occupancyNumber: 1,
-        remarks: "",
-        firstName: guestFirstName,
-        lastName: guestLastName,
-        email: guestEmail
-      }
-    ]
+    payment: { method: "TRANSACTION_ID", transactionId },
+    guests: [{ occupancyNumber: 1, remarks: "", firstName: guestFirstName, lastName: guestLastName, email: guestEmail }]
   };
 
-  console.log(`📦 Données de réservation:`, JSON.stringify(bodyData, null, 2));
-
   try {
-    console.log(`⏳ Réservation en cours...`);
     const response = await sdk.book(bodyData);
-    
-    console.log(`✅ Réservation réussie!`);
-    console.log(`🆔 Booking ID: ${response.data?.bookingId}`);
-    
-    res.json({ 
-      success: true, 
-      data: response.data 
-    });
+    res.json({ success: true, data: response.data });
   } catch (err) {
     console.error("❌ Error during booking:", err);
-    res.status(500).json({ 
-      success: false,
-      error: "Booking failed",
-      message: err.message
-    });
+    res.status(500).json({ success: false, error: "Booking failed", message: err.message });
   }
 });
 
 // ============================================
-// 5. RECHERCHE VOLS
+// 6. RECHERCHE VOLS
 // ============================================
 app.post("/search-flights", async (req, res) => {
   console.log("\n✈️ ===== SEARCH FLIGHTS ===== ✈️");
@@ -623,37 +652,20 @@ app.post("/search-flights", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  console.log(`📍 Itinéraire:`, JSON.stringify(legs, null, 2));
-  console.log(`👤 Adultes: ${adults}, Enfants: ${children}, Bébés: ${infants}`);
-
   try {
-    console.log(`⏳ Recherche de vols...`);
     const response = await sdk.searchFlights({
-      legs: legs,
-      adults: adults || 1,
-      children: children || 0,
-      infants: infants || 0,
-      currency: currency || "USD",
-      country: country || "US",
-      cabinClass: cabinClass || "ECONOMY"
+      legs, adults: adults || 1, children: children || 0, infants: infants || 0,
+      currency: currency || "USD", country: country || "US", cabinClass: cabinClass || "ECONOMY"
     });
-
-    const journeys = response.data?.[0]?.journeys || [];
-    console.log(`✅ ${journeys.length} voyages trouvés`);
-    
     res.json({ success: true, data: response.data });
   } catch (error) {
     console.error("❌ Error searching flights:", error);
-    res.status(500).json({ 
-      success: false,
-      error: "Failed to search flights",
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: "Failed to search flights", message: error.message });
   }
 });
 
 // ============================================
-// 6. VÉRIFICATION VOL
+// 7. VÉRIFICATION VOL
 // ============================================
 app.post("/verify-flight", async (req, res) => {
   console.log("\n🔎 ===== VERIFY FLIGHT ===== 🔎");
@@ -661,25 +673,17 @@ app.post("/verify-flight", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  console.log(`🆔 Offer ID: ${offerId}`);
-
   try {
-    console.log(`⏳ Vérification de l'offre...`);
     const response = await sdk.verifyFlight({ offerId });
-    console.log(`✅ Offre vérifiée avec succès`);
     res.json({ success: true, data: response.data });
   } catch (error) {
     console.error("❌ Error verifying flight:", error);
-    res.status(500).json({ 
-      success: false,
-      error: "Failed to verify flight",
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: "Failed to verify flight", message: error.message });
   }
 });
 
 // ============================================
-// 7. PRÉ-RÉSERVATION VOL
+// 8. PRÉ-RÉSERVATION VOL
 // ============================================
 app.post("/prebook-flight", async (req, res) => {
   console.log("\n📋 ===== PREBOOK FLIGHT ===== 📋");
@@ -687,32 +691,20 @@ app.post("/prebook-flight", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  console.log(`🆔 Offer ID: ${offerId}`);
-  console.log(`👤 Contact: ${contact?.firstName} ${contact?.lastName}`);
-
   try {
-    console.log(`⏳ Pré-réservation du vol...`);
     const response = await sdk.prebookFlight({
-      offerId: offerId,
-      usePaymentSdk: usePaymentSdk !== undefined ? usePaymentSdk : true,
-      contact: contact,
-      passengers: passengers
+      offerId, usePaymentSdk: usePaymentSdk !== undefined ? usePaymentSdk : true,
+      contact, passengers
     });
-
-    console.log(`✅ Pré-réservation réussie!`);
     res.json({ success: true, data: response.data });
   } catch (error) {
     console.error("❌ Error prebooking flight:", error);
-    res.status(500).json({ 
-      success: false,
-      error: "Failed to prebook flight",
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: "Failed to prebook flight", message: error.message });
   }
 });
 
 // ============================================
-// 8. RÉSERVATION FINALE VOL
+// 9. RÉSERVATION FINALE VOL
 // ============================================
 app.post("/book-flight", async (req, res) => {
   console.log("\n📝 ===== BOOK FLIGHT ===== 📝");
@@ -720,33 +712,20 @@ app.post("/book-flight", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  console.log(`🆔 Prebook ID: ${prebookId}`);
-  console.log(`💳 Transaction ID: ${transactionId}`);
-
   try {
-    console.log(`⏳ Réservation du vol...`);
     const response = await sdk.bookFlight({
-      prebookId: prebookId,
-      payment: {
-        method: method || "TRANSACTION_ID",
-        transactionId: transactionId
-      }
+      prebookId,
+      payment: { method: method || "TRANSACTION_ID", transactionId }
     });
-
-    console.log(`✅ Réservation réussie!`);
     res.json({ success: true, data: response.data });
   } catch (error) {
     console.error("❌ Error booking flight:", error);
-    res.status(500).json({ 
-      success: false,
-      error: "Failed to book flight",
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: "Failed to book flight", message: error.message });
   }
 });
 
 // ============================================
-// 9. DÉTAILS HÔTEL
+// 10. DÉTAILS HÔTEL
 // ============================================
 app.get("/hotel-details", async (req, res) => {
   console.log("\n🏨 ===== HOTEL DETAILS ===== 🏨");
@@ -754,15 +733,9 @@ app.get("/hotel-details", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  console.log(`🆔 Hotel ID: ${hotelId}`);
-
   try {
-    console.log(`⏳ Récupération des détails...`);
     const response = await sdk.getHotelDetails(hotelId, timeout);
     const hotel = response.data;
-
-    console.log(`🏨 Hôtel: ${hotel.name}`);
-    console.log(`🛏️ Chambres: ${hotel.rooms?.length || 0}`);
 
     const rooms = (hotel.rooms || []).map(function(room) {
       return {
@@ -776,33 +749,20 @@ app.get("/hotel-details", async (req, res) => {
         bedTypes: room.bedTypes || [],
         roomAmenities: (room.roomAmenities || []).map(function(a) { return a.name; }),
         photos: (room.photos || []).map(function(p) {
-          return {
-            url: p.hd_url || p.url || '',
-            mainPhoto: p.mainPhoto || false
-          };
+          return { url: p.hd_url || p.url || '', mainPhoto: p.mainPhoto || false };
         })
       };
     });
 
-    res.json({ 
-      success: true, 
-      data: {
-        ...hotel,
-        rooms: rooms
-      }
-    });
+    res.json({ success: true, data: { ...hotel, rooms } });
   } catch (error) {
     console.error("❌ Error getting hotel details:", error);
-    res.status(500).json({ 
-      success: false,
-      error: "Failed to get hotel details",
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: "Failed to get hotel details", message: error.message });
   }
 });
 
 // ============================================
-// 10. AVIS HÔTEL
+// 11. AVIS HÔTEL
 // ============================================
 app.get("/hotel-reviews", async (req, res) => {
   console.log("\n⭐ ===== HOTEL REVIEWS ===== ⭐");
@@ -810,21 +770,12 @@ app.get("/hotel-reviews", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  console.log(`🆔 Hotel ID: ${hotelId}`);
-
   try {
-    console.log(`⏳ Récupération des avis...`);
     const response = await sdk.getHotelReviews(hotelId, timeout);
-    console.log(`✅ ${response.data?.length || 0} avis récupérés`);
-    
     res.json({ success: true, data: response.data });
   } catch (error) {
     console.error("❌ Error getting hotel reviews:", error);
-    res.status(500).json({ 
-      success: false,
-      error: "Failed to get hotel reviews",
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: "Failed to get hotel reviews", message: error.message });
   }
 });
 
@@ -849,10 +800,7 @@ app.get("/hotel-detail.html", (req, res) => {
 // Gestion des erreurs 404
 // ============================================
 app.use((req, res) => {
-  res.status(404).json({ 
-    success: false,
-    error: "Route not found" 
-  });
+  res.status(404).json({ success: false, error: "Route not found" });
 });
 
 // ============================================
@@ -868,6 +816,7 @@ app.listen(port, () => {
   console.log(`🔑 API Key (sandbox): ${sandbox_apiKey ? '✅' : '❌'}`);
   console.log(`\n📋 ENDPOINTS:`);
   console.log(`   🔍 GET  /search-hotels     - Hôtels (AVEC PLACE ID)`);
+  console.log(`   📍 GET  /search-places     - Recherche de lieux (CORRIGÉ)`);
   console.log(`   💰 GET  /search-rates      - Tarifs détaillés`);
   console.log(`   📋 POST /prebook           - Pré-réservation hôtel`);
   console.log(`   📝 POST /book              - Réservation hôtel`);

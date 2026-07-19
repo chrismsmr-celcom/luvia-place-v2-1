@@ -47,7 +47,33 @@ app.get("/search-hotels", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+app.get("/search-places", async (req, res) => {
+  console.log("\n📍 SEARCH PLACES");
+  const { query, environment } = req.query;
+  const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
 
+  if (!query || query.length < 2) {
+    return res.json({ success: true, data: [] });
+  }
+
+  try {
+    const response = await axios.get(
+      `https://api.liteapi.travel/v3.0/data/places?textQuery=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          'X-API-Key': apiKey,
+          'accept': 'application/json'
+        }
+      }
+    );
+    const places = response.data?.data || [];
+    console.log(`✅ ${places.length} lieux trouvés`);
+    res.json({ success: true, data: places });
+  } catch (error) {
+    console.error("❌ Error searching places:", error.message);
+    res.status(500).json({ success: false, error: "Failed to search places" });
+  }
+});
 app.get("/search-rates", async (req, res) => {
   console.log("Rate endpoint hit");
   const { checkin, checkout, adults, hotelId, environment } = req.query;

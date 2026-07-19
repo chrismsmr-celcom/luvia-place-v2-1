@@ -270,9 +270,6 @@
 var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
 var params = new URLSearchParams(window.location.search);
 
-// Clé Google Places API (à mettre dans ton .env ou directement ici)
-var GOOGLE_PLACES_API_KEY = 'TA_CLE_GOOGLE_PLACES_API'; // À remplacer
-
 function generateSkeleton() {
   var container = document.getElementById('resultsContainer');
   var html = '';
@@ -299,81 +296,42 @@ function generateSkeleton() {
 }
 
 // ============================================
-// NOUVEAU : Récupérer le placeId depuis Google Places
-// ============================================
-function getPlaceId(cityName) {
-  if (!cityName || cityName.length < 2) return Promise.resolve(null);
-  
-  console.log('📍 Récupération du placeId pour:', cityName);
-  
-  // Option 1: Utiliser l'API Google Places directe
-  var url = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json' +
-    '?input=' + encodeURIComponent(cityName) +
-    '&inputtype=textquery' +
-    '&fields=place_id,formatted_address,name' +
-    '&key=' + GOOGLE_PLACES_API_KEY;
-  
-  return fetch(url)
-    .then(function(response) { return response.json(); })
-    .then(function(data) {
-      if (data.candidates && data.candidates.length > 0) {
-        var placeId = data.candidates[0].place_id;
-        console.log('✅ PlaceId trouvé:', placeId);
-        return placeId;
-      }
-      console.warn('⚠️ Aucun placeId trouvé pour:', cityName);
-      return null;
-    })
-    .catch(function(error) {
-      console.warn('⚠️ Erreur Google Places:', error.message);
-      return null;
-    });
-}
-
-// ============================================
-// RECHERCHE HÔTELS AVEC PLACE ID
+// RECHERCHE HÔTELS - LE BACKEND GÈRE LE PLACE ID
 // ============================================
 function searchHotels(searchParams) {
   var destination = searchParams.destination || '';
   var checkin = searchParams.checkin || '';
   var checkout = searchParams.checkout || '';
   var adults = parseInt(searchParams.adults || '2', 10);
+  var countryCode = searchParams.countryCode || '';
   var placeId = searchParams.placeId || '';
 
-  console.log('🔍 searchHotels appelé avec:', searchParams);
+  console.log('🔍 searchHotels appelé avec:', { destination, checkin, checkout, adults, countryCode, placeId });
 
-  // Si on a un placeId, on l'utilise directement
-  if (placeId) {
-    return searchHotelsWithPlaceId(placeId, checkin, checkout, adults);
-  }
-
-  // Sinon, on récupère le placeId depuis le nom de la ville
-  return getPlaceId(destination)
-    .then(function(foundPlaceId) {
-      if (foundPlaceId) {
-        return searchHotelsWithPlaceId(foundPlaceId, checkin, checkout, adults);
-      } else {
-        // Fallback: utiliser city + countryCode (moins fiable)
-        console.warn('⚠️ Fallback: recherche par ville sans placeId');
-        return searchHotelsWithCity(destination, checkin, checkout, adults, searchParams.countryCode || 'FR');
-      }
-    });
-}
-
-// ============================================
-// RECHERCHE AVEC PLACE ID (PRINCIPALE)
-// ============================================
-function searchHotelsWithPlaceId(placeId, checkin, checkout, adults) {
-  console.log('🏨 Recherche avec placeId:', placeId);
-  
+  // ✅ Construire les paramètres - le backend gère le placeId automatiquement
   var queryParams = new URLSearchParams({
     checkin: checkin,
     checkout: checkout,
     adults: adults,
-    placeId: placeId,           // ← PRIORITAIRE
     environment: 'production',
     limit: 2000
   });
+
+  // ✅ Si on a un placeId, on le transmet (le backend l'utilisera en priorité)
+  if (placeId) {
+    queryParams.append('placeId', placeId);
+    console.log('📍 PlaceId fourni:', placeId);
+  } else if (destination) {
+    // ✅ Sinon, on transmet la ville (le backend récupérera le placeId)
+    queryParams.append('city', destination);
+    if (countryCode) {
+      queryParams.append('countryCode', countryCode);
+    }
+    console.log('📍 Ville fournie:', destination);
+  } else {
+    console.error('❌ Aucune destination fournie');
+    return Promise.resolve(null);
+  }
 
   var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
   console.log('📦 URL:', url);
@@ -402,49 +360,6 @@ function searchHotelsWithPlaceId(placeId, checkin, checkout, adults) {
   });
 }
 
-// ============================================
-// RECHERCHE AVEC VILLE (FALLBACK)
-// ============================================
-function searchHotelsWithCity(city, checkin, checkout, adults, countryCode) {
-  console.log('🏨 Fallback: recherche avec ville:', city, countryCode);
-  
-  var queryParams = new URLSearchParams({
-    checkin: checkin,
-    checkout: checkout,
-    adults: adults,
-    city: city,                  // ← Fallback
-    countryCode: countryCode || 'FR',
-    environment: 'production',
-    limit: 2000
-  });
-
-  var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
-  console.log('📦 URL (fallback):', url);
-
-  return fetch(url, {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json'
-    }
-  })
-  .then(function(response) {
-    if (!response.ok) {
-      return response.text().then(function(text) {
-        throw new Error('HTTP ' + response.status + ': ' + text);
-      });
-    }
-    return response.json();
-  })
-  .then(function(data) {
-    console.log('✅ /search-hotels (fallback) réponse:', data);
-    return data.success ? data : null;
-  })
-  .catch(function(error) {
-    console.error('❌ searchHotels fallback error:', error.message);
-    return null;
-  });
-}
-
 function formatDate(dateStr) {
   if (!dateStr) return '';
   var d = new Date(dateStr);
@@ -463,11 +378,12 @@ function displayHotels(data) {
   if (!data || !data.success || !data.hotels || data.hotels.length === 0) {
     container.innerHTML = `
       <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-        <h3>Aucun hôtel trouvé</h3>
+        <h3>${data?.message || 'Aucun hôtel trouvé'}</h3>
         <p>Essayez de modifier votre destination ou vos dates.</p>
         <p style="font-size:14px;color:#999;margin-top:10px;">
           💡 Astuce: Vérifiez que les dates sont valides (format YYYY-MM-DD)
         </p>
+        ${data?.debug ? `<p style="font-size:12px;color:#999;margin-top:5px;">🔍 Debug: ${JSON.stringify(data.debug)}</p>` : ''}
         <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
           🔄 Réessayer
         </button>
@@ -556,13 +472,18 @@ function loadResults() {
   var checkout = params.get('checkout') || '';
   var adults = parseInt(params.get('adults') || '2', 10);
   var countryCode = params.get('countryCode') || '';
-  var placeId = params.get('placeId') || ''; // ← NOUVEAU
+  var placeId = params.get('placeId') || '';
 
   console.log('📋 Paramètres reçus:', { destination, checkin, checkout, adults, countryCode, placeId });
 
-  document.getElementById('sumDest').textContent = destination || 'Destination non spécifiée';
-  document.getElementById('sumDates').textContent = checkin && checkout ? formatDate(checkin) + ' - ' + formatDate(checkout) : 'Sélectionnez vos dates';
-  document.getElementById('sumGuests').textContent = adults + ' adulte' + (adults > 1 ? 's' : '');
+  // Mettre à jour le résumé
+  var sumDest = document.getElementById('sumDest');
+  var sumDates = document.getElementById('sumDates');
+  var sumGuests = document.getElementById('sumGuests');
+  
+  if (sumDest) sumDest.textContent = destination || 'Destination non spécifiée';
+  if (sumDates) sumDates.textContent = checkin && checkout ? formatDate(checkin) + ' - ' + formatDate(checkout) : 'Sélectionnez vos dates';
+  if (sumGuests) sumGuests.textContent = adults + ' adulte' + (adults > 1 ? 's' : '');
 
   generateSkeleton();
 
@@ -584,7 +505,7 @@ function loadResults() {
     checkout: checkout, 
     adults: adults,
     countryCode: countryCode,
-    placeId: placeId  // ← NOUVEAU : transmis si présent
+    placeId: placeId
   })
     .then(function(results) {
       if (results) {

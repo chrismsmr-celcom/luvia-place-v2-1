@@ -8,22 +8,11 @@ const axios = require("axios");
 require("dotenv").config();
 
 // ============================================
-// CORS - CORRIGÉ
+// CORS - CORRIGÉ (plus permissif pour le moment)
 // ============================================
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',') 
-  : ['http://localhost:3000', 'https://luviaplace-v2.onrender.com'];
-
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"]
   })
@@ -120,7 +109,6 @@ app.get("/search-hotels", async (req, res) => {
       includeHotelData: true
     });
 
-    // ✅ CORRECTION: Normaliser la réponse
     const data = Array.isArray(response?.data?.data) ? response.data.data : Array.isArray(response?.data) ? response.data : [];
     console.log(`✅ ${data.length} hôtels avec tarifs trouvés`);
 
@@ -160,7 +148,7 @@ app.get("/search-hotels", async (req, res) => {
 });
 
 // ============================================
-// TARIFS DÉTAILLÉS HÔTEL - CORRIGÉ
+// TARIFS DÉTAILLÉS HÔTEL
 // ============================================
 app.get("/search-rates", async (req, res) => {
   console.log("\n💰 ===== SEARCH RATES ===== 💰");
@@ -214,7 +202,6 @@ app.get("/search-rates", async (req, res) => {
 
     const response = await sdk.getFullRates(requestBody);
 
-    // ✅ CORRECTION: Normaliser la réponse pour récupérer le tableau
     const rates = Array.isArray(response?.data?.data) 
       ? response.data.data 
       : Array.isArray(response?.data) 
@@ -325,7 +312,7 @@ app.get("/search-rates", async (req, res) => {
 });
 
 // ============================================
-// PRÉ-RÉSERVATION HÔTEL - CORRIGÉ
+// PRÉ-RÉSERVATION HÔTEL
 // ============================================
 app.post("/prebook", async (req, res) => {
   console.log("\n📋 ===== PREBOOK ===== 📋");
@@ -369,7 +356,7 @@ app.post("/prebook", async (req, res) => {
 });
 
 // ============================================
-// RÉSERVATION FINALE HÔTEL - CORRIGÉ
+// RÉSERVATION FINALE HÔTEL
 // ============================================
 app.post("/book", async (req, res) => {
   console.log("\n📝 ===== BOOK ===== 📝");
@@ -405,7 +392,6 @@ app.post("/book", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  // ✅ CORRECTION: bodyData conforme à l'API LiteAPI
   const bodyData = {
     prebookId: prebookId,
     holder: {
@@ -415,7 +401,7 @@ app.post("/book", async (req, res) => {
       phone: guestPhone || '+1234567890'
     },
     payment: {
-      method: "TRANSACTION_ID",  // ✅ TRANSACTION_ID exactement
+      method: "TRANSACTION_ID",
       transactionId: transactionId
     },
     guests: [
@@ -666,11 +652,11 @@ app.listen(port, () => {
   console.log(`🔑 API Key (prod): ${prod_apiKey ? '✅' : '❌'}`);
   console.log(`🔑 API Key (sandbox): ${sandbox_apiKey ? '✅' : '❌'}`);
   console.log(`\n📋 ENDPOINTS:`);
-  console.log(`   📍 GET  /search-places     - Autocomplete de lieux (API directe)`);
+  console.log(`   📍 GET  /search-places     - Autocomplete de lieux`);
   console.log(`   🔍 GET  /search-hotels     - Hôtels`);
-  console.log(`   💰 GET  /search-rates      - Tarifs détaillés (CORRIGÉ)`);
+  console.log(`   💰 GET  /search-rates      - Tarifs détaillés`);
   console.log(`   📋 POST /prebook           - Pré-réservation hôtel`);
-  console.log(`   📝 POST /book              - Réservation hôtel (CORRIGÉ)`);
+  console.log(`   📝 POST /book              - Réservation hôtel`);
   console.log(`   🏨 GET  /hotel-details     - Détails hôtel`);
   console.log(`   ⭐ GET  /hotel-reviews     - Avis hôtel`);
   console.log(`   ✈️ POST /search-flights    - Recherche vols`);

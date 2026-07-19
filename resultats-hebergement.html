@@ -270,6 +270,9 @@
 var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
 var params = new URLSearchParams(window.location.search);
 
+// Clé Google Places API (à mettre dans ton .env ou directement ici)
+var GOOGLE_PLACES_API_KEY = 'TA_CLE_GOOGLE_PLACES_API'; // À remplacer
+
 function generateSkeleton() {
   var container = document.getElementById('resultsContainer');
   var html = '';
@@ -295,37 +298,86 @@ function generateSkeleton() {
   container.innerHTML = html;
 }
 
-function searchPlaces(query) {
-  if (!query || query.length < 2) return Promise.resolve([]);
-  return fetch(API_BASE_URL + '/search-places?query=' + encodeURIComponent(query) + '&environment=production')
+// ============================================
+// NOUVEAU : Récupérer le placeId depuis Google Places
+// ============================================
+function getPlaceId(cityName) {
+  if (!cityName || cityName.length < 2) return Promise.resolve(null);
+  
+  console.log('📍 Récupération du placeId pour:', cityName);
+  
+  // Option 1: Utiliser l'API Google Places directe
+  var url = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json' +
+    '?input=' + encodeURIComponent(cityName) +
+    '&inputtype=textquery' +
+    '&fields=place_id,formatted_address,name' +
+    '&key=' + GOOGLE_PLACES_API_KEY;
+  
+  return fetch(url)
     .then(function(response) { return response.json(); })
-    .then(function(data) { return data.success ? data.data : []; })
-    .catch(function() { return []; });
+    .then(function(data) {
+      if (data.candidates && data.candidates.length > 0) {
+        var placeId = data.candidates[0].place_id;
+        console.log('✅ PlaceId trouvé:', placeId);
+        return placeId;
+      }
+      console.warn('⚠️ Aucun placeId trouvé pour:', cityName);
+      return null;
+    })
+    .catch(function(error) {
+      console.warn('⚠️ Erreur Google Places:', error.message);
+      return null;
+    });
 }
 
-// ✅ ADAPTÉ : utilise GET /search-hotels (comme dans votre backend)
-// Dans votre frontend, supprimez l'appel à searchPlaces
+// ============================================
+// RECHERCHE HÔTELS AVEC PLACE ID
+// ============================================
 function searchHotels(searchParams) {
   var destination = searchParams.destination || '';
   var checkin = searchParams.checkin || '';
   var checkout = searchParams.checkout || '';
   var adults = parseInt(searchParams.adults || '2', 10);
-  var countryCode = searchParams.countryCode || 'CD';
+  var placeId = searchParams.placeId || '';
 
+  console.log('🔍 searchHotels appelé avec:', searchParams);
+
+  // Si on a un placeId, on l'utilise directement
+  if (placeId) {
+    return searchHotelsWithPlaceId(placeId, checkin, checkout, adults);
+  }
+
+  // Sinon, on récupère le placeId depuis le nom de la ville
+  return getPlaceId(destination)
+    .then(function(foundPlaceId) {
+      if (foundPlaceId) {
+        return searchHotelsWithPlaceId(foundPlaceId, checkin, checkout, adults);
+      } else {
+        // Fallback: utiliser city + countryCode (moins fiable)
+        console.warn('⚠️ Fallback: recherche par ville sans placeId');
+        return searchHotelsWithCity(destination, checkin, checkout, adults, searchParams.countryCode || 'FR');
+      }
+    });
+}
+
+// ============================================
+// RECHERCHE AVEC PLACE ID (PRINCIPALE)
+// ============================================
+function searchHotelsWithPlaceId(placeId, checkin, checkout, adults) {
+  console.log('🏨 Recherche avec placeId:', placeId);
+  
   var queryParams = new URLSearchParams({
-  checkin: checkin,
-  checkout: checkout,
-  adults: adults,
-  city: destination,
-  countryCode: countryCode,
-  environment: 'production',
-  limit: 2000,        // ← Max de l'API
-  maxHotels: 500,     // ← Retourner jusqu'à 500
-  expandSearch: true  // ← Activer les stratégies élargies
-});
+    checkin: checkin,
+    checkout: checkout,
+    adults: adults,
+    placeId: placeId,           // ← PRIORITAIRE
+    environment: 'production',
+    limit: 2000
+  });
 
   var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
-  
+  console.log('📦 URL:', url);
+
   return fetch(url, {
     method: 'GET',
     headers: {
@@ -350,13 +402,58 @@ function searchHotels(searchParams) {
   });
 }
 
+// ============================================
+// RECHERCHE AVEC VILLE (FALLBACK)
+// ============================================
+function searchHotelsWithCity(city, checkin, checkout, adults, countryCode) {
+  console.log('🏨 Fallback: recherche avec ville:', city, countryCode);
+  
+  var queryParams = new URLSearchParams({
+    checkin: checkin,
+    checkout: checkout,
+    adults: adults,
+    city: city,                  // ← Fallback
+    countryCode: countryCode || 'FR',
+    environment: 'production',
+    limit: 2000
+  });
+
+  var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
+  console.log('📦 URL (fallback):', url);
+
+  return fetch(url, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json'
+    }
+  })
+  .then(function(response) {
+    if (!response.ok) {
+      return response.text().then(function(text) {
+        throw new Error('HTTP ' + response.status + ': ' + text);
+      });
+    }
+    return response.json();
+  })
+  .then(function(data) {
+    console.log('✅ /search-hotels (fallback) réponse:', data);
+    return data.success ? data : null;
+  })
+  .catch(function(error) {
+    console.error('❌ searchHotels fallback error:', error.message);
+    return null;
+  });
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return '';
   var d = new Date(dateStr);
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
-// ✅ ADAPTÉ : pour afficher les hôtels au format du backend
+// ============================================
+// AFFICHAGE DES HÔTELS
+// ============================================
 function displayHotels(data) {
   var container = document.getElementById('resultsContainer');
   var count = document.getElementById('resultsCount');
@@ -371,6 +468,9 @@ function displayHotels(data) {
         <p style="font-size:14px;color:#999;margin-top:10px;">
           💡 Astuce: Vérifiez que les dates sont valides (format YYYY-MM-DD)
         </p>
+        <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
+          🔄 Réessayer
+        </button>
       </div>
     `;
     count.textContent = '0 propriété trouvée';
@@ -431,7 +531,9 @@ function displayHotels(data) {
   }
 }
 
-// ✅ ADAPTÉ : récupère les détails de l'hôtel via GET /hotel-details
+// ============================================
+// VOIR HÔTEL
+// ============================================
 function voirHotel(hotelId) {
   if (!hotelId) {
     alert('ID de l\'hôtel non disponible.');
@@ -445,14 +547,18 @@ function voirHotel(hotelId) {
   window.location.href = url;
 }
 
+// ============================================
+// CHARGEMENT DES RÉSULTATS
+// ============================================
 function loadResults() {
   var destination = params.get('destination') || '';
   var checkin = params.get('checkin') || '';
   var checkout = params.get('checkout') || '';
   var adults = parseInt(params.get('adults') || '2', 10);
-  var countryCode = params.get('countryCode') || 'FR';
+  var countryCode = params.get('countryCode') || '';
+  var placeId = params.get('placeId') || ''; // ← NOUVEAU
 
-  console.log('📋 Paramètres reçus:', { destination, checkin, checkout, adults, countryCode });
+  console.log('📋 Paramètres reçus:', { destination, checkin, checkout, adults, countryCode, placeId });
 
   document.getElementById('sumDest').textContent = destination || 'Destination non spécifiée';
   document.getElementById('sumDates').textContent = checkin && checkout ? formatDate(checkin) + ' - ' + formatDate(checkout) : 'Sélectionnez vos dates';
@@ -477,7 +583,8 @@ function loadResults() {
     checkin: checkin, 
     checkout: checkout, 
     adults: adults,
-    countryCode: countryCode
+    countryCode: countryCode,
+    placeId: placeId  // ← NOUVEAU : transmis si présent
   })
     .then(function(results) {
       if (results) {
@@ -488,6 +595,9 @@ function loadResults() {
             <h3>❌ Aucun résultat</h3>
             <p>Impossible de trouver des hôtels pour "${destination}".</p>
             <p style="font-size:14px;color:#999;margin-top:10px;">Essayez une autre destination ou modifiez vos dates.</p>
+            <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
+              🔄 Réessayer
+            </button>
           </div>
         `;
       }
@@ -498,11 +608,17 @@ function loadResults() {
         <div style="text-align:center;padding:60px;color:var(--ink-soft);">
           <h3>❌ Une erreur est survenue</h3>
           <p>${error.message || 'Veuillez réessayer plus tard.'}</p>
+          <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
+            🔄 Réessayer
+          </button>
         </div>
       `;
     });
 }
 
+// ============================================
+// INITIALISATION
+// ============================================
 document.addEventListener('DOMContentLoaded', loadResults);
 
 // Menu déroulant (si présent)

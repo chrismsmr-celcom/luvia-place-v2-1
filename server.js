@@ -7,29 +7,23 @@ const path = require("path");
 require("dotenv").config();
 
 // ============================================
-// CORS - Limité en production
+// CORS - Configuration ouverte pour production
 // ============================================
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',') 
-  : ['http://localhost:3000', 'https://luviaplace.com'];
+app.use(cors({
+  origin: '*', // Accepte toutes les origines
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+}));
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true
-  })
-);
+// Gestion des requêtes OPTIONS (pré-flight)
+app.options('*', cors());
 
 const prod_apiKey = process.env.PROD_API_KEY;
 const sandbox_apiKey = process.env.SAND_API_KEY;
 
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // ============================================
 // LOG MIDDLEWARE
@@ -77,44 +71,20 @@ app.get("/search-hotels", async (req, res) => {
 
     console.log('📦 Type de response:', typeof response);
     console.log('📦 Clés de response:', Object.keys(response));
-    console.log('📦 Type de response.data:', typeof response.data);
-    console.log('📦 Est-ce un tableau?', Array.isArray(response.data));
     
-    if (response.data) {
-      console.log('📦 Structure de response.data:', JSON.stringify(response.data, null, 2).substring(0, 1000));
-    }
-
-    // ✅ Gestion correcte de la structure { data: [], guestLevel: 0, sandbox: false }
+    // ✅ Extraction correcte des données
     let data = [];
-    
-    if (Array.isArray(response.data)) {
-      data = response.data;
-      console.log('✅ Cas 1: response.data est un tableau de', data.length, 'éléments');
-    } else if (response.data && typeof response.data === 'object') {
-      console.log('📦 response.data est un objet avec les clés:', Object.keys(response.data));
-      
-      // ✅ Vérifier si response.data a une propriété 'data' qui est un tableau
+    if (response.data && typeof response.data === 'object') {
       if (response.data.data && Array.isArray(response.data.data)) {
         data = response.data.data;
-        console.log('✅ Cas 2: Trouvé response.data.data avec', data.length, 'éléments');
-      } else if (Array.isArray(response.data.hotels)) {
+        console.log('✅ Trouvé response.data.data avec', data.length, 'éléments');
+      } else if (Array.isArray(response.data)) {
+        data = response.data;
+        console.log('✅ response.data est un tableau de', data.length, 'éléments');
+      } else if (response.data.hotels && Array.isArray(response.data.hotels)) {
         data = response.data.hotels;
-        console.log('✅ Cas 3: Trouvé response.data.hotels avec', data.length, 'éléments');
-      } else if (Array.isArray(response.data.results)) {
-        data = response.data.results;
-        console.log('✅ Cas 4: Trouvé response.data.results avec', data.length, 'éléments');
-      } else if (Array.isArray(response.data.items)) {
-        data = response.data.items;
-        console.log('✅ Cas 5: Trouvé response.data.items avec', data.length, 'éléments');
-      } else if (response.data.hotelId || response.data.hotel) {
-        data = [response.data];
-        console.log('✅ Cas 6: Objet unique transformé en tableau');
-      } else {
-        console.warn('⚠️ Structure de réponse inconnue:', JSON.stringify(response.data, null, 2).substring(0, 500));
-        data = [];
+        console.log('✅ Trouvé response.data.hotels avec', data.length, 'éléments');
       }
-    } else {
-      console.warn('⚠️ response.data est null ou undefined');
     }
 
     console.log(`✅ ${data.length} hôtels avec tarifs trouvés`);
@@ -128,7 +98,7 @@ app.get("/search-hotels", async (req, res) => {
         address: hotel.hotel?.address || hotel.address || '',
         city: hotel.hotel?.city || hotel.city || city,
         country: hotel.hotel?.country || hotel.country || countryCode,
-        main_photo: hotel.hotel?.main_photo || hotel.main_photo || '',
+        main_photo: hotel.hotel?.main_photo || hotel.main_photo || 'https://picsum.photos/seed/' + (hotel.hotelId || Math.random()) + '/460/380',
         rating: hotel.hotel?.rating || hotel.rating || 0,
         reviewCount: hotel.hotel?.reviewCount || hotel.reviewCount || 0,
         starRating: hotel.hotel?.starRating || hotel.starRating || 0,
@@ -143,6 +113,17 @@ app.get("/search-hotels", async (req, res) => {
     const validHotels = hotels.filter(h => h.minPrice > 0);
     console.log(`📤 Envoi de ${validHotels.length} hôtels avec prix (sur ${hotels.length} au total)`);
 
+    // ✅ Si aucun hôtel trouvé, retourner un message clair
+    if (validHotels.length === 0) {
+      return res.json({ 
+        success: true,
+        hotels: [],
+        total: 0,
+        message: "Aucun hôtel disponible pour cette destination et ces dates",
+        rawTotal: data.length
+      });
+    }
+
     res.json({ 
       success: true,
       hotels: validHotels,
@@ -151,11 +132,6 @@ app.get("/search-hotels", async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error searching for hotels:", error);
-    console.error("📦 Détails de l'erreur:", {
-      message: error.message,
-      stack: error.stack,
-      response: error.response?.data
-    });
     res.status(500).json({ 
       success: false,
       error: "Internal server error", 
@@ -194,17 +170,13 @@ app.get("/search-rates", async (req, res) => {
     });
 
     let rates = [];
-    if (Array.isArray(response.data)) {
-      rates = response.data;
-    } else if (response.data && typeof response.data === 'object') {
+    if (response.data && typeof response.data === 'object') {
       if (response.data.data && Array.isArray(response.data.data)) {
         rates = response.data.data;
-      } else if (Array.isArray(response.data.hotels)) {
+      } else if (Array.isArray(response.data)) {
+        rates = response.data;
+      } else if (response.data.hotels && Array.isArray(response.data.hotels)) {
         rates = response.data.hotels;
-      } else if (Array.isArray(response.data.results)) {
-        rates = response.data.results;
-      } else {
-        rates = [response.data];
       }
     }
 
@@ -627,12 +599,6 @@ app.get("/hotel-reviews", async (req, res) => {
 });
 
 // ============================================
-// 11. RECHERCHE DE LIEUX - SUPPRIMÉE (méthode inexistante)
-// ============================================
-// La méthode sdk.searchPlaces n'existe pas dans le SDK LiteAPI
-// Le frontend doit appeler directement /search-hotels avec le nom de la ville
-
-// ============================================
 // ROUTES FRONTEND
 // ============================================
 app.use(express.static(path.join(__dirname)));
@@ -650,9 +616,19 @@ app.get("/hotel-detail.html", (req, res) => {
 });
 
 // ============================================
+// Gestion des erreurs 404
+// ============================================
+app.use((req, res) => {
+  res.status(404).json({ 
+    success: false,
+    error: "Route not found" 
+  });
+});
+
+// ============================================
 // SERVEUR
 // ============================================
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 10000;
 
 app.listen(port, () => {
   console.log(`\n🚀 ===== LUVIA PLACE SERVER ===== 🚀`);

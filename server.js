@@ -76,22 +76,78 @@ app.get("/search-hotels", async (req, res) => {
       includeHotelData: true // Pour avoir nom, photo, adresse
     });
 
-    const data = response.data || [];
+    // 🔍 LOGS DÉTAILLÉS pour comprendre la structure de la réponse
+    console.log('📦 Type de response:', typeof response);
+    console.log('📦 Clés de response:', Object.keys(response));
+    console.log('📦 Type de response.data:', typeof response.data);
+    console.log('📦 Est-ce un tableau?', Array.isArray(response.data));
+    
+    if (response.data) {
+      console.log('📦 Structure de response.data:', JSON.stringify(response.data, null, 2).substring(0, 1000));
+      console.log('📦 Clés de response.data:', Object.keys(response.data));
+    }
+
+    // ✅ CORRECTION : Gestion robuste de différents formats de réponse
+    let data = [];
+    
+    if (Array.isArray(response.data)) {
+      // Cas 1: response.data est directement un tableau
+      data = response.data;
+      console.log('✅ Cas 1: response.data est un tableau de', data.length, 'éléments');
+    } else if (response.data && typeof response.data === 'object') {
+      // Cas 2: response.data est un objet
+      console.log('📦 response.data est un objet avec les clés:', Object.keys(response.data));
+      
+      // Essayer différents noms de propriétés possibles
+      if (Array.isArray(response.data.hotels)) {
+        data = response.data.hotels;
+        console.log('✅ Cas 2a: Trouvé response.data.hotels avec', data.length, 'éléments');
+      } else if (Array.isArray(response.data.results)) {
+        data = response.data.results;
+        console.log('✅ Cas 2b: Trouvé response.data.results avec', data.length, 'éléments');
+      } else if (Array.isArray(response.data.items)) {
+        data = response.data.items;
+        console.log('✅ Cas 2c: Trouvé response.data.items avec', data.length, 'éléments');
+      } else if (Array.isArray(response.data.data)) {
+        data = response.data.data;
+        console.log('✅ Cas 2d: Trouvé response.data.data avec', data.length, 'éléments');
+      } else if (response.data.hotelId || response.data.hotel) {
+        // Cas 3: C'est un seul hôtel
+        data = [response.data];
+        console.log('✅ Cas 3: Objet unique transformé en tableau');
+      } else {
+        // Cas 4: Autre structure, on log pour diagnostic
+        console.warn('⚠️ Structure de réponse inconnue:', JSON.stringify(response.data, null, 2).substring(0, 500));
+        data = [];
+      }
+    } else {
+      console.warn('⚠️ response.data est null ou undefined');
+    }
+
     console.log(`✅ ${data.length} hôtels avec tarifs trouvés`);
 
     // Enrichir chaque hôtel avec son prix minimum
     const hotels = data.map(function(hotel) {
+      // 🔍 Log pour chaque hôtel
+      console.log(`🏨 Hôtel ${data.indexOf(hotel) + 1}:`, {
+        id: hotel.hotelId || hotel.id,
+        name: hotel.hotel?.name || hotel.name,
+        hasRooms: !!hotel.roomTypes,
+        roomCount: hotel.roomTypes?.length || 0
+      });
+
       const bestRate = hotel.roomTypes?.[0]?.rates?.[0];
+      
       return {
-        id: hotel.hotelId,
-        name: hotel.hotel?.name || 'Hôtel sans nom',
-        address: hotel.hotel?.address || '',
-        city: hotel.hotel?.city || city,
-        country: hotel.hotel?.country || countryCode,
-        main_photo: hotel.hotel?.main_photo || '',
-        rating: hotel.hotel?.rating || 0,
-        reviewCount: hotel.hotel?.reviewCount || 0,
-        starRating: hotel.hotel?.starRating || 0,
+        id: hotel.hotelId || hotel.id || 'N/A',
+        name: hotel.hotel?.name || hotel.name || 'Hôtel sans nom',
+        address: hotel.hotel?.address || hotel.address || '',
+        city: hotel.hotel?.city || hotel.city || city,
+        country: hotel.hotel?.country || hotel.country || countryCode,
+        main_photo: hotel.hotel?.main_photo || hotel.main_photo || '',
+        rating: hotel.hotel?.rating || hotel.rating || 0,
+        reviewCount: hotel.hotel?.reviewCount || hotel.reviewCount || 0,
+        starRating: hotel.hotel?.starRating || hotel.starRating || 0,
         minPrice: bestRate?.retailRate?.total?.[0]?.amount || 0,
         currency: bestRate?.retailRate?.total?.[0]?.currency || 'USD',
         offerId: hotel.roomTypes?.[0]?.offerId || null,
@@ -100,18 +156,28 @@ app.get("/search-hotels", async (req, res) => {
       };
     });
 
-    console.log(`📤 Envoi de ${hotels.length} hôtels`);
+    // Filtrer les hôtels sans prix
+    const validHotels = hotels.filter(h => h.minPrice > 0);
+    console.log(`📤 Envoi de ${validHotels.length} hôtels avec prix (sur ${hotels.length} au total)`);
+
     res.json({ 
       success: true,
-      hotels: hotels,
-      total: hotels.length
+      hotels: validHotels,
+      total: validHotels.length,
+      rawTotal: data.length // Pour debug
     });
   } catch (error) {
     console.error("❌ Error searching for hotels:", error);
+    console.error("📦 Détails de l'erreur:", {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data
+    });
     res.status(500).json({ 
       success: false,
       error: "Internal server error", 
-      message: error.message
+      message: error.message,
+      details: error.response?.data // Pour debug
     });
   }
 });
@@ -145,7 +211,23 @@ app.get("/search-rates", async (req, res) => {
       timeout: 8
     });
 
-    const rates = response.data || [];
+    // 🔍 LOGS pour la structure
+    console.log('📦 Type de response.data:', typeof response.data);
+    console.log('📦 Est-ce un tableau?', Array.isArray(response.data));
+    
+    let rates = [];
+    if (Array.isArray(response.data)) {
+      rates = response.data;
+    } else if (response.data && typeof response.data === 'object') {
+      if (Array.isArray(response.data.hotels)) {
+        rates = response.data.hotels;
+      } else if (Array.isArray(response.data.results)) {
+        rates = response.data.results;
+      } else {
+        rates = [response.data];
+      }
+    }
+
     console.log(`✅ ${rates.length} hôtels dans la réponse`);
 
     if (rates.length === 0) {

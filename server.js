@@ -123,7 +123,7 @@ app.get("/search-places", async (req, res) => {
 });
 
 // ============================================
-// 2. RECHERCHE HÔTELS - AVEC PLACE ID
+// 2. RECHERCHE HÔTELS - CORRIGÉ
 // ============================================
 app.get("/search-hotels", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS ===== 🔍");
@@ -131,8 +131,8 @@ app.get("/search-hotels", async (req, res) => {
     checkin, 
     checkout, 
     adults, 
-    placeId,        // ← Reçu du frontend ou trouvé via /search-places
-    city,           // ← Fallback
+    placeId, 
+    city, 
     environment, 
     limit = 500 
   } = req.query;
@@ -149,24 +149,28 @@ app.get("/search-hotels", async (req, res) => {
     let finalPlaceId = placeId;
 
     // ============================================
-    // ÉTAPE 1: Si pas de placeId, le récupérer via LiteAPI Places
+    // ÉTAPE 1: Récupérer le placeId via LiteAPI Places
     // ============================================
     if (!finalPlaceId && city) {
       console.log(`⏳ Récupération du placeId pour "${city}" via LiteAPI Places...`);
-      finalPlaceId = await getPlaceIdFromLiteAPI(city, apiKey);
+      try {
+        const url = `https://api.liteapi.travel/v3.0/data/places?textQuery=${encodeURIComponent(city)}&language=fr`;
+        const response = await fetch(url, {
+          headers: { 'X-API-Key': apiKey, 'Accept': 'application/json' }
+        });
+        const data = await response.json();
+        if (data.data && data.data.length > 0) {
+          finalPlaceId = data.data[0].placeId;
+          console.log(`✅ PlaceId trouvé: ${finalPlaceId}`);
+        }
+      } catch (error) {
+        console.warn(`⚠️ Erreur LiteAPI Places: ${error.message}`);
+      }
     }
 
-    // ============================================
-    // ÉTAPE 2: Vérifier qu'on a un placeId
-    // ============================================
     if (!finalPlaceId) {
-      console.error('❌ Aucun placeId trouvé pour cette ville');
-      
-      // ⚠️ FALLBACK : Recherche avec city + countryCode
-      console.log('🔄 Fallback: recherche avec city + countryCode');
-      return searchHotelsWithCity(req, res, {
-        checkin, checkout, adults, city, environment, limit
-      });
+      console.error('❌ Aucun placeId trouvé');
+      return res.json({ success: true, hotels: [], total: 0, message: "Ville non reconnue" });
     }
 
     // ============================================
@@ -192,185 +196,240 @@ app.get("/search-hotels", async (req, res) => {
     console.log(`✅ ${hotelList.length} hôtels trouvés`);
 
     if (hotelList.length === 0) {
-      return res.json({ 
-        success: true,
-        hotels: [],
-        total: 0,
-        message: "Aucun hôtel trouvé dans cette zone"
-      });
+      return res.json({ success: true, hotels: [], total: 0, message: "Aucun hôtel trouvé" });
     }
 
     // ============================================
-    // ÉTAPE 4: Récupérer les tarifs
+    // ÉTAPE 4: Récupérer les tarifs (CORRIGÉ)
     // ============================================
     const hotelIds = hotelList.map(h => h.hotelId || h.id).filter(id => id);
     console.log(`📋 ${hotelIds.length} IDs d'hôtels extraits`);
 
-    const BATCH_SIZE = 50;
-    const batches = [];
-    for (let i = 0; i < Math.min(hotelIds.length, 500); i += BATCH_SIZE) {
-      batches.push(hotelIds.slice(i, i + BATCH_SIZE));
-    }
-    
-    console.log(`📦 ${batches.length} lots de ${BATCH_SIZE} hôtels`);
+    // ✅ Tester avec moins d'hôtels pour debug
+    const testHotelIds = hotelIds.slice(0, 20);
+    console.log(`🧪 Test avec ${testHotelIds.length} hôtels`);
 
-    const rateMap = {};
-    let totalWithRates = 0;
-    
-    for (let i = 0; i < batches.length; i++) {
-      const batch = batches[i];
-      console.log(`⏳ Lot ${i + 1}/${batches.length}: ${batch.length} hôtels...`);
-      
-      try {
-        const ratesResponse = await sdk.getFullRates({
-          hotelIds: batch.join(','),
-          occupancies: [{ adults: parseInt(adults, 10) || 2 }],
+    // ✅ Essayer avec un tableau (pas une chaîne CSV)
+    try {
+      console.log('📦 Tentative avec hotelIds en tableau...');
+      const ratesResponse = await sdk.getFullRates({
+        hotelIds: testHotelIds,  // ← TABLEAU, pas string
+        occupancies: [{ adults: parseInt(adults, 10) || 2 }],
+        currency: "USD",
+        guestNationality: "US",
+        checkin: checkin,
+        checkout: checkout,
+        maxRatesPerHotel: 1,
+        timeout: 30,  // ← Augmenté
+        includeHotelData: true
+      });
+
+      console.log('📦 Réponse rates:', {
+        status: ratesResponse.status,
+        dataLength: ratesResponse.data?.length || 0,
+        dataKeys: ratesResponse.data ? Object.keys(ratesResponse.data) : []
+      });
+
+      let rateData = [];
+      if (Array.isArray(ratesResponse.data)) {
+        rateData = ratesResponse.data;
+      } else if (ratesResponse.data && Array.isArray(ratesResponse.data.data)) {
+        rateData = ratesResponse.data.data;
+      } else if (ratesResponse.data && Array.isArray(ratesResponse.data.hotels)) {
+        rateData = ratesResponse.data.hotels;
+      }
+
+      console.log(`✅ ${rateData.length} hôtels avec tarifs (test)`);
+
+      if (rateData.length > 0) {
+        // ✅ On a des tarifs ! On continue avec tous les hôtels par lots
+        const BATCH_SIZE = 50;
+        const batches = [];
+        for (let i = 0; i < Math.min(hotelIds.length, 500); i += BATCH_SIZE) {
+          batches.push(hotelIds.slice(i, i + BATCH_SIZE));
+        }
+
+        const rateMap = {};
+        let totalWithRates = 0;
+
+        for (let i = 0; i < batches.length; i++) {
+          const batch = batches[i];
+          console.log(`⏳ Lot ${i + 1}/${batches.length}: ${batch.length} hôtels...`);
+          
+          try {
+            const batchResponse = await sdk.getFullRates({
+              hotelIds: batch,  // ← TABLEAU
+              occupancies: [{ adults: parseInt(adults, 10) || 2 }],
+              currency: "USD",
+              guestNationality: "US",
+              checkin: checkin,
+              checkout: checkout,
+              maxRatesPerHotel: 1,
+              timeout: 30,
+              includeHotelData: true
+            });
+
+            let batchData = [];
+            if (Array.isArray(batchResponse.data)) {
+              batchData = batchResponse.data;
+            } else if (batchResponse.data && Array.isArray(batchResponse.data.data)) {
+              batchData = batchResponse.data.data;
+            } else if (batchResponse.data && Array.isArray(batchResponse.data.hotels)) {
+              batchData = batchResponse.data.hotels;
+            }
+
+            batchData.forEach(function(item) {
+              const hotelId = item.hotelId || item.id;
+              if (hotelId) {
+                rateMap[hotelId] = item;
+              }
+            });
+            
+            totalWithRates += batchData.length;
+            console.log(`✅ Lot ${i + 1}: ${batchData.length} hôtels avec tarifs`);
+            
+          } catch (error) {
+            console.warn(`⚠️ Erreur lot ${i + 1}: ${error.message}`);
+          }
+        }
+
+        console.log(`✅ Total: ${Object.keys(rateMap).length} hôtels avec tarifs`);
+
+        // ============================================
+        // ÉTAPE 5: Fusionner les données
+        // ============================================
+        const hotels = hotelList.map(function(hotel) {
+          const hotelId = hotel.hotelId || hotel.id;
+          const rateItem = rateMap[hotelId] || {};
+          const bestRate = rateItem.roomTypes?.[0]?.rates?.[0];
+          
+          let name = hotel.name || hotel.hotelName || 'Hôtel sans nom';
+          let photo = hotel.main_photo || hotel.photo || hotel.image || 
+            `https://picsum.photos/seed/${hotelId || Math.random()}/460/380`;
+
+          return {
+            id: hotelId || `hotel-${Math.random()}`,
+            name: name,
+            address: hotel.address || hotel.city || city,
+            city: hotel.city || city,
+            country: hotel.country || '',
+            main_photo: photo,
+            rating: hotel.rating || 0,
+            reviewCount: hotel.reviewCount || hotel.review_count || 0,
+            starRating: hotel.starRating || 0,
+            minPrice: bestRate?.retailRate?.total?.[0]?.amount || 0,
+            currency: bestRate?.retailRate?.total?.[0]?.currency || 'USD',
+            offerId: rateItem.roomTypes?.[0]?.offerId || null,
+            roomName: bestRate?.name || 'Chambre standard',
+            refundable: bestRate?.cancellationPolicies?.refundableTag === 'RFN'
+          };
+        });
+
+        const validHotels = hotels
+          .filter(h => h.minPrice > 0)
+          .sort((a, b) => a.minPrice - b.minPrice);
+
+        const finalHotels = validHotels.slice(0, 500);
+        
+        console.log(`\n📊 RÉSULTAT FINAL:`);
+        console.log(`  - Total hôtels: ${hotelList.length}`);
+        console.log(`  - Hôtels avec tarifs: ${validHotels.length}`);
+        console.log(`  - Hôtels retournés: ${finalHotels.length}`);
+
+        return res.json({ 
+          success: true,
+          hotels: finalHotels,
+          total: finalHotels.length,
+          rawTotal: hotelList.length,
+          placeIdUsed: finalPlaceId,
+          availableWithPrice: validHotels.length
+        });
+      } else {
+        // ❌ Pas de tarifs pour le test
+        console.warn('⚠️ Aucun tarif trouvé pour les 20 premiers hôtels');
+        console.log('🔍 Vérification des dates et paramètres...');
+        
+        // Essayer avec des dates plus proches
+        const today = new Date();
+        const futureDate = new Date(today);
+        futureDate.setDate(today.getDate() + 30);
+        const futureCheckin = futureDate.toISOString().split('T')[0];
+        const futureCheckout = new Date(futureDate);
+        futureCheckout.setDate(futureDate.getDate() + 2);
+        const futureCheckoutStr = futureCheckout.toISOString().split('T')[0];
+        
+        console.log(`🔄 Test avec dates futures: ${futureCheckin} - ${futureCheckoutStr}`);
+        
+        // Essayer avec une occupancy différente
+        const alternativeResponse = await sdk.getFullRates({
+          hotelIds: testHotelIds.slice(0, 5),
+          occupancies: [{ adults: 1 }],  // ← Test avec 1 adulte
           currency: "USD",
           guestNationality: "US",
-          checkin: checkin,
-          checkout: checkout,
+          checkin: futureCheckin,
+          checkout: futureCheckoutStr,
           maxRatesPerHotel: 1,
-          timeout: 15,
+          timeout: 30,
           includeHotelData: true
         });
-
-        let rateData = [];
-        if (Array.isArray(ratesResponse.data)) {
-          rateData = ratesResponse.data;
-        } else if (ratesResponse.data && Array.isArray(ratesResponse.data.data)) {
-          rateData = ratesResponse.data.data;
-        } else if (ratesResponse.data && Array.isArray(ratesResponse.data.hotels)) {
-          rateData = ratesResponse.data.hotels;
+        
+        let altData = [];
+        if (Array.isArray(alternativeResponse.data)) {
+          altData = alternativeResponse.data;
+        } else if (alternativeResponse.data && Array.isArray(alternativeResponse.data.data)) {
+          altData = alternativeResponse.data.data;
         }
-
-        rateData.forEach(function(item) {
-          const hotelId = item.hotelId || item.id;
-          if (hotelId) {
-            rateMap[hotelId] = item;
+        
+        console.log(`🧪 Test dates futures: ${altData.length} hôtels avec tarifs`);
+        
+        if (altData.length === 0) {
+          // Dernier essai : changer la nationalité
+          const lastTry = await sdk.getFullRates({
+            hotelIds: testHotelIds.slice(0, 5),
+            occupancies: [{ adults: 2 }],
+            currency: "EUR",  // ← Changement de devise
+            guestNationality: "FR",  // ← Changement de nationalité
+            checkin: futureCheckin,
+            checkout: futureCheckoutStr,
+            maxRatesPerHotel: 1,
+            timeout: 30,
+            includeHotelData: true
+          });
+          
+          let lastData = [];
+          if (Array.isArray(lastTry.data)) {
+            lastData = lastTry.data;
+          } else if (lastTry.data && Array.isArray(lastTry.data.data)) {
+            lastData = lastTry.data.data;
+          }
+          
+          console.log(`🧪 Test avec EUR/FR: ${lastData.length} hôtels avec tarifs`);
+        }
+        
+        return res.json({ 
+          success: true,
+          hotels: [],
+          total: 0,
+          message: "Aucun tarif disponible pour ces dates",
+          debug: {
+            hotelsFound: hotelList.length,
+            testRates: rateData.length,
+            alternativeRates: altData.length
           }
         });
-        
-        totalWithRates += rateData.length;
-        console.log(`✅ Lot ${i + 1}: ${rateData.length} hôtels avec tarifs`);
-        
-      } catch (error) {
-        console.warn(`⚠️ Erreur lot ${i + 1}: ${error.message}`);
       }
-    }
-
-    console.log(`✅ Total: ${Object.keys(rateMap).length} hôtels avec tarifs`);
-
-    // ============================================
-    // ÉTAPE 5: Fusionner les données
-    // ============================================
-    const hotels = hotelList.map(function(hotel) {
-      const hotelId = hotel.hotelId || hotel.id;
-      const rateItem = rateMap[hotelId] || {};
-      const bestRate = rateItem.roomTypes?.[0]?.rates?.[0];
+    } catch (error) {
+      console.error('❌ Erreur getFullRates:', error.message);
+      console.error('📦 Détails:', error.response?.data || error);
       
-      let name = 'Hôtel sans nom';
-      const nameCandidates = [
-        hotel.name, hotel.hotelName, hotel.hotel_name, hotel.title,
-        hotel.fullName, hotel.establishmentName, hotel.propertyName,
-        hotel['Hotel Name'], hotel.name_en, hotel.name_fr
-      ];
-      for (let n of nameCandidates) {
-        if (n && typeof n === 'string' && n.trim().length > 0) {
-          name = n.trim();
-          break;
-        }
-      }
-
-      let photo = '';
-      const photoCandidates = [
-        hotel.main_photo, hotel.mainPhoto, hotel.photo, hotel.image,
-        hotel.picture, hotel.thumbnail, hotel.images?.[0], hotel.photos?.[0],
-        hotel.hotelImage, hotel.imageUrl
-      ];
-      for (let p of photoCandidates) {
-        if (p && typeof p === 'string' && p.trim().length > 0) {
-          photo = p.trim();
-          break;
-        }
-      }
-      if (!photo) {
-        photo = `https://picsum.photos/seed/${hotelId || Math.random()}/460/380`;
-      }
-
-      let address = '';
-      const addressCandidates = [
-        hotel.address, hotel.streetAddress, hotel.street,
-        hotel.addressLine1, hotel.fullAddress, hotel.location?.address
-      ];
-      for (let a of addressCandidates) {
-        if (a && typeof a === 'string' && a.trim().length > 0) {
-          address = a.trim();
-          break;
-        }
-      }
-
-      let rating = 0;
-      const ratingCandidates = [
-        hotel.rating, hotel.score, hotel.averageRating,
-        hotel.overallRating, hotel.starRating
-      ];
-      for (let r of ratingCandidates) {
-        if (r && !isNaN(parseFloat(r)) && parseFloat(r) > 0) {
-          rating = parseFloat(r);
-          break;
-        }
-      }
-
-      let starRating = 0;
-      const starCandidates = [
-        hotel.starRating, hotel.stars, hotel.star_rating,
-        hotel.hotelClass, hotel.category
-      ];
-      for (let s of starCandidates) {
-        if (s && !isNaN(parseFloat(s)) && parseFloat(s) > 0) {
-          starRating = parseFloat(s);
-          break;
-        }
-      }
-
-      return {
-        id: hotelId || `hotel-${Math.random()}`,
-        name: name,
-        address: address || hotel.city || city,
-        city: hotel.city || city,
-        country: hotel.country || '',
-        main_photo: photo,
-        rating: rating || 0,
-        reviewCount: hotel.reviewCount || hotel.review_count || 0,
-        starRating: starRating || 0,
-        minPrice: bestRate?.retailRate?.total?.[0]?.amount || 0,
-        currency: bestRate?.retailRate?.total?.[0]?.currency || 'USD',
-        offerId: rateItem.roomTypes?.[0]?.offerId || null,
-        roomName: bestRate?.name || 'Chambre standard',
-        refundable: bestRate?.cancellationPolicies?.refundableTag === 'RFN'
-      };
-    });
-
-    const validHotels = hotels
-      .filter(h => h.minPrice > 0)
-      .sort((a, b) => a.minPrice - b.minPrice);
-
-    const maxReturn = 500;
-    const finalHotels = validHotels.slice(0, maxReturn);
-    
-    console.log(`\n📊 RÉSULTAT FINAL:`);
-    console.log(`  - Total hôtels: ${hotelList.length}`);
-    console.log(`  - Hôtels avec tarifs: ${validHotels.length}`);
-    console.log(`  - Hôtels retournés: ${finalHotels.length}`);
-
-    res.json({ 
-      success: true,
-      hotels: finalHotels,
-      total: finalHotels.length,
-      rawTotal: hotelList.length,
-      placeIdUsed: finalPlaceId,
-      availableWithPrice: validHotels.length
-    });
+      return res.json({ 
+        success: false,
+        error: "Erreur lors de la récupération des tarifs",
+        message: error.message,
+        hotels: [],
+        total: 0
+      });
+    }
   } catch (error) {
     console.error("❌ Error:", error);
     res.status(500).json({ 

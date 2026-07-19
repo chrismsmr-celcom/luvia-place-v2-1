@@ -46,7 +46,7 @@ app.use((req, res, next) => {
 });
 
 // ============================================
-// 1. RECHERCHE HÔTELS - OPTIMISÉ (1 seul appel)
+// 1. RECHERCHE HÔTELS
 // ============================================
 app.get("/search-hotels", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS ===== 🔍");
@@ -61,9 +61,8 @@ app.get("/search-hotels", async (req, res) => {
   try {
     console.log(`⏳ Recherche des tarifs pour ${city}...`);
     
-    // UN SEUL APPEL à l'API (pas getHotels + getFullRates)
     const response = await sdk.getFullRates({
-      countryCode: countryCode,
+      countryCode: countryCode || "CD",
       cityName: city,
       checkin: checkin,
       checkout: checkout,
@@ -71,12 +70,11 @@ app.get("/search-hotels", async (req, res) => {
       guestNationality: "US",
       occupancies: [{ adults: parseInt(adults, 10) }],
       limit: parseInt(limit),
-      maxRatesPerHotel: 1,  // Seulement le meilleur prix par hôtel pour le listing
-      timeout: 8,           // Recommandé par LiteAPI
-      includeHotelData: true // Pour avoir nom, photo, adresse
+      maxRatesPerHotel: 1,
+      timeout: 8,
+      includeHotelData: true
     });
 
-    // 🔍 LOGS DÉTAILLÉS pour comprendre la structure de la réponse
     console.log('📦 Type de response:', typeof response);
     console.log('📦 Clés de response:', Object.keys(response));
     console.log('📦 Type de response.data:', typeof response.data);
@@ -84,39 +82,34 @@ app.get("/search-hotels", async (req, res) => {
     
     if (response.data) {
       console.log('📦 Structure de response.data:', JSON.stringify(response.data, null, 2).substring(0, 1000));
-      console.log('📦 Clés de response.data:', Object.keys(response.data));
     }
 
-    // ✅ CORRECTION : Gestion robuste de différents formats de réponse
+    // ✅ Gestion correcte de la structure { data: [], guestLevel: 0, sandbox: false }
     let data = [];
     
     if (Array.isArray(response.data)) {
-      // Cas 1: response.data est directement un tableau
       data = response.data;
       console.log('✅ Cas 1: response.data est un tableau de', data.length, 'éléments');
     } else if (response.data && typeof response.data === 'object') {
-      // Cas 2: response.data est un objet
       console.log('📦 response.data est un objet avec les clés:', Object.keys(response.data));
       
-      // Essayer différents noms de propriétés possibles
-      if (Array.isArray(response.data.hotels)) {
+      // ✅ Vérifier si response.data a une propriété 'data' qui est un tableau
+      if (response.data.data && Array.isArray(response.data.data)) {
+        data = response.data.data;
+        console.log('✅ Cas 2: Trouvé response.data.data avec', data.length, 'éléments');
+      } else if (Array.isArray(response.data.hotels)) {
         data = response.data.hotels;
-        console.log('✅ Cas 2a: Trouvé response.data.hotels avec', data.length, 'éléments');
+        console.log('✅ Cas 3: Trouvé response.data.hotels avec', data.length, 'éléments');
       } else if (Array.isArray(response.data.results)) {
         data = response.data.results;
-        console.log('✅ Cas 2b: Trouvé response.data.results avec', data.length, 'éléments');
+        console.log('✅ Cas 4: Trouvé response.data.results avec', data.length, 'éléments');
       } else if (Array.isArray(response.data.items)) {
         data = response.data.items;
-        console.log('✅ Cas 2c: Trouvé response.data.items avec', data.length, 'éléments');
-      } else if (Array.isArray(response.data.data)) {
-        data = response.data.data;
-        console.log('✅ Cas 2d: Trouvé response.data.data avec', data.length, 'éléments');
+        console.log('✅ Cas 5: Trouvé response.data.items avec', data.length, 'éléments');
       } else if (response.data.hotelId || response.data.hotel) {
-        // Cas 3: C'est un seul hôtel
         data = [response.data];
-        console.log('✅ Cas 3: Objet unique transformé en tableau');
+        console.log('✅ Cas 6: Objet unique transformé en tableau');
       } else {
-        // Cas 4: Autre structure, on log pour diagnostic
         console.warn('⚠️ Structure de réponse inconnue:', JSON.stringify(response.data, null, 2).substring(0, 500));
         data = [];
       }
@@ -126,16 +119,7 @@ app.get("/search-hotels", async (req, res) => {
 
     console.log(`✅ ${data.length} hôtels avec tarifs trouvés`);
 
-    // Enrichir chaque hôtel avec son prix minimum
     const hotels = data.map(function(hotel) {
-      // 🔍 Log pour chaque hôtel
-      console.log(`🏨 Hôtel ${data.indexOf(hotel) + 1}:`, {
-        id: hotel.hotelId || hotel.id,
-        name: hotel.hotel?.name || hotel.name,
-        hasRooms: !!hotel.roomTypes,
-        roomCount: hotel.roomTypes?.length || 0
-      });
-
       const bestRate = hotel.roomTypes?.[0]?.rates?.[0];
       
       return {
@@ -156,7 +140,6 @@ app.get("/search-hotels", async (req, res) => {
       };
     });
 
-    // Filtrer les hôtels sans prix
     const validHotels = hotels.filter(h => h.minPrice > 0);
     console.log(`📤 Envoi de ${validHotels.length} hôtels avec prix (sur ${hotels.length} au total)`);
 
@@ -164,7 +147,7 @@ app.get("/search-hotels", async (req, res) => {
       success: true,
       hotels: validHotels,
       total: validHotels.length,
-      rawTotal: data.length // Pour debug
+      rawTotal: data.length
     });
   } catch (error) {
     console.error("❌ Error searching for hotels:", error);
@@ -176,8 +159,7 @@ app.get("/search-hotels", async (req, res) => {
     res.status(500).json({ 
       success: false,
       error: "Internal server error", 
-      message: error.message,
-      details: error.response?.data // Pour debug
+      message: error.message
     });
   }
 });
@@ -211,15 +193,13 @@ app.get("/search-rates", async (req, res) => {
       timeout: 8
     });
 
-    // 🔍 LOGS pour la structure
-    console.log('📦 Type de response.data:', typeof response.data);
-    console.log('📦 Est-ce un tableau?', Array.isArray(response.data));
-    
     let rates = [];
     if (Array.isArray(response.data)) {
       rates = response.data;
     } else if (response.data && typeof response.data === 'object') {
-      if (Array.isArray(response.data.hotels)) {
+      if (response.data.data && Array.isArray(response.data.data)) {
+        rates = response.data.data;
+      } else if (Array.isArray(response.data.hotels)) {
         rates = response.data.hotels;
       } else if (Array.isArray(response.data.results)) {
         rates = response.data.results;
@@ -258,7 +238,6 @@ app.get("/search-rates", async (req, res) => {
       });
     });
 
-    // Prix minimum
     let minPrice = null;
     rateInfo.forEach(function(r) {
       if (r.retailRate > 0 && (minPrice === null || r.retailRate < minPrice)) {
@@ -295,7 +274,7 @@ app.get("/search-rates", async (req, res) => {
 });
 
 // ============================================
-// 3. PRÉ-RÉSERVATION HÔTEL (POST - sécurisé)
+// 3. PRÉ-RÉSERVATION HÔTEL
 // ============================================
 app.post("/prebook", async (req, res) => {
   console.log("\n📋 ===== PREBOOK ===== 📋");
@@ -345,7 +324,7 @@ app.post("/prebook", async (req, res) => {
 });
 
 // ============================================
-// 4. RÉSERVATION FINALE HÔTEL (POST - sécurisé)
+// 4. RÉSERVATION FINALE HÔTEL
 // ============================================
 app.post("/book", async (req, res) => {
   console.log("\n📝 ===== BOOK ===== 📝");
@@ -359,7 +338,6 @@ app.post("/book", async (req, res) => {
     environment 
   } = req.body;
 
-  // Validation des champs requis
   if (!prebookId) {
     return res.status(400).json({ 
       success: false,
@@ -388,17 +366,16 @@ app.post("/book", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  // ✅ Corps correct selon l'API LiteAPI
   const bodyData = {
     prebookId: prebookId,
     holder: {
       firstName: guestFirstName,
       lastName: guestLastName,
       email: guestEmail,
-      phone: guestPhone || '+1234567890' // Phone est requis par l'API
+      phone: guestPhone || '+1234567890'
     },
     payment: {
-      method: "TRANSACTION_ID", // ✅ Exactement ce nom
+      method: "TRANSACTION_ID",
       transactionId: transactionId
     },
     guests: [
@@ -585,7 +562,6 @@ app.get("/hotel-details", async (req, res) => {
     console.log(`🏨 Hôtel: ${hotel.name}`);
     console.log(`🛏️ Chambres: ${hotel.rooms?.length || 0}`);
 
-    // Extraire les chambres avec photos
     const rooms = (hotel.rooms || []).map(function(room) {
       return {
         id: room.id,
@@ -651,31 +627,10 @@ app.get("/hotel-reviews", async (req, res) => {
 });
 
 // ============================================
-// 11. RECHERCHE DE LIEUX
+// 11. RECHERCHE DE LIEUX - SUPPRIMÉE (méthode inexistante)
 // ============================================
-app.get("/search-places", async (req, res) => {
-  console.log("\n📍 ===== SEARCH PLACES ===== 📍");
-  const { query, environment } = req.query;
-  const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
-  const sdk = liteApi(apiKey);
-
-  console.log(`🔍 Recherche: "${query}"`);
-
-  try {
-    console.log(`⏳ Recherche de lieux...`);
-    const response = await sdk.searchPlaces(query);
-    console.log(`✅ ${response.data?.length || 0} lieux trouvés`);
-    
-    res.json({ success: true, data: response.data });
-  } catch (error) {
-    console.error("❌ Error searching places:", error);
-    res.status(500).json({ 
-      success: false,
-      error: "Failed to search places",
-      message: error.message
-    });
-  }
-});
+// La méthode sdk.searchPlaces n'existe pas dans le SDK LiteAPI
+// Le frontend doit appeler directement /search-hotels avec le nom de la ville
 
 // ============================================
 // ROUTES FRONTEND
@@ -686,8 +641,8 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.get("/results.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "results.html"));
+app.get("/resultats-hebergement.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "resultats-hebergement.html"));
 });
 
 app.get("/hotel-detail.html", (req, res) => {
@@ -706,13 +661,12 @@ app.listen(port, () => {
   console.log(`🔑 API Key (prod): ${prod_apiKey ? '✅' : '❌'}`);
   console.log(`🔑 API Key (sandbox): ${sandbox_apiKey ? '✅' : '❌'}`);
   console.log(`\n📋 ENDPOINTS:`);
-  console.log(`   🔍 GET  /search-hotels     - Hôtels (1 appel optimisé)`);
+  console.log(`   🔍 GET  /search-hotels     - Hôtels`);
   console.log(`   💰 GET  /search-rates      - Tarifs détaillés`);
   console.log(`   📋 POST /prebook           - Pré-réservation hôtel`);
-  console.log(`   📝 POST /book              - Réservation hôtel (POST sécurisé)`);
+  console.log(`   📝 POST /book              - Réservation hôtel`);
   console.log(`   🏨 GET  /hotel-details     - Détails hôtel`);
   console.log(`   ⭐ GET  /hotel-reviews     - Avis hôtel`);
-  console.log(`   📍 GET  /search-places     - Autocomplete`);
   console.log(`   ✈️ POST /search-flights    - Recherche vols`);
   console.log(`   ✈️ POST /prebook-flight    - Pré-réservation vol`);
   console.log(`   ✈️ POST /book-flight       - Réservation vol`);

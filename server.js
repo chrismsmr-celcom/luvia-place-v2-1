@@ -70,9 +70,20 @@ app.get("/search-places", async (req, res) => {
 });
 
 // ============================================
-// 2) SEARCH HOTELS (wrapper pour POST /hotels/rates)
-//    Ce endpoint est utilisé par le frontend pour obtenir une liste d'hôtels
-//    avec leurs prix minimums.
+// RECHERCHE HÔTELS - VERSION GET (compatibilité)
+// ============================================
+app.get("/search-hotels", async (req, res) => {
+  console.log("\n🔍 ===== SEARCH HOTELS (GET) ===== 🔍");
+  // On redirige vers la version POST en convertissant les query params en body
+  const body = req.query;
+  req.body = body;
+  return app._router.handle(req, res, (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+  });
+});
+
+// ============================================
+// RECHERCHE HÔTELS - VERSION POST (améliorée selon l'exemple LiteAPI)
 // ============================================
 app.post("/search-hotels", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS (POST) ===== 🔍");
@@ -85,7 +96,7 @@ app.post("/search-hotels", async (req, res) => {
     hotelId,
     aiSearch,
     environment,
-    maxRatesPerHotel = 10,
+    maxRatesPerHotel = 50,   // Augmenté pour obtenir plus d'hôtels
     includeHotelData = true,
     roomMapping = true,
     currency = "USD",
@@ -110,7 +121,7 @@ app.post("/search-hotels", async (req, res) => {
   }
 
   try {
-    // Construction du corps de la requête conforme à la doc LiteAPI
+    // 1. Construction de la requête vers l'API LiteAPI (POST /hotels/rates)
     const requestBody = {
       occupancies: [{ adults: parseInt(adults, 10) }],
       currency: currency,
@@ -120,19 +131,15 @@ app.post("/search-hotels", async (req, res) => {
       maxRatesPerHotel: parseInt(maxRatesPerHotel, 10),
       roomMapping: roomMapping === "true" || roomMapping === true,
       includeHotelData: includeHotelData === "true" || includeHotelData === true,
-      timeout: 8
+      timeout: 10   // Timeout un peu plus long
     };
 
-    // Ajout du critère de recherche
     if (aiSearch) {
       requestBody.aiSearch = aiSearch;
-      console.log(`🔍 Recherche IA: "${aiSearch}"`);
     } else if (placeId) {
       requestBody.placeId = placeId;
-      console.log(`📍 Recherche par lieu: ${placeId}`);
     } else if (hotelId) {
       requestBody.hotelIds = [hotelId];
-      console.log(`🏨 Recherche par hôtel: ${hotelId}`);
     } else {
       return res.status(400).json({
         success: false,
@@ -140,19 +147,30 @@ app.post("/search-hotels", async (req, res) => {
       });
     }
 
-    console.log(`📦 Requête envoyée à LiteAPI:`, JSON.stringify(requestBody, null, 2));
+    console.log(`📦 Requête envoyée à LiteAPI (rates):`, JSON.stringify(requestBody, null, 2));
 
-    // Appel direct à l'API LiteAPI (via le SDK)
+    // 2. Appel à l'API
     const response = await sdk.getFullRates(requestBody);
 
-    // Extraction des données
+    // 3. Extraction des données
     const ratesData = Array.isArray(response?.data?.data) ? response.data.data : [];
     const hotelsData = response?.data?.hotels || []; // tableau enrichi pour AI search
 
     console.log(`✅ ${ratesData.length} tarifs trouvés`);
     console.log(`✅ ${hotelsData.length} hôtels enrichis (IA)`);
 
-    // Fonction utilitaire pour extraire la photo principale
+    // 4. Fonction utilitaire pour récupérer les détails complets d'un hôtel
+    async function getHotelDetailsFull(hotelId) {
+      try {
+        const details = await sdk.getHotelDetails(hotelId, 10); // timeout 10s
+        return details.data;
+      } catch (err) {
+        console.log(`⚠️ Échec pour l'hôtel ${hotelId}: ${err.message}`);
+        return null;
+      }
+    }
+
+    // 5. Fonction pour extraire la photo principale
     function getMainPhoto(hotelObj) {
       if (hotelObj.main_photo) return hotelObj.main_photo;
       if (hotelObj.hotelImages && hotelObj.hotelImages.length > 0) {
@@ -161,18 +179,15 @@ app.post("/search-hotels", async (req, res) => {
       return '';
     }
 
+    // 6. Construction de la liste finale des hôtels
     let hotels = [];
 
     if (aiSearch && hotelsData.length > 0) {
       // Cas AI : on utilise les données enrichies du tableau `hotels`
       hotels = hotelsData.map((hotel) => {
         const rateData = ratesData.find((r) => r.hotelId === hotel.id);
-        let minPrice = 0;
-        let currency = 'USD';
-        let offerId = null;
-        let roomName = 'Chambre standard';
-        let refundable = false;
-        let boardName = 'Non spécifié';
+        let minPrice = 0, currency = 'USD', offerId = null;
+        let roomName = 'Chambre standard', boardName = 'Non spécifié', refundable = false;
 
         if (rateData && rateData.roomTypes && rateData.roomTypes.length > 0) {
           const firstRoom = rateData.roomTypes[0];
@@ -211,38 +226,58 @@ app.post("/search-hotels", async (req, res) => {
         };
       });
     } else {
-      // Cas standard (placeId ou hotelId)
-      hotels = ratesData.map((rateData) => {
-        const hotel = rateData.hotel || {};
+      // Cas standard (placeId ou hotelId) : on enrichit chaque hôtel avec getHotelDetails
+      // si les données de rateData.hotel sont insuffisantes
+      const hotelPromises = ratesData.map(async (rateData) => {
+        const hotelId = rateData.hotelId;
+        let hotelDetails = null;
+
+        // On regarde d'abord ce que contient rateData.hotel
+        if (rateData.hotel && rateData.hotel.name) {
+          hotelDetails = rateData.hotel;
+        } else {
+          // Si absent, on appelle getHotelDetails
+          hotelDetails = await getHotelDetailsFull(hotelId);
+        }
+
         const firstRoom = rateData.roomTypes?.[0];
         const rate = firstRoom?.rates?.[0];
-        const main_photo = getMainPhoto(hotel);
+        const main_photo = getMainPhoto(hotelDetails || rateData.hotel || {});
 
         return {
-          id: rateData.hotelId,
-          name: hotel.name || 'Hôtel sans nom',
-          address: hotel.address || '',
-          city: hotel.city || '',
-          country: hotel.country || '',
+          id: hotelId,
+          name: hotelDetails?.name || rateData.hotel?.name || 'Hôtel sans nom',
+          address: hotelDetails?.address || rateData.hotel?.address || '',
+          city: hotelDetails?.city || rateData.hotel?.city || '',
+          country: hotelDetails?.country || rateData.hotel?.country || '',
           main_photo: main_photo,
-          rating: hotel.rating || 0,
-          reviewCount: hotel.reviewCount || 0,
-          starRating: hotel.starRating || 0,
+          rating: hotelDetails?.rating || rateData.hotel?.rating || 0,
+          reviewCount: hotelDetails?.reviewCount || rateData.hotel?.reviewCount || 0,
+          starRating: hotelDetails?.starRating || rateData.hotel?.starRating || 0,
           minPrice: rate?.retailRate?.total?.[0]?.amount || 0,
           currency: rate?.retailRate?.total?.[0]?.currency || 'USD',
           offerId: firstRoom?.offerId || null,
           roomName: rate?.name || 'Chambre standard',
           boardName: rate?.boardName || 'Non spécifié',
-          refundable: rate?.cancellationPolicies?.refundableTag === 'RFN'
+          refundable: rate?.cancellationPolicies?.refundableTag === 'RFN',
+          tags: hotelDetails?.tags || [],
+          persona: hotelDetails?.persona || '',
+          style: hotelDetails?.style || '',
+          location_type: hotelDetails?.location_type || '',
+          story: hotelDetails?.story || ''
         };
       });
+
+      hotels = await Promise.all(hotelPromises);
     }
 
-    // Filtrer les hôtels sans prix et limiter le nombre
+    // 7. Filtrer ceux sans prix et limiter le nombre
     hotels = hotels.filter(h => h.minPrice > 0);
     if (limit && hotels.length > limit) {
       hotels = hotels.slice(0, limit);
     }
+
+    console.log(`✅ ${hotels.length} hôtels retournés avec données complètes`);
 
     res.json({
       success: true,

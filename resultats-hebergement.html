@@ -304,64 +304,48 @@ function searchPlaces(query) {
 }
 
 // ✅ ADAPTÉ : utilise GET /search-hotels (comme dans votre backend)
+// Dans votre frontend, supprimez l'appel à searchPlaces
 function searchHotels(searchParams) {
   var destination = searchParams.destination || '';
   var checkin = searchParams.checkin || '';
   var checkout = searchParams.checkout || '';
   var adults = parseInt(searchParams.adults || '2', 10);
-  var countryCode = searchParams.countryCode || 'FR';
+  var countryCode = searchParams.countryCode || 'CD';
 
-  console.log('🔍 searchHotels appelé avec:', searchParams);
+  var queryParams = new URLSearchParams({
+    checkin: checkin,
+    checkout: checkout,
+    adults: adults,
+    city: destination,
+    countryCode: countryCode,
+    environment: 'production',
+    limit: 200
+  });
 
-  return searchPlaces(destination)
-    .then(function(places) {
-      var city = destination;
-      // Si on a des places, on prend le premier
-      if (places && places.length > 0) {
-        city = places[0].name || destination;
-        // On peut aussi récupérer le pays depuis la réponse
-        if (places[0].country) {
-          countryCode = places[0].country;
-        }
-      }
-
-      // ✅ Construction des paramètres pour GET /search-hotels
-      var queryParams = new URLSearchParams({
-        checkin: checkin,
-        checkout: checkout,
-        adults: adults,
-        city: city,
-        countryCode: countryCode,
-        environment: 'production',
-        limit: 200
+  var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
+  
+  return fetch(url, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json'
+    }
+  })
+  .then(function(response) {
+    if (!response.ok) {
+      return response.text().then(function(text) {
+        throw new Error('HTTP ' + response.status + ': ' + text);
       });
-
-      var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
-      console.log('📦 URL appelée:', url);
-
-      return fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
-      })
-      .then(function(response) {
-        if (!response.ok) {
-          return response.text().then(function(text) {
-            throw new Error('HTTP ' + response.status + ': ' + text);
-          });
-        }
-        return response.json();
-      })
-      .then(function(data) {
-        console.log('✅ /search-hotels réponse:', data);
-        return data.success ? data : null;
-      })
-      .catch(function(error) {
-        console.error('❌ searchHotels error:', error.message);
-        return null;
-      });
-    });
+    }
+    return response.json();
+  })
+  .then(function(data) {
+    console.log('✅ /search-hotels réponse:', data);
+    return data.success ? data : null;
+  })
+  .catch(function(error) {
+    console.error('❌ searchHotels error:', error.message);
+    return null;
+  });
 }
 
 function formatDate(dateStr) {

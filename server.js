@@ -82,106 +82,246 @@ app.get("/search-places", async (req, res) => {
 });
 
 // ============================================
-// RECHERCHE HÔTELS (SIMPLIFIÉ)
+// RECHERCHE HÔTELS - CORRIGÉE (POST avec body)
 // ============================================
-app.get("/search-hotels", async (req, res) => {
-  console.log("\n🔍 ===== SEARCH HOTELS ===== 🔍");
-  const { checkin, checkout, adults, city, countryCode, environment, limit = 200 } = req.query;
+app.post("/search-hotels", async (req, res) => {
+  console.log("\n🔍 ===== SEARCH HOTELS (POST) ===== 🔍");
+  
+  const {
+    checkin,
+    checkout,
+    adults = 2,
+    placeId,
+    hotelId,
+    aiSearch,
+    environment,
+    maxRatesPerHotel = 1,
+    includeHotelData = true,
+    roomMapping = true,
+    currency = "USD",
+    guestNationality = "US",
+    limit = 200
+  } = req.body;
+
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  console.log(`📍 Ville: ${city}, Pays: ${countryCode}`);
   console.log(`📅 Arrivée: ${checkin}, Départ: ${checkout}`);
   console.log(`👤 Adultes: ${adults}`);
+  console.log(`📍 PlaceId: ${placeId || 'non fourni'}`);
+  console.log(`🏨 HotelId: ${hotelId || 'non fourni'}`);
+  console.log(`🤖 AI Search: ${aiSearch || 'non utilisé'}`);
+
+  // Validation des dates
+  if (!checkin || !checkout) {
+    return res.status(400).json({
+      success: false,
+      error: "checkin and checkout are required"
+    });
+  }
 
   try {
-    const response = await sdk.getFullRates({
-      countryCode: countryCode,
-      cityName: city,
+    // Construction du corps de la requête selon la documentation
+    const requestBody = {
+      occupancies: [{ adults: parseInt(adults, 10) }],
+      currency: currency,
+      guestNationality: guestNationality,
       checkin: checkin,
       checkout: checkout,
-      currency: "USD",
-      guestNationality: "US",
-      occupancies: [{ adults: parseInt(adults, 10) }],
-      limit: parseInt(limit),
-      maxRatesPerHotel: 1,
-      timeout: 8,
-      includeHotelData: true
-    });
+      maxRatesPerHotel: parseInt(maxRatesPerHotel, 10),
+      roomMapping: roomMapping,
+      includeHotelData: includeHotelData,
+      timeout: 8
+    };
 
-    const data = Array.isArray(response?.data?.data) ? response.data.data : Array.isArray(response?.data) ? response.data : [];
-    console.log(`✅ ${data.length} hôtels avec tarifs trouvés`);
+    // Ajout du critère de recherche approprié
+    if (aiSearch) {
+      // Recherche par IA (free text)
+      requestBody.aiSearch = aiSearch;
+      console.log(`🔍 Recherche IA: "${aiSearch}"`);
+    } else if (placeId) {
+      // Recherche par lieu
+      requestBody.placeId = placeId;
+      console.log(`📍 Recherche par lieu: ${placeId}`);
+    } else if (hotelId) {
+      // Recherche par hôtel spécifique
+      requestBody.hotelIds = [hotelId];
+      console.log(`🏨 Recherche par hôtel: ${hotelId}`);
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: "Missing search criteria: placeId, hotelId, or aiSearch required"
+      });
+    }
 
-    const hotels = data.map(function(hotel) {
-      const bestRate = hotel.roomTypes?.[0]?.rates?.[0];
-      return {
-        id: hotel.hotelId,
-        name: hotel.hotel?.name || 'Hôtel sans nom',
-        address: hotel.hotel?.address || '',
-        city: hotel.hotel?.city || city,
-        country: hotel.hotel?.country || countryCode,
-        main_photo: hotel.hotel?.main_photo || '',
-        rating: hotel.hotel?.rating || 0,
-        reviewCount: hotel.hotel?.reviewCount || 0,
-        starRating: hotel.hotel?.starRating || 0,
-        minPrice: bestRate?.retailRate?.total?.[0]?.amount || 0,
-        currency: bestRate?.retailRate?.total?.[0]?.currency || 'USD',
-        offerId: hotel.roomTypes?.[0]?.offerId || null,
-        roomName: bestRate?.name || 'Chambre standard',
-        refundable: bestRate?.cancellationPolicies?.refundableTag === 'RFN'
-      };
-    });
+    console.log(`📦 Requête envoyée à LiteAPI:`, JSON.stringify(requestBody, null, 2));
 
-    res.json({ 
+    const response = await sdk.getFullRates(requestBody);
+
+    // Extraction des données
+    const ratesData = Array.isArray(response?.data?.data) ? response.data.data : Array.isArray(response?.data) ? response.data : [];
+    const hotelsData = response?.data?.hotels || [];
+
+    console.log(`✅ ${ratesData.length} tarifs trouvés`);
+    console.log(`✅ ${hotelsData.length} hôtels trouvés (IA search)`);
+
+    // Si on a une recherche IA, on utilise les données des hôtels pour enrichir
+    let hotels = [];
+    
+    if (aiSearch && hotelsData.length > 0) {
+      // Cas AI Search: on utilise les données de l'objet "hotels"
+      hotels = hotelsData.map((hotel) => {
+        // Trouver le tarif correspondant dans ratesData
+        const rateData = ratesData.find((r) => r.hotelId === hotel.id);
+        let minPrice = 0;
+        let currency = 'USD';
+        let offerId = null;
+        let roomName = 'Chambre standard';
+        let refundable = false;
+        let boardName = 'Non spécifié';
+
+        if (rateData && rateData.roomTypes && rateData.roomTypes.length > 0) {
+          const firstRoom = rateData.roomTypes[0];
+          if (firstRoom.rates && firstRoom.rates.length > 0) {
+            const rate = firstRoom.rates[0];
+            minPrice = rate.retailRate?.total?.[0]?.amount || 0;
+            currency = rate.retailRate?.total?.[0]?.currency || 'USD';
+            offerId = firstRoom.offerId;
+            roomName = rate.name || 'Chambre standard';
+            refundable = rate.cancellationPolicies?.refundableTag === 'RFN';
+            boardName = rate.boardName || 'Non spécifié';
+          }
+        }
+
+        return {
+          id: hotel.id,
+          name: hotel.name || 'Hôtel sans nom',
+          address: hotel.address || '',
+          city: hotel.city || '',
+          country: hotel.country || '',
+          main_photo: hotel.main_photo || '',
+          rating: hotel.rating || 0,
+          reviewCount: hotel.reviewCount || 0,
+          starRating: hotel.starRating || 0,
+          minPrice: minPrice,
+          currency: currency,
+          offerId: offerId,
+          roomName: roomName,
+          boardName: boardName,
+          refundable: refundable,
+          tags: hotel.tags || [],
+          persona: hotel.persona || '',
+          style: hotel.style || '',
+          location_type: hotel.location_type || '',
+          story: hotel.story || ''
+        };
+      });
+    } else {
+      // Cas standard: on utilise les données des tarifs
+      hotels = ratesData.map((rateData) => {
+        const hotel = rateData.hotel || {};
+        const firstRoom = rateData.roomTypes?.[0];
+        const rate = firstRoom?.rates?.[0];
+        
+        return {
+          id: rateData.hotelId,
+          name: hotel.name || 'Hôtel sans nom',
+          address: hotel.address || '',
+          city: hotel.city || '',
+          country: hotel.country || '',
+          main_photo: hotel.main_photo || '',
+          rating: hotel.rating || 0,
+          reviewCount: hotel.reviewCount || 0,
+          starRating: hotel.starRating || 0,
+          minPrice: rate?.retailRate?.total?.[0]?.amount || 0,
+          currency: rate?.retailRate?.total?.[0]?.currency || 'USD',
+          offerId: firstRoom?.offerId || null,
+          roomName: rate?.name || 'Chambre standard',
+          boardName: rate?.boardName || 'Non spécifié',
+          refundable: rate?.cancellationPolicies?.refundableTag === 'RFN'
+        };
+      });
+    }
+
+    // Limiter le nombre de résultats si nécessaire
+    if (limit && hotels.length > limit) {
+      hotels = hotels.slice(0, limit);
+    }
+
+    res.json({
       success: true,
       hotels: hotels,
-      total: hotels.length
+      total: hotels.length,
+      aiSearch: aiSearch || false,
+      ratesData: ratesData // Pour les pages de détail
     });
+
   } catch (error) {
     console.error("❌ Error searching for hotels:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("📝 Message:", error.message);
+    if (error.response) {
+      console.error("📄 Response data:", error.response.data);
+    }
+    res.status(500).json({
+      success: false,
+      error: "Failed to search hotels",
+      message: error.message,
+      details: error.response?.data || null
+    });
   }
 });
 
 // ============================================
-// TARIFS DÉTAILLÉS HÔTEL (SIMPLIFIÉ)
+// TARIFS DÉTAILLÉS HÔTEL (POST avec body)
 // ============================================
-app.get("/search-rates", async (req, res) => {
-  console.log("\n💰 ===== SEARCH RATES ===== 💰");
+app.post("/search-rates", async (req, res) => {
+  console.log("\n💰 ===== SEARCH RATES (POST) ===== 💰");
 
   const {
     checkin,
     checkout,
-    adults,
+    adults = 2,
     hotelId,
     placeId,
     aiSearch,
     environment,
     maxRatesPerHotel = 20,
-    includeHotelData = "true"
-  } = req.query;
+    includeHotelData = true,
+    roomMapping = true,
+    currency = "USD",
+    guestNationality = "US"
+  } = req.body;
 
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
   console.log(`🏨 Hotel ID: ${hotelId || 'non fourni'}`);
   console.log(`📍 Place ID: ${placeId || 'non fourni'}`);
+  console.log(`🤖 AI Search: ${aiSearch || 'non utilisé'}`);
   console.log(`📅 Arrivée: ${checkin}, Départ: ${checkout}`);
   console.log(`👤 Adultes: ${adults}`);
+
+  if (!checkin || !checkout) {
+    return res.status(400).json({
+      success: false,
+      error: "checkin and checkout are required"
+    });
+  }
 
   try {
     const requestBody = {
       occupancies: [{ adults: parseInt(adults, 10) || 2 }],
-      currency: "USD",
-      guestNationality: "US",
+      currency: currency,
+      guestNationality: guestNationality,
       checkin: checkin,
       checkout: checkout,
       maxRatesPerHotel: parseInt(maxRatesPerHotel, 10) || 20,
-      roomMapping: true,
+      roomMapping: roomMapping,
       includeHotelData: includeHotelData === "true" || includeHotelData === true,
       timeout: 8,
     };
 
+    // Ajout du critère de recherche
     if (hotelId) {
       requestBody.hotelIds = [hotelId];
     } else if (placeId) {
@@ -195,6 +335,8 @@ app.get("/search-rates", async (req, res) => {
       });
     }
 
+    console.log(`📦 Requête envoyée:`, JSON.stringify(requestBody, null, 2));
+
     const response = await sdk.getFullRates(requestBody);
 
     const rates = Array.isArray(response?.data?.data) 
@@ -203,105 +345,118 @@ app.get("/search-rates", async (req, res) => {
         ? response.data 
         : [];
 
+    const hotelsInfo = response?.data?.hotels || [];
+
     console.log(`✅ ${rates.length} hôtels dans la réponse`);
+    console.log(`✅ ${hotelsInfo.length} hôtels enrichis (IA)`);
 
     if (rates.length === 0) {
       return res.json({
         success: false,
         error: "No availability found",
         message: "Aucun hôtel trouvé pour ces critères",
-        rateInfo: [],
+        rates: [],
+        hotelInfo: null
       });
     }
 
-    // Récupérer les détails de l'hôtel
-    let hotelInfo = null;
-    if (hotelId) {
-      try {
-        const hotelDetailsResponse = await sdk.getHotelDetails(hotelId);
-        hotelInfo = hotelDetailsResponse.data;
-      } catch (err) {
-        console.log("⚠️ Impossible de récupérer les détails de l'hôtel");
-      }
-    }
-
-    // Extraire les informations de tarifs
-    const rateInfo = [];
-    for (let i = 0; i < rates.length; i++) {
-      const hotel = rates[i];
-      if (!hotel) continue;
-
+    // Structurer les données par hôtel avec tous les tarifs
+    const result = rates.map((hotel) => {
       const hotelData = hotel.hotel || {};
-      if (!hotelData?.name) continue;
-
-      // Filtrer les tarifs par type de board (RO et BI) et trier par refundable
-      const boardTypes = ["RO", "BI"];
       
-      const roomRates = (hotel.roomTypes || []).flatMap(function(roomType) {
-        return boardTypes
-          .map(function(boardType) {
-            const filteredRates = (roomType.rates || []).filter(function(rate) {
-              return rate.boardType === boardType;
-            });
-            
-            // Trier pour prioriser 'RFN' sur 'NRFN'
-            const sortedRates = filteredRates.sort(function(a, b) {
-              if (a.cancellationPolicies?.refundableTag === "RFN" && b.cancellationPolicies?.refundableTag !== "RFN") {
-                return -1;
-              } else if (b.cancellationPolicies?.refundableTag === "RFN" && a.cancellationPolicies?.refundableTag !== "RFN") {
-                return 1;
-              }
-              return 0;
-            });
-
-            if (sortedRates.length > 0) {
-              const rate = sortedRates[0];
-              return {
-                rateName: rate.name || "Chambre standard",
-                offerId: roomType.offerId || "",
-                board: rate.boardName || "Non spécifié",
-                boardType: rate.boardType || "",
-                refundableTag: rate.cancellationPolicies?.refundableTag || "NRFN",
-                retailRate: rate.retailRate?.total?.[0]?.amount || 0,
-                originalRate: rate.retailRate?.suggestedSellingPrice?.[0]?.amount || null,
-                maxOccupancy: rate.maxOccupancy || 0,
-                adultCount: rate.adultCount || 0,
-                childCount: rate.childCount || 0,
-                mappedRoomId: rate.mappedRoomId || null,
-              };
-            }
-            return null;
-          })
-          .filter(function(rate) { return rate !== null; });
+      // Récupérer les informations de l'hôtel depuis l'objet hotels si disponible (AI search)
+      const aiHotelInfo = hotelsInfo.find((h) => h.id === hotel.hotelId);
+      
+      // Extraire tous les tarifs par type de chambre
+      const roomTypes = (hotel.roomTypes || []).map((roomType) => {
+        const rates = (roomType.rates || []).map((rate) => {
+          return {
+            rateName: rate.name || "Chambre standard",
+            offerId: roomType.offerId || "",
+            boardName: rate.boardName || "Non spécifié",
+            boardType: rate.boardType || "",
+            refundableTag: rate.cancellationPolicies?.refundableTag || "NRFN",
+            retailRate: rate.retailRate?.total?.[0]?.amount || 0,
+            originalRate: rate.retailRate?.suggestedSellingPrice?.[0]?.amount || null,
+            currency: rate.retailRate?.total?.[0]?.currency || 'USD',
+            maxOccupancy: rate.maxOccupancy || 0,
+            adultCount: rate.adultCount || 0,
+            childCount: rate.childCount || 0,
+            mappedRoomId: rate.mappedRoomId || null,
+            cancelPolicy: rate.cancellationPolicies?.cancelPolicyInfos?.[0] || null,
+            taxesIncluded: rate.retailRate?.taxesAndFees?.[0]?.included || false
+          };
+        });
+        
+        return {
+          roomName: roomType.rates?.[0]?.name || 'Chambre',
+          offerId: roomType.offerId,
+          rates: rates,
+          mappedRoomId: roomType.rates?.[0]?.mappedRoomId || null
+        };
       });
 
-      rateInfo.push({
+      // Grouper par mappedRoomId
+      const groupedRooms = {};
+      roomTypes.forEach((roomType) => {
+        roomType.rates.forEach((rate) => {
+          const key = rate.mappedRoomId || 'default';
+          if (!groupedRooms[key]) {
+            groupedRooms[key] = {
+              roomName: roomType.roomName,
+              mappedRoomId: key,
+              rates: []
+            };
+          }
+          groupedRooms[key].rates.push({
+            ...rate,
+            offerId: roomType.offerId
+          });
+        });
+      });
+
+      return {
         hotelId: hotel.hotelId,
-        hotelName: hotelData.name,
-        rates: roomRates
-      });
-    }
-
-    if (rateInfo.length === 0) {
-      return res.json({ 
-        success: false, 
-        error: "No valid rates found", 
-        rateInfo: [] 
-      });
-    }
-
-    res.json({ 
-      success: true,
-      hotelInfo: hotelInfo || null,
-      rateInfo: rateInfo,
-      totalHotels: rateInfo.length
+        hotelInfo: {
+          id: hotel.hotelId,
+          name: aiHotelInfo?.name || hotelData.name || "Hôtel sans nom",
+          address: aiHotelInfo?.address || hotelData.address || "",
+          city: aiHotelInfo?.city || hotelData.city || "",
+          country: aiHotelInfo?.country || hotelData.country || "",
+          starRating: aiHotelInfo?.starRating || hotelData.starRating || 0,
+          rating: aiHotelInfo?.rating || hotelData.rating || 0,
+          reviewCount: aiHotelInfo?.reviewCount || hotelData.reviewCount || 0,
+          main_photo: aiHotelInfo?.main_photo || hotelData.main_photo || "",
+          tags: aiHotelInfo?.tags || [],
+          persona: aiHotelInfo?.persona || '',
+          style: aiHotelInfo?.style || '',
+          location_type: aiHotelInfo?.location_type || '',
+          story: aiHotelInfo?.story || '',
+          description: hotelData.hotelDescription || ''
+        },
+        roomTypes: groupedRooms,
+        minPrice: Math.min(...Object.values(groupedRooms).flatMap((g) => g.rates.map((r) => r.retailRate))),
+        maxPrice: Math.max(...Object.values(groupedRooms).flatMap((g) => g.rates.map((r) => r.retailRate)))
+      };
     });
+
+    res.json({
+      success: true,
+      hotels: result,
+      totalHotels: result.length
+    });
+
   } catch (error) {
     console.error("❌ Error fetching rates:", error);
-    res.status(500).json({ 
+    console.error("📝 Message:", error.message);
+    if (error.response) {
+      console.error("📄 Response data:", error.response.data);
+    }
+    res.status(500).json({
       success: false,
-      error: "No availability found",
-      message: error.message
+      error: "Failed to fetch rates",
+      message: error.message,
+      details: error.response?.data || null,
     });
   }
 });
@@ -324,6 +479,7 @@ app.post("/prebook", async (req, res) => {
   const sdk = liteApi(apiKey);
 
   console.log(`🔑 Offer ID: ${offerId}`);
+  console.log(`🌍 Environnement: ${environment || 'sandbox'}`);
 
   const bodyData = {
     offerId: offerId,
@@ -335,17 +491,25 @@ app.post("/prebook", async (req, res) => {
   }
 
   try {
+    console.log(`📦 Requête prebook:`, JSON.stringify(bodyData, null, 2));
     const response = await sdk.preBook(bodyData);
+    
+    console.log(`✅ Prebook réussi! prebookId: ${response.data?.prebookId}`);
+    
     res.json({ 
       success: true, 
       data: response.data 
     });
   } catch (err) {
     console.error("❌ Prebook error:", err);
+    if (err.response) {
+      console.error("📄 Response data:", err.response.data);
+    }
     res.status(500).json({ 
       success: false,
-      error: "Internal Server Error",
-      message: err.message
+      error: "Prebook failed",
+      message: err.message,
+      details: err.response?.data || null
     });
   }
 });
@@ -362,7 +526,8 @@ app.post("/book", async (req, res) => {
     guestEmail, 
     guestPhone,
     transactionId, 
-    environment 
+    environment,
+    occupancyNumber = 1
   } = req.body;
 
   if (!prebookId) {
@@ -401,7 +566,7 @@ app.post("/book", async (req, res) => {
     },
     guests: [
       {
-        occupancyNumber: 1,
+        occupancyNumber: parseInt(occupancyNumber, 10),
         remarks: "",
         firstName: guestFirstName,
         lastName: guestLastName,
@@ -421,10 +586,14 @@ app.post("/book", async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Error during booking:", err);
+    if (err.response) {
+      console.error("📄 Response data:", err.response.data);
+    }
     res.status(500).json({ 
       success: false,
-      error: "Internal Server Error",
-      message: err.message
+      error: "Booking failed",
+      message: err.message,
+      details: err.response?.data || null
     });
   }
 });
@@ -456,7 +625,7 @@ app.post("/search-flights", async (req, res) => {
     console.error("❌ Error searching flights:", error);
     res.status(500).json({ 
       success: false,
-      error: "Internal Server Error",
+      error: "Failed to search flights",
       message: error.message
     });
   }
@@ -478,7 +647,7 @@ app.post("/verify-flight", async (req, res) => {
     console.error("❌ Error verifying flight:", error);
     res.status(500).json({ 
       success: false,
-      error: "Internal Server Error",
+      error: "Failed to verify flight",
       message: error.message
     });
   }
@@ -506,7 +675,7 @@ app.post("/prebook-flight", async (req, res) => {
     console.error("❌ Error prebooking flight:", error);
     res.status(500).json({ 
       success: false,
-      error: "Internal Server Error",
+      error: "Failed to prebook flight",
       message: error.message
     });
   }
@@ -535,7 +704,7 @@ app.post("/book-flight", async (req, res) => {
     console.error("❌ Error booking flight:", error);
     res.status(500).json({ 
       success: false,
-      error: "Internal Server Error",
+      error: "Failed to book flight",
       message: error.message
     });
   }
@@ -549,6 +718,13 @@ app.get("/hotel-details", async (req, res) => {
   const { hotelId, timeout = 8, environment } = req.query;
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
+
+  if (!hotelId) {
+    return res.status(400).json({
+      success: false,
+      error: "hotelId is required"
+    });
+  }
 
   try {
     const response = await sdk.getHotelDetails(hotelId, timeout);
@@ -585,7 +761,7 @@ app.get("/hotel-details", async (req, res) => {
     console.error("❌ Error getting hotel details:", error);
     res.status(500).json({ 
       success: false,
-      error: "Internal Server Error",
+      error: "Failed to get hotel details",
       message: error.message
     });
   }
@@ -600,6 +776,13 @@ app.get("/hotel-reviews", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
+  if (!hotelId) {
+    return res.status(400).json({
+      success: false,
+      error: "hotelId is required"
+    });
+  }
+
   try {
     const response = await sdk.getHotelReviews(hotelId, timeout);
     res.json({ success: true, data: response.data });
@@ -607,7 +790,7 @@ app.get("/hotel-reviews", async (req, res) => {
     console.error("❌ Error getting hotel reviews:", error);
     res.status(500).json({ 
       success: false,
-      error: "Internal Server Error",
+      error: "Failed to get hotel reviews",
       message: error.message
     });
   }
@@ -617,10 +800,8 @@ app.get("/hotel-reviews", async (req, res) => {
 // SERVEUR - SERVIR LES FICHIERS STATIQUES
 // ============================================
 
-// Servir les fichiers statiques du dossier courant
 app.use(express.static(path.join(__dirname)));
 
-// Routes HTML
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
@@ -649,15 +830,15 @@ app.listen(port, () => {
   console.log(`🔑 API Key (prod): ${prod_apiKey ? '✅' : '❌'}`);
   console.log(`🔑 API Key (sandbox): ${sandbox_apiKey ? '✅' : '❌'}`);
   console.log(`\n📋 ENDPOINTS:`);
-  console.log(`   📍 GET  /search-places     - Autocomplete de lieux`);
-  console.log(`   🔍 GET  /search-hotels     - Hôtels`);
-  console.log(`   💰 GET  /search-rates      - Tarifs détaillés`);
-  console.log(`   📋 POST /prebook           - Pré-réservation hôtel`);
-  console.log(`   📝 POST /book              - Réservation hôtel`);
-  console.log(`   🏨 GET  /hotel-details     - Détails hôtel`);
-  console.log(`   ⭐ GET  /hotel-reviews     - Avis hôtel`);
-  console.log(`   ✈️ POST /search-flights    - Recherche vols`);
-  console.log(`   ✈️ POST /prebook-flight    - Pré-réservation vol`);
-  console.log(`   ✈️ POST /book-flight       - Réservation vol`);
+  console.log(`   📍 GET  /search-places      - Autocomplete de lieux`);
+  console.log(`   🔍 POST /search-hotels      - Recherche hôtels (POST avec body)`);
+  console.log(`   💰 POST /search-rates       - Tarifs détaillés (POST avec body)`);
+  console.log(`   📋 POST /prebook            - Pré-réservation hôtel`);
+  console.log(`   📝 POST /book               - Réservation hôtel`);
+  console.log(`   🏨 GET  /hotel-details      - Détails hôtel`);
+  console.log(`   ⭐ GET  /hotel-reviews      - Avis hôtel`);
+  console.log(`   ✈️ POST /search-flights     - Recherche vols`);
+  console.log(`   ✈️ POST /prebook-flight     - Pré-réservation vol`);
+  console.log(`   ✈️ POST /book-flight        - Réservation vol`);
   console.log(`\n✅ Serveur prêt !\n`);
 });

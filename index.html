@@ -726,23 +726,38 @@
 // CONNEXION BACKEND - LuviaPlace v2
 // ============================================
 
-// ✅ CORRECT - Pas de /api
 var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
 
+// ============================================
+// 1. RECHERCHE DE LIEUX (CORRIGÉE)
+// ============================================
 async function searchPlaces(query) {
   if (!query || query.length < 2) return [];
   try {
     var response = await fetch(API_BASE_URL + '/search-places?query=' + encodeURIComponent(query) + '&environment=production');
     var data = await response.json();
-    return data.success ? data.data : [];
+    
+    console.log('📍 Réponse searchPlaces:', data);
+    
+    if (data.success && data.data) {
+      return data.data.map(function(place) {
+        return {
+          placeId: place.placeId || place.id,
+          name: place.name || place.displayName || place.label || 'Lieu sans nom',
+          address: place.address || place.formattedAddress || '',
+          country: place.country || ''
+        };
+      });
+    }
+    return [];
   } catch (error) {
-    console.error('Error searching places:', error);
+    console.error('❌ Error searching places:', error);
     return [];
   }
 }
 
 // ============================================
-// 2. RECHERCHE DE TARIFS HÔTELIERS (GET)
+// 2. RECHERCHE DE TARIFS HÔTELIERS
 // ============================================
 async function searchRates(params) {
     console.log('🔍 searchRates appelé avec:', params);
@@ -781,7 +796,9 @@ async function searchRates(params) {
     }
 }
 
-// Modifier la fonction searchHotels pour utiliser le nouveau format
+// ============================================
+// 3. RECHERCHE HÔTELS
+// ============================================
 async function searchHotels(params) {
     console.log('🔍 searchHotels appelé avec:', params);
     
@@ -818,7 +835,10 @@ async function searchHotels(params) {
         throw error;
     }
 }
-    
+
+// ============================================
+// 4. AFFICHAGE DES HÔTELS
+// ============================================
 function displayHotels(containerId, hotelsData, isClickable) {
   var container = document.getElementById(containerId);
   if (!container) return;
@@ -869,6 +889,24 @@ function displayHotels(containerId, hotelsData, isClickable) {
   container.innerHTML = html;
 }
 
+// ============================================
+// 5. AUTRES FONCTIONS UTILITAIRES
+// ============================================
+function showLoader(show) {
+  // Implémentez votre loader
+}
+
+function showNoResults() {
+  // Implémentez l'affichage "aucun résultat"
+}
+
+function showError(message) {
+  alert(message);
+}
+
+// ============================================
+// 6. INITIALISATION
+// ============================================
 document.addEventListener('DOMContentLoaded', function() {
   var today = new Date();
   var tomorrow = new Date(today);
@@ -953,9 +991,10 @@ document.addEventListener('DOMContentLoaded', function() {
       defaultDate: formatDate(tomorrow),
     }));
   });
-});
 
-document.addEventListener('DOMContentLoaded', function() {
+  // ============================================
+  // 7. AUTOCOMPLÉTION CORRIGÉE
+  // ============================================
   document.querySelectorAll('.shared-dest').forEach(function(input) {
     var debounceTimer;
     input.addEventListener('input', function(e) {
@@ -970,9 +1009,10 @@ document.addEventListener('DOMContentLoaded', function() {
           if (dropdown && places.length > 0) {
             dropdown.innerHTML = '<div class="sd-label">Suggestions</div>' +
               places.slice(0, 5).map(function(p) {
-                return '<div class="sd-item" data-place-id="' + p.placeId + '" data-value="' + p.displayName + '">' +
+                var displayText = p.name + (p.address ? ', ' + p.address : '');
+                return '<div class="sd-item" data-place-id="' + p.placeId + '" data-value="' + displayText + '">' +
                   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>' +
-                  p.displayName + (p.formattedAddress ? ', ' + p.formattedAddress : '') +
+                  displayText +
                 '</div>';
               }).join('');
             dropdown.classList.add('open');
@@ -990,6 +1030,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+  // ============================================
+  // 8. BOUTONS DE RECHERCHE
+  // ============================================
   var hotelSearchBtn = document.querySelector('[data-search="hotel"]');
   if (hotelSearchBtn) {
     hotelSearchBtn.addEventListener('click', function() {
@@ -1047,71 +1090,10 @@ document.addEventListener('DOMContentLoaded', function() {
       window.location.href = 'resultats-vols.html?' + params.toString();
     });
   }
-});
 
-async function loadRecommendations() {
-    const checkin = document.getElementById('checkin').value;
-    const checkout = document.getElementById('checkout').value;
-    const adults = parseInt(document.getElementById('adults').value) || 2;
-    const placeId = document.getElementById('placeId')?.value || null;
-    const aiSearch = document.getElementById('aiSearch')?.value || null;
-    
-    if (!checkin || !checkout) {
-        alert('Veuillez sélectionner des dates');
-        return;
-    }
-
-    try {
-        // Afficher un loader
-        showLoader(true);
-
-        // Appeler searchHotels avec POST
-        const result = await searchHotels({
-            checkin: checkin,
-            checkout: checkout,
-            adults: adults,
-            placeId: placeId,
-            aiSearch: aiSearch,
-            environment: 'production',
-            maxRatesPerHotel: 1,
-            limit: 50
-        });
-
-        if (result.success && result.hotels && result.hotels.length > 0) {
-            displayHotels(result.hotels);
-        } else {
-            showNoResults();
-        }
-    } catch (error) {
-        console.error('❌ Error in loadRecommendations:', error);
-        showError('Impossible de charger les hôtels. Veuillez réessayer.');
-    } finally {
-        showLoader(false);
-    }
-}
-async function loadHotelDetails(hotelId, checkin, checkout, adults) {
-    try {
-        const result = await searchRates({
-            checkin: checkin,
-            checkout: checkout,
-            adults: adults || 2,
-            hotelId: hotelId,
-            environment: 'production',
-            maxRatesPerHotel: 20,
-            includeHotelData: true
-        });
-
-        if (result.success && result.hotels && result.hotels.length > 0) {
-            displayHotelDetails(result.hotels[0]);
-        } else {
-            showError('Aucun tarif disponible pour cet hôtel');
-        }
-    } catch (error) {
-        console.error('❌ Error loading hotel details:', error);
-        showError('Impossible de charger les détails de l\'hôtel');
-    }
-}
-(function(){
+  // ============================================
+  // 9. UI - ONGLETS, POPOVERS, ETC.
+  // ============================================
   var recentSearches = ['Kinshasa, Gombe', 'Lubumbashi, Karavia', 'Goma, bord du lac'];
 
   function buildSuggestDropdown(container){
@@ -1267,8 +1249,11 @@ async function loadHotelDetails(hotelId, checkin, checkout, adults) {
       label.textContent = btn.dataset.package === 'flight-car' ? 'Ville de départ' : 'Origine';
     });
   });
-})();
+});
 
+// ============================================
+// 10. OBSERVER POUR LES ANIMATIONS
+// ============================================
 var observer = new IntersectionObserver(function(entries){
   entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('in'); });
 }, { threshold:0.12 });

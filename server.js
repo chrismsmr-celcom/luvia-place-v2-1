@@ -95,12 +95,12 @@ app.get("/search-hotels", async (req, res) => {
     hotelId,
     aiSearch,
     environment,
-    maxRatesPerHotel = 10, // CHANGÉ: 10 au lieu de 1 pour obtenir plus de données
+    maxRatesPerHotel = 100, // CHANGÉ: 10 au lieu de 1 pour obtenir plus de données
     includeHotelData = true,
     roomMapping = true,
     currency = "USD",
     guestNationality = "US",
-    limit = 200
+    limit = 1200
   } = req.query;
 
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;

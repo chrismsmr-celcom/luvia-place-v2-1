@@ -729,7 +729,7 @@
 var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
 
 // ============================================
-// 1. RECHERCHE DE LIEUX (CORRIGÉE)
+// 1. RECHERCHE DE LIEUX (AUTOCOMPLÉTION)
 // ============================================
 async function searchPlaces(query) {
   if (!query || query.length < 2) return [];
@@ -837,75 +837,227 @@ async function searchHotels(params) {
 }
 
 // ============================================
-// 4. AFFICHAGE DES HÔTELS
+// 4. GÉOLOCALISATION PAR IP
 // ============================================
-function displayHotels(containerId, hotelsData, isClickable) {
+async function getUserLocation() {
+    try {
+        // Utiliser ipapi.co pour obtenir la ville depuis l'IP
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        console.log('📍 Géolocalisation IP:', data);
+        
+        if (data.city && data.city !== '') {
+            return {
+                city: data.city,
+                country: data.country_code || data.country,
+                countryCode: data.country_code || 'CD'
+            };
+        }
+        return null;
+    } catch (error) {
+        console.warn('⚠️ Erreur géolocalisation IP:', error.message);
+        return null;
+    }
+}
+
+// ============================================
+// 5. VILLES POUR RECOMMANDATIONS (AVEC PLACE ID)
+// ============================================
+var RECOMMENDED_CITIES = [
+    { name: 'Paris', country: 'France', countryCode: 'FR', placeId: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ' },
+    { name: 'Londres', country: 'Royaume-Uni', countryCode: 'GB', placeId: 'ChIJdd4hrwug2EcRmSrV3Vo6llI' },
+    { name: 'Milan', country: 'Italie', countryCode: 'IT', placeId: 'ChIJ51cu8IcbhkcRp5qU6z_f2rM' },
+    { name: 'Le Cap', country: 'Afrique du Sud', countryCode: 'ZA', placeId: 'ChIJ1-4miA9QzB0R2I6FhH8uO5I' },
+    { name: 'Marrakech', country: 'Maroc', countryCode: 'MA', placeId: 'ChIJsbqj5zvepQ0R8X5Fg87gFJQ' }
+];
+
+// ============================================
+// 6. AFFICHAGE DES HÔTELS
+// ============================================
+function displayHotels(containerId, hotelsData, isClickable, title) {
   var container = document.getElementById(containerId);
   if (!container) return;
 
-  if (!hotelsData || !hotelsData.rateInfo || hotelsData.rateInfo.length === 0) {
-    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-soft);"><p>Aucun hôtel trouvé.</p></div>';
+  if (!hotelsData || !hotelsData.hotels || hotelsData.hotels.length === 0) {
+    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-soft);"><p>Aucun hôtel trouvé' + (title ? ' pour ' + title : '') + '.</p></div>';
     return;
   }
 
-  var hotel = hotelsData.hotelInfo || {};
-  var rates = hotelsData.rateInfo || [];
-  var roomMap = {};
-  for (var i = 0; i < rates.length; i++) {
-    var r = rates[i];
-    if (!roomMap[r.rateName]) roomMap[r.rateName] = [];
-    roomMap[r.rateName].push(r);
-  }
-
-  var roomNames = Object.keys(roomMap);
+  var hotels = hotelsData.hotels.slice(0, 3);
   var html = '';
-  var count = 0;
 
-  for (var j = 0; j < roomNames.length && count < 3; j++) {
-    var name = roomNames[j];
-    var roomRates = roomMap[name];
-    var bestRate = roomRates.sort(function(a, b) { return a.retailRate - b.retailRate; })[0];
+  for (var j = 0; j < hotels.length; j++) {
+    var hotel = hotels[j];
     
-    var stars = hotel.starRating || 4;
-    var starHtml = '★'.repeat(Math.min(stars, 5));
-    var rating = hotel.rating || (8.5 - j * 0.3);
-    var ratingText = rating >= 9 ? 'Merveilleux' : rating >= 8 ? 'Excellent' : 'Très bien';
-    var reviewCount = hotel.reviewCount || (100 + j * 50);
-    var price = bestRate.retailRate || (100 + j * 20);
+    if (!hotel.minPrice || hotel.minPrice === 0) continue;
+
+    var stars = hotel.starRating || 3;
+    var starHtml = '★'.repeat(Math.min(Math.round(stars), 5));
+    var rating = hotel.rating || 0;
+    var ratingText = rating >= 8 ? 'Excellent' : rating >= 7 ? 'Très bien' : 'Bien';
+    var reviewCount = hotel.reviewCount || 0;
+    var price = hotel.minPrice || 0;
     var hotelId = hotel.id || '';
 
-    var onclick = isClickable && hotelId ? 'onclick="window.location.href=\'hotel-detail.html?id=' + hotelId + '\'"' : '';
+    var onclick = isClickable && hotelId ? 'onclick="window.location.href=\'hotel-detail.html?hotelId=' + hotelId + '&checkin=' + getDefaultCheckin() + '&checkout=' + getDefaultCheckout() + '&adults=2\'"' : '';
 
     html += '<div class="hotel-card" ' + onclick + ' style="' + (isClickable && hotelId ? 'cursor:pointer;' : '') + '">';
-    html += '<div class="photo"><img src="' + (hotel.main_photo || 'https://picsum.photos/seed/hotel' + j + '/500/380') + '" alt="' + (hotel.name || 'Hôtel') + '"></div>';
+    html += '<div class="photo"><img src="' + (hotel.main_photo || 'https://picsum.photos/seed/' + hotelId + '/500/380') + '" alt="' + (hotel.name || 'Hôtel') + '" loading="lazy"></div>';
     html += '<div class="body"><div class="stars">' + starHtml + '</div>';
     html += '<h3>' + (hotel.name || 'Hôtel sans nom') + '</h3>';
-    html += '<div class="location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg> ' + (hotel.city || hotel.address || 'Adresse non disponible') + '</div>';
-    html += '<div class="card-bottom"><div class="score-pill"><div class="score-num">' + (typeof rating === 'number' ? rating.toFixed(1) : rating) + '</div><div class="score-text">' + ratingText + '<b>' + reviewCount + ' avis</b></div></div>';
-    html += '<div class="price"><div class="amount">$' + (typeof price === 'number' ? price.toFixed(0) : price) + '</div><div class="note">1 nuit, taxes incl.</div></div></div></div></div>';
-    count++;
+    html += '<div class="location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg> ' + (hotel.address || hotel.city || 'Adresse non disponible') + '</div>';
+    html += '<div class="card-bottom"><div class="score-pill"><div class="score-num">' + (rating > 0 ? rating.toFixed(1) : 'N/A') + '</div><div class="score-text">' + ratingText + '<b>' + reviewCount + ' avis</b></div></div>';
+    html += '<div class="price"><div class="amount">$' + Math.round(price) + '</div><div class="note">1 nuit, taxes incl.</div></div></div></div></div>';
   }
 
-  container.innerHTML = html;
+  container.innerHTML = html || '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-soft);"><p>Aucun hôtel disponible.</p></div>';
 }
 
 // ============================================
-// 5. AUTRES FONCTIONS UTILITAIRES
+// 7. FONCTIONS UTILITAIRES
 // ============================================
-function showLoader(show) {
-  // Implémentez votre loader
+function getDefaultCheckin() {
+    var d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
 }
 
-function showNoResults() {
-  // Implémentez l'affichage "aucun résultat"
-}
-
-function showError(message) {
-  alert(message);
+function getDefaultCheckout() {
+    var d = new Date();
+    d.setDate(d.getDate() + 4);
+    return d.toISOString().slice(0, 10);
 }
 
 // ============================================
-// 6. INITIALISATION
+// 8. CHARGEMENT DES RECOMMANDATIONS
+// ============================================
+async function loadRecommendations() {
+    console.log('🌟 Chargement des recommandations...');
+    var checkin = getDefaultCheckin();
+    var checkout = getDefaultCheckout();
+    var adults = 2;
+
+    // Recommandations pour chaque ville
+    for (var i = 0; i < RECOMMENDED_CITIES.length; i++) {
+        var city = RECOMMENDED_CITIES[i];
+        console.log(`📍 Chargement pour ${city.name}...`);
+        
+        try {
+            var result = await searchHotels({
+                checkin: checkin,
+                checkout: checkout,
+                adults: adults,
+                placeId: city.placeId,
+                environment: 'production',
+                maxRatesPerHotel: 1,
+                limit: 5
+            });
+
+            if (result.success && result.hotels && result.hotels.length > 0) {
+                console.log(`✅ ${city.name}: ${result.hotels.length} hôtels`);
+                // Afficher dans la section appropriée
+                var container = document.getElementById('recommendedHotels');
+                if (container) {
+                    // Si c'est le premier, on affiche directement
+                    if (i === 0) {
+                        displayHotels('recommendedHotels', result, true, city.name);
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn(`⚠️ Erreur pour ${city.name}:`, error.message);
+        }
+    }
+}
+
+// ============================================
+// 9. CHARGEMENT DES HÔTELS À PROXIMITÉ
+// ============================================
+async function loadNearbyHotels() {
+    console.log('📍 Chargement des hôtels à proximité...');
+    var checkin = getDefaultCheckin();
+    var checkout = getDefaultCheckout();
+    var adults = 2;
+    
+    // Essayer d'obtenir la localisation
+    var userLocation = await getUserLocation();
+    var city = userLocation ? userLocation.city : 'Kinshasa';
+    var countryCode = userLocation ? userLocation.countryCode : 'CD';
+    
+    console.log(`📍 Localisation détectée: ${city}, ${countryCode}`);
+    
+    try {
+        // Rechercher les hôtels dans la ville de l'utilisateur
+        // On utilise le nom de la ville avec le code pays
+        var result = await searchHotels({
+            checkin: checkin,
+            checkout: checkout,
+            adults: adults,
+            aiSearch: city + ', ' + countryCode,
+            environment: 'production',
+            maxRatesPerHotel: 1,
+            limit: 6
+        });
+
+        if (result.success && result.hotels && result.hotels.length > 0) {
+            console.log(`✅ ${result.hotels.length} hôtels à proximité trouvés`);
+            displayHotels('nearbyHotels', result, true, city);
+        } else {
+            // Fallback: recherche par pays
+            console.log('🔄 Fallback: recherche par pays');
+            var fallbackResult = await searchHotels({
+                checkin: checkin,
+                checkout: checkout,
+                adults: adults,
+                aiSearch: countryCode,
+                environment: 'production',
+                maxRatesPerHotel: 1,
+                limit: 6
+            });
+            
+            if (fallbackResult.success && fallbackResult.hotels && fallbackResult.hotels.length > 0) {
+                displayHotels('nearbyHotels', fallbackResult, true, countryCode);
+            } else {
+                // Dernier fallback: Kinshasa
+                console.log('🔄 Dernier fallback: Kinshasa');
+                var finalResult = await searchHotels({
+                    checkin: checkin,
+                    checkout: checkout,
+                    adults: adults,
+                    aiSearch: 'Kinshasa, CD',
+                    environment: 'production',
+                    maxRatesPerHotel: 1,
+                    limit: 6
+                });
+                if (finalResult.success && finalResult.hotels) {
+                    displayHotels('nearbyHotels', finalResult, true, 'Kinshasa');
+                }
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erreur chargement hôtels à proximité:', error);
+        // Fallback sur Kinshasa
+        try {
+            var fallbackResult = await searchHotels({
+                checkin: checkin,
+                checkout: checkout,
+                adults: adults,
+                aiSearch: 'Kinshasa, CD',
+                environment: 'production',
+                maxRatesPerHotel: 1,
+                limit: 6
+            });
+            if (fallbackResult.success && fallbackResult.hotels) {
+                displayHotels('nearbyHotels', fallbackResult, true, 'Kinshasa');
+            }
+        } catch (e) {
+            console.error('❌ Fallback échoué:', e);
+        }
+    }
+}
+
+// ============================================
+// 10. INITIALISATION
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
   var today = new Date();
@@ -993,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // ============================================
-  // 7. AUTOCOMPLÉTION CORRIGÉE
+  // 11. AUTOCOMPLÉTION
   // ============================================
   document.querySelectorAll('.shared-dest').forEach(function(input) {
     var debounceTimer;
@@ -1031,7 +1183,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // ============================================
-  // 8. BOUTONS DE RECHERCHE
+  // 12. BOUTON DE RECHERCHE HÔTEL
   // ============================================
   var hotelSearchBtn = document.querySelector('[data-search="hotel"]');
   if (hotelSearchBtn) {
@@ -1061,38 +1213,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  var flightSearchBtn = document.querySelector('[data-search="flight"]');
-  if (flightSearchBtn) {
-    flightSearchBtn.addEventListener('click', function() {
-      var origin = document.getElementById('flightOrigin')?.value || '';
-      var destination = document.getElementById('flightDestination')?.value || '';
-      var departure = document.getElementById('flightDeparture')?.value || '';
-      var returnDate = document.getElementById('flightReturn')?.value || '';
-      
-      if (!origin || !destination) {
-        alert('Veuillez entrer une origine et une destination.');
-        return;
-      }
-      
-      if (!departure) {
-        alert('Veuillez sélectionner une date de départ.');
-        return;
-      }
-      
-      var params = new URLSearchParams({
-        origin: origin,
-        destination: destination,
-        departure: departure,
-        return: returnDate || '',
-        adults: 1
-      });
-      
-      window.location.href = 'resultats-vols.html?' + params.toString();
-    });
-  }
+  // ============================================
+  // 13. CHARGER LES RECOMMANDATIONS ET HÔTELS À PROXIMITÉ
+  // ============================================
+  setTimeout(function() {
+    loadRecommendations();
+    loadNearbyHotels();
+  }, 500);
 
   // ============================================
-  // 9. UI - ONGLETS, POPOVERS, ETC.
+  // 14. UI - ONGLETS, POPOVERS, ETC.
   // ============================================
   var recentSearches = ['Kinshasa, Gombe', 'Lubumbashi, Karavia', 'Goma, bord du lac'];
 
@@ -1252,7 +1382,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 10. OBSERVER POUR LES ANIMATIONS
+// 15. OBSERVER POUR LES ANIMATIONS
 // ============================================
 var observer = new IntersectionObserver(function(entries){
   entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('in'); });

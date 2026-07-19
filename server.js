@@ -7,16 +7,15 @@ const path = require("path");
 require("dotenv").config();
 
 // ============================================
-// CORS - Configuration ouverte pour production
+// CORS - Configuration ouverte
 // ============================================
 app.use(cors({
-  origin: '*', // Accepte toutes les origines
+  origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 
-// Gestion des requêtes OPTIONS (pré-flight)
 app.options('*', cors());
 
 const prod_apiKey = process.env.PROD_API_KEY;
@@ -40,7 +39,7 @@ app.use((req, res, next) => {
 });
 
 // ============================================
-// 1. RECHERCHE HÔTELS
+// 1. RECHERCHE HÔTELS - AVEC LOGS DÉTAILLÉS
 // ============================================
 app.get("/search-hotels", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS ===== 🔍");
@@ -69,39 +68,123 @@ app.get("/search-hotels", async (req, res) => {
       includeHotelData: true
     });
 
+    // 🔍 LOGS ULTRA-DÉTAILLÉS
+    console.log('📦 === RÉPONSE COMPLÈTE DE LITEAPI ===');
     console.log('📦 Type de response:', typeof response);
     console.log('📦 Clés de response:', Object.keys(response));
+    console.log('📦 response.status:', response.status);
+    console.log('📦 Type de response.data:', typeof response.data);
+    console.log('📦 response.data complet:', JSON.stringify(response.data, null, 2).substring(0, 2000));
     
-    // ✅ Extraction correcte des données
+    // ✅ Extraction des données - TEST DE TOUTES LES STRUCTURES POSSIBLES
     let data = [];
-    if (response.data && typeof response.data === 'object') {
-      if (response.data.data && Array.isArray(response.data.data)) {
-        data = response.data.data;
-        console.log('✅ Trouvé response.data.data avec', data.length, 'éléments');
-      } else if (Array.isArray(response.data)) {
+    let extractionMethod = 'aucune';
+    
+    if (response.data) {
+      // Structure 1: response.data est un tableau
+      if (Array.isArray(response.data)) {
         data = response.data;
-        console.log('✅ response.data est un tableau de', data.length, 'éléments');
-      } else if (response.data.hotels && Array.isArray(response.data.hotels)) {
+        extractionMethod = 'response.data est un tableau';
+        console.log(`✅ ${extractionMethod} avec ${data.length} éléments`);
+      } 
+      // Structure 2: response.data.data est un tableau
+      else if (response.data.data && Array.isArray(response.data.data)) {
+        data = response.data.data;
+        extractionMethod = 'response.data.data est un tableau';
+        console.log(`✅ ${extractionMethod} avec ${data.length} éléments`);
+      }
+      // Structure 3: response.data.hotels est un tableau
+      else if (response.data.hotels && Array.isArray(response.data.hotels)) {
         data = response.data.hotels;
-        console.log('✅ Trouvé response.data.hotels avec', data.length, 'éléments');
+        extractionMethod = 'response.data.hotels est un tableau';
+        console.log(`✅ ${extractionMethod} avec ${data.length} éléments`);
+      }
+      // Structure 4: response.data.results est un tableau
+      else if (response.data.results && Array.isArray(response.data.results)) {
+        data = response.data.results;
+        extractionMethod = 'response.data.results est un tableau';
+        console.log(`✅ ${extractionMethod} avec ${data.length} éléments`);
+      }
+      // Structure 5: response.data.items est un tableau
+      else if (response.data.items && Array.isArray(response.data.items)) {
+        data = response.data.items;
+        extractionMethod = 'response.data.items est un tableau';
+        console.log(`✅ ${extractionMethod} avec ${data.length} éléments`);
+      }
+      // Structure 6: Si c'est un objet unique
+      else if (response.data.hotelId || response.data.hotel || response.data.id) {
+        data = [response.data];
+        extractionMethod = 'objet unique transformé en tableau';
+        console.log(`✅ ${extractionMethod} avec ${data.length} élément`);
+      }
+      // Structure 7: Parcourir toutes les clés pour trouver un tableau
+      else {
+        console.log('🔍 Recherche d\'un tableau dans les propriétés de response.data...');
+        for (let key in response.data) {
+          if (Array.isArray(response.data[key]) && response.data[key].length > 0) {
+            data = response.data[key];
+            extractionMethod = `response.data.${key} est un tableau`;
+            console.log(`✅ ${extractionMethod} avec ${data.length} éléments`);
+            break;
+          }
+        }
       }
     }
 
-    console.log(`✅ ${data.length} hôtels avec tarifs trouvés`);
+    console.log(`📊 Données extraites: ${data.length} éléments (méthode: ${extractionMethod})`);
 
-    const hotels = data.map(function(hotel) {
+    // Si data est vide, essayer de récupérer depuis response directement
+    if (data.length === 0 && response.hotels) {
+      data = response.hotels;
+      console.log(`🔄 Tentative avec response.hotels: ${data.length} éléments`);
+    }
+
+    // 🔍 LOG DU PREMIER ÉLÉMENT POUR VOIR SA STRUCTURE
+    if (data.length > 0) {
+      console.log('📦 === STRUCTURE DU PREMIER HÔTEL ===');
+      console.log('🔑 Clés:', Object.keys(data[0]));
+      console.log('📄 Contenu:', JSON.stringify(data[0], null, 2).substring(0, 500));
+      
+      // Vérifier si hotel existe
+      if (data[0].hotel) {
+        console.log('🏨 Clés de hotel:', Object.keys(data[0].hotel));
+        console.log('🏨 hotel.name:', data[0].hotel.name);
+        console.log('🏨 hotel.main_photo:', data[0].hotel.main_photo);
+      }
+    }
+
+    // Enrichir chaque hôtel
+    const hotels = data.map(function(hotel, index) {
+      // 🔍 Log pour chaque hôtel
+      console.log(`\n🏨 HÔTEL #${index + 1}:`);
+      console.log(`  - hotelId: ${hotel.hotelId || hotel.id || 'NON TROUVÉ'}`);
+      console.log(`  - hotel existe? ${!!hotel.hotel}`);
+      console.log(`  - hotel.name: ${hotel.hotel?.name || hotel.name || 'NON TROUVÉ'}`);
+      console.log(`  - hotel.main_photo: ${hotel.hotel?.main_photo || hotel.main_photo || 'NON TROUVÉ'}`);
+      console.log(`  - roomTypes: ${hotel.roomTypes?.length || 0} chambres`);
+      
       const bestRate = hotel.roomTypes?.[0]?.rates?.[0];
       
+      // Construction de l'objet hôtel avec toutes les possibilités
       return {
-        id: hotel.hotelId || hotel.id || 'N/A',
-        name: hotel.hotel?.name || hotel.name || 'Hôtel sans nom',
-        address: hotel.hotel?.address || hotel.address || '',
-        city: hotel.hotel?.city || hotel.city || city,
-        country: hotel.hotel?.country || hotel.country || countryCode,
-        main_photo: hotel.hotel?.main_photo || hotel.main_photo || 'https://picsum.photos/seed/' + (hotel.hotelId || Math.random()) + '/460/380',
-        rating: hotel.hotel?.rating || hotel.rating || 0,
-        reviewCount: hotel.hotel?.reviewCount || hotel.reviewCount || 0,
-        starRating: hotel.hotel?.starRating || hotel.starRating || 0,
+        id: hotel.hotelId || hotel.id || `hotel-${index}`,
+        // Essayer plusieurs chemins pour le nom
+        name: hotel.hotel?.name || hotel.name || hotel.hotelName || hotel.hotel_name || 'Hôtel sans nom',
+        // Essayer plusieurs chemins pour l'adresse
+        address: hotel.hotel?.address || hotel.address || hotel.hotelAddress || '',
+        // Essayer plusieurs chemins pour la ville
+        city: hotel.hotel?.city || hotel.city || hotel.hotelCity || city,
+        // Essayer plusieurs chemins pour le pays
+        country: hotel.hotel?.country || hotel.country || hotel.hotelCountry || countryCode,
+        // Essayer plusieurs chemins pour la photo principale
+        main_photo: hotel.hotel?.main_photo || hotel.main_photo || hotel.mainPhoto || hotel.image || hotel.photo || hotel.hotelImage || '',
+        // Essayer plusieurs chemins pour la note
+        rating: hotel.hotel?.rating || hotel.rating || hotel.hotelRating || 0,
+        // Essayer plusieurs chemins pour le nombre d'avis
+        reviewCount: hotel.hotel?.reviewCount || hotel.reviewCount || hotel.review_count || 0,
+        // Essayer plusieurs chemins pour le nombre d'étoiles
+        starRating: hotel.hotel?.starRating || hotel.starRating || hotel.star_rating || hotel.rating || 0,
+        // Prix minimum
         minPrice: bestRate?.retailRate?.total?.[0]?.amount || 0,
         currency: bestRate?.retailRate?.total?.[0]?.currency || 'USD',
         offerId: hotel.roomTypes?.[0]?.offerId || null,
@@ -110,28 +193,36 @@ app.get("/search-hotels", async (req, res) => {
       };
     });
 
+    // Filtrer les hôtels sans prix
     const validHotels = hotels.filter(h => h.minPrice > 0);
-    console.log(`📤 Envoi de ${validHotels.length} hôtels avec prix (sur ${hotels.length} au total)`);
-
-    // ✅ Si aucun hôtel trouvé, retourner un message clair
-    if (validHotels.length === 0) {
-      return res.json({ 
-        success: true,
-        hotels: [],
-        total: 0,
-        message: "Aucun hôtel disponible pour cette destination et ces dates",
-        rawTotal: data.length
-      });
-    }
+    
+    console.log(`\n📊 RÉSULTAT FINAL:`);
+    console.log(`  - Total hôtels extraits: ${data.length}`);
+    console.log(`  - Hôtels avec prix: ${validHotels.length}`);
+    console.log(`  - Premier hôtel: ${validHotels[0]?.name || 'AUCUN'}`);
+    console.log(`  - Photo: ${validHotels[0]?.main_photo || 'AUCUNE'}`);
 
     res.json({ 
       success: true,
-      hotels: validHotels,
-      total: validHotels.length,
-      rawTotal: data.length
+      hotels: validHotels.length > 0 ? validHotels : hotels.filter(h => h.id !== 'N/A'),
+      total: validHotels.length > 0 ? validHotels.length : hotels.length,
+      rawTotal: data.length,
+      extractionMethod: extractionMethod,
+      debug: {
+        firstHotel: data.length > 0 ? {
+          keys: Object.keys(data[0]),
+          hasHotel: !!data[0].hotel,
+          hotelKeys: data[0].hotel ? Object.keys(data[0].hotel) : []
+        } : null
+      }
     });
   } catch (error) {
     console.error("❌ Error searching for hotels:", error);
+    console.error("📦 Détails:", {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data
+    });
     res.status(500).json({ 
       success: false,
       error: "Internal server error", 

@@ -39,29 +39,24 @@ app.use((req, res, next) => {
 });
 
 // ============================================
-// FONCTION UTILITAIRE : Recherche dans un objet
+// FONCTION UTILITAIRE : Décoder la clé "et"
 // ============================================
-function findInObject(obj, keys) {
-  if (!obj || typeof obj !== 'object') return undefined;
-  for (let key of keys) {
-    if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
-      return obj[key];
+function decodeHotelData(encodedData) {
+  if (!encodedData || typeof encodedData !== 'string') return null;
+  try {
+    // La clé "et" contient des données encodées en base64
+    const decoded = Buffer.from(encodedData, 'base64').toString('utf-8');
+    // Essayer de parser en JSON
+    try {
+      return JSON.parse(decoded);
+    } catch {
+      // Si ce n'est pas du JSON, retourner la chaîne décodée
+      return decoded;
     }
+  } catch (error) {
+    console.warn('⚠️ Erreur de décodage de "et":', error.message);
+    return null;
   }
-  return undefined;
-}
-
-function findNestedValue(obj, path) {
-  if (!obj || typeof obj !== 'object') return undefined;
-  const parts = path.split('.');
-  let current = obj;
-  for (let part of parts) {
-    if (current === null || current === undefined || typeof current !== 'object') {
-      return undefined;
-    }
-    current = current[part];
-  }
-  return current;
 }
 
 // ============================================
@@ -81,7 +76,7 @@ app.get("/search-hotels", async (req, res) => {
     console.log(`⏳ Recherche des tarifs pour ${city}...`);
     
     const response = await sdk.getFullRates({
-      countryCode: countryCode || "CD",
+      countryCode: countryCode || "FR",
       cityName: city,
       checkin: checkin,
       checkout: checkout,
@@ -111,191 +106,167 @@ app.get("/search-hotels", async (req, res) => {
     // Afficher la structure du premier hôtel pour debug
     if (data.length > 0) {
       const first = data[0];
-      console.log('📦 Structure du premier hôtel (clés):', Object.keys(first));
-      console.log('📦 Exemple de contenu:', JSON.stringify(first, null, 2).substring(0, 1000));
+      console.log('📦 Clés du premier hôtel:', Object.keys(first));
+      console.log('📦 Contenu de "et":', first.et ? first.et.substring(0, 200) : 'NON TROUVÉ');
     }
 
     const hotels = data.map(function(hotel, index) {
       const bestRate = hotel.roomTypes?.[0]?.rates?.[0];
       
-      // 🔍 RECHERCHE DU NOM - Explorer TOUTES les possibilités
-      let name = 'Hôtel sans nom';
-      const nameCandidates = [
-        hotel.name,
-        hotel.hotelName,
-        hotel.hotel_name,
-        hotel.fullName,
-        hotel.hotel?.name,
-        hotel.hotel?.hotelName,
-        hotel.title,
-        hotel.label,
-        hotel.description?.name,
-        hotel.info?.name,
-        findNestedValue(hotel, 'hotelInfo.name'),
-        findNestedValue(hotel, 'property.name'),
-        findNestedValue(hotel, 'accommodation.name'),
-        findNestedValue(hotel, 'details.name'),
-        hotel['HotelName'],
-        hotel['hotelName'],
-        hotel['name_en'],
-        hotel['name_fr'],
-        hotel['name_es']
-      ];
-      
-      for (let candidate of nameCandidates) {
-        if (candidate && typeof candidate === 'string' && candidate.trim().length > 0) {
-          name = candidate.trim();
-          break;
+      // 🔍 DÉCODER LA CLÉ "et" QUI CONTIENT LES INFOS DE L'HÔTEL
+      let hotelInfo = null;
+      let hotelName = 'Hôtel sans nom';
+      let hotelAddress = '';
+      let hotelCity = city;
+      let hotelCountry = countryCode;
+      let hotelPhoto = '';
+      let hotelRating = 0;
+      let hotelStarRating = 0;
+      let hotelReviewCount = 0;
+
+      // Décoder "et" si présent
+      if (hotel.et) {
+        try {
+          const decoded = decodeHotelData(hotel.et);
+          console.log(`🏨 Hôtel #${index + 1} - "et" décodé:`, decoded);
+          
+          if (typeof decoded === 'object') {
+            hotelInfo = decoded;
+            
+            // Extraire le nom
+            hotelName = hotelInfo.name || 
+                       hotelInfo.hotelName || 
+                       hotelInfo.hotel_name || 
+                       hotelInfo.title ||
+                       hotelInfo.fullName ||
+                       hotelInfo.establishmentName ||
+                       hotelInfo['Hotel Name'] ||
+                       'Hôtel sans nom';
+            
+            // Extraire l'adresse
+            hotelAddress = hotelInfo.address || 
+                          hotelInfo.streetAddress || 
+                          hotelInfo.street ||
+                          hotelInfo.addressLine1 ||
+                          hotelInfo.location?.address ||
+                          '';
+            
+            // Extraire la ville
+            hotelCity = hotelInfo.city || 
+                       hotelInfo.location?.city || 
+                       hotelInfo.hotelCity ||
+                       city;
+            
+            // Extraire le pays
+            hotelCountry = hotelInfo.country || 
+                          hotelInfo.location?.country || 
+                          hotelInfo.hotelCountry ||
+                          countryCode;
+            
+            // Extraire la photo
+            hotelPhoto = hotelInfo.main_photo || 
+                        hotelInfo.mainPhoto || 
+                        hotelInfo.image || 
+                        hotelInfo.photo || 
+                        hotelInfo.picture ||
+                        hotelInfo.images?.[0] ||
+                        hotelInfo.photos?.[0] ||
+                        '';
+            
+            // Extraire la note
+            hotelRating = parseFloat(hotelInfo.rating || hotelInfo.score || hotelInfo.averageRating || 0);
+            
+            // Extraire le nombre d'étoiles
+            hotelStarRating = parseFloat(hotelInfo.starRating || hotelInfo.stars || hotelInfo.star_rating || 0);
+            
+            // Extraire le nombre d'avis
+            hotelReviewCount = parseInt(hotelInfo.reviewCount || hotelInfo.review_count || hotelInfo.totalReviews || 0);
+          } else if (typeof decoded === 'string') {
+            // Si c'est une chaîne, essayer d'en extraire des infos
+            hotelName = decoded.substring(0, 100) || 'Hôtel sans nom';
+          }
+        } catch (error) {
+          console.warn(`⚠️ Erreur de décodage pour l'hôtel #${index + 1}:`, error.message);
         }
       }
-      
-      // 🔍 RECHERCHE DE LA PHOTO
-      let mainPhoto = '';
-      const photoCandidates = [
-        hotel.main_photo,
-        hotel.mainPhoto,
-        hotel.hotel?.main_photo,
-        hotel.hotel?.mainPhoto,
-        hotel.photo,
-        hotel.image,
-        hotel.picture,
-        hotel.imageUrl,
-        hotel.thumbnail,
-        hotel.hotelImage,
-        hotel.hotel_image,
-        hotel.images?.[0],
-        hotel.photos?.[0],
-        hotel.media?.[0]?.url,
-        hotel.pictures?.[0],
-        hotel.gallery?.[0]?.url,
-        findNestedValue(hotel, 'hotelInfo.mainPhoto'),
-        findNestedValue(hotel, 'property.mainPhoto'),
-        findNestedValue(hotel, 'accommodation.image'),
-        hotel['main_photo_url'],
-        hotel['photo_url'],
-        hotel['image_url']
-      ];
-      
-      for (let candidate of photoCandidates) {
-        if (candidate && typeof candidate === 'string' && candidate.trim().length > 0) {
-          mainPhoto = candidate.trim();
-          break;
+
+      // 🔍 SI "et" n'a pas donné de nom, chercher ailleurs
+      if (hotelName === 'Hôtel sans nom') {
+        const fallbackNames = [
+          hotel.name,
+          hotel.hotelName,
+          hotel.hotel_name,
+          hotel.title,
+          hotel.hotel?.name,
+          hotel.hotel?.hotelName
+        ];
+        for (let name of fallbackNames) {
+          if (name && typeof name === 'string' && name.trim().length > 0) {
+            hotelName = name.trim();
+            break;
+          }
+        }
+      }
+
+      // 🔍 SI "et" n'a pas donné de photo, chercher ailleurs
+      if (!hotelPhoto) {
+        const fallbackPhotos = [
+          hotel.main_photo,
+          hotel.mainPhoto,
+          hotel.photo,
+          hotel.image,
+          hotel.hotel?.main_photo,
+          hotel.hotel?.mainPhoto
+        ];
+        for (let photo of fallbackPhotos) {
+          if (photo && typeof photo === 'string' && photo.trim().length > 0) {
+            hotelPhoto = photo.trim();
+            break;
+          }
         }
       }
 
       // Si pas de photo, générer une URL placeholder
-      if (!mainPhoto) {
-        mainPhoto = `https://picsum.photos/seed/${hotel.hotelId || hotel.id || index}/460/380`;
-      }
-
-      // 🔍 RECHERCHE DE L'ADRESSE
-      let address = '';
-      const addressCandidates = [
-        hotel.address,
-        hotel.hotel?.address,
-        hotel.hotelAddress,
-        hotel.hotel_address,
-        hotel.location?.address,
-        hotel.address_line1,
-        hotel.fullAddress,
-        hotel.street,
-        findNestedValue(hotel, 'property.address')
-      ];
-      
-      for (let candidate of addressCandidates) {
-        if (candidate && typeof candidate === 'string' && candidate.trim().length > 0) {
-          address = candidate.trim();
-          break;
-        }
-      }
-
-      // 🔍 RECHERCHE DE LA NOTE
-      let rating = 0;
-      const ratingCandidates = [
-        hotel.rating,
-        hotel.hotel?.rating,
-        hotel.hotelRating,
-        hotel.hotel_rating,
-        hotel.starRating,
-        hotel.star_rating,
-        hotel.score,
-        hotel.averageRating,
-        findNestedValue(hotel, 'hotelInfo.rating'),
-        findNestedValue(hotel, 'property.rating')
-      ];
-      
-      for (let candidate of ratingCandidates) {
-        if (candidate && !isNaN(parseFloat(candidate)) && parseFloat(candidate) > 0) {
-          rating = parseFloat(candidate);
-          break;
-        }
-      }
-
-      // 🔍 RECHERCHE DU NOMBRE D'AVIS
-      let reviewCount = 0;
-      const reviewCandidates = [
-        hotel.reviewCount,
-        hotel.hotel?.reviewCount,
-        hotel.review_count,
-        hotel.totalReviews,
-        hotel.reviews,
-        hotel.numberOfReviews,
-        findNestedValue(hotel, 'hotelInfo.reviewCount')
-      ];
-      
-      for (let candidate of reviewCandidates) {
-        if (candidate && !isNaN(parseInt(candidate)) && parseInt(candidate) > 0) {
-          reviewCount = parseInt(candidate);
-          break;
-        }
-      }
-
-      // 🔍 RECHERCHE DU NOMBRE D'ÉTOILES
-      let starRating = 0;
-      const starCandidates = [
-        hotel.starRating,
-        hotel.hotel?.starRating,
-        hotel.hotelStarRating,
-        hotel.hotel_star_rating,
-        hotel.stars,
-        hotel.star,
-        hotel.category,
-        findNestedValue(hotel, 'hotelInfo.starRating')
-      ];
-      
-      for (let candidate of starCandidates) {
-        if (candidate && !isNaN(parseFloat(candidate)) && parseFloat(candidate) > 0) {
-          starRating = parseFloat(candidate);
-          break;
-        }
+      if (!hotelPhoto) {
+        hotelPhoto = `https://picsum.photos/seed/${hotel.hotelId || hotel.id || index}/460/380`;
       }
 
       // Log pour le premier hôtel
       if (index === 0) {
         console.log(`🏨 PREMIER HÔTEL EXTRAIT:`);
         console.log(`  - ID: ${hotel.hotelId || hotel.id}`);
-        console.log(`  - Nom trouvé: "${name}"`);
-        console.log(`  - Photo trouvée: "${mainPhoto}"`);
-        console.log(`  - Adresse: "${address}"`);
-        console.log(`  - Note: ${rating}`);
+        console.log(`  - Nom trouvé: "${hotelName}"`);
+        console.log(`  - Photo trouvée: "${hotelPhoto}"`);
+        console.log(`  - Adresse: "${hotelAddress}"`);
+        console.log(`  - Note: ${hotelRating}`);
+        console.log(`  - Étoiles: ${hotelStarRating}`);
         console.log(`  - Prix: ${bestRate?.retailRate?.total?.[0]?.amount || 0}`);
+        if (hotelInfo) {
+          console.log(`  - Infos décodées:`, Object.keys(hotelInfo));
+        }
       }
 
       return {
         id: hotel.hotelId || hotel.id || `hotel-${index}`,
-        name: name,
-        address: address || hotel.city || city,
-        city: hotel.city || hotel.hotel?.city || city,
-        country: hotel.country || hotel.hotel?.country || countryCode,
-        main_photo: mainPhoto,
-        rating: rating,
-        reviewCount: reviewCount,
-        starRating: starRating,
+        name: hotelName,
+        address: hotelAddress || hotel.city || city,
+        city: hotelCity,
+        country: hotelCountry,
+        main_photo: hotelPhoto,
+        rating: hotelRating || 0,
+        reviewCount: hotelReviewCount || 0,
+        starRating: hotelStarRating || 0,
         minPrice: bestRate?.retailRate?.total?.[0]?.amount || 0,
         currency: bestRate?.retailRate?.total?.[0]?.currency || 'USD',
         offerId: hotel.roomTypes?.[0]?.offerId || null,
         roomName: bestRate?.name || 'Chambre standard',
-        refundable: bestRate?.cancellationPolicies?.refundableTag === 'RFN'
+        refundable: bestRate?.cancellationPolicies?.refundableTag === 'RFN',
+        // Debug: garder les infos décodées pour le développement
+        _debug: hotelInfo ? {
+          keys: Object.keys(hotelInfo),
+          name: hotelInfo.name,
+          photo: hotelInfo.main_photo || hotelInfo.image
+        } : null
       };
     });
 
@@ -376,6 +347,30 @@ app.get("/search-rates", async (req, res) => {
     }
 
     const hotel = rates[0];
+    
+    // Décoder "et" si présent pour obtenir les infos de l'hôtel
+    let hotelName = 'Hôtel sans nom';
+    let hotelPhoto = '';
+    if (hotel.et) {
+      try {
+        const decoded = decodeHotelData(hotel.et);
+        if (typeof decoded === 'object') {
+          hotelName = decoded.name || decoded.hotelName || hotelName;
+          hotelPhoto = decoded.main_photo || decoded.mainPhoto || decoded.image || decoded.photo || '';
+        }
+      } catch (error) {
+        console.warn('⚠️ Erreur de décodage de "et" dans search-rates:', error.message);
+      }
+    }
+    
+    // Fallback
+    if (hotelName === 'Hôtel sans nom') {
+      hotelName = hotel.hotel?.name || hotel.name || hotelName;
+    }
+    if (!hotelPhoto) {
+      hotelPhoto = hotel.hotel?.main_photo || hotel.main_photo || '';
+    }
+
     const hotelInfo = hotel.hotel || {};
 
     const rateInfo = (hotel.roomTypes || []).flatMap(function(roomType) {
@@ -410,13 +405,13 @@ app.get("/search-rates", async (req, res) => {
       success: true,
       hotelInfo: {
         id: hotel.hotelId,
-        name: hotelInfo.name || hotel.name || 'Hôtel sans nom',
+        name: hotelName,
         address: hotelInfo.address || hotel.address || '',
         city: hotelInfo.city || hotel.city || '',
         country: hotelInfo.country || hotel.country || '',
         starRating: hotelInfo.starRating || hotel.starRating || 0,
         rating: hotelInfo.rating || hotel.rating || 0,
-        main_photo: hotelInfo.main_photo || hotel.main_photo || ''
+        main_photo: hotelPhoto || hotelInfo.main_photo || hotel.main_photo || ''
       },
       rateInfo: rateInfo,
       minPrice: minPrice
@@ -430,6 +425,23 @@ app.get("/search-rates", async (req, res) => {
     });
   }
 });
+
+// ============================================
+// FONCTION DE DÉCODAGE (exposée pour les autres routes)
+// ============================================
+function decodeHotelData(encodedData) {
+  if (!encodedData || typeof encodedData !== 'string') return null;
+  try {
+    const decoded = Buffer.from(encodedData, 'base64').toString('utf-8');
+    try {
+      return JSON.parse(decoded);
+    } catch {
+      return decoded;
+    }
+  } catch (error) {
+    return null;
+  }
+}
 
 // ============================================
 // 3. PRÉ-RÉSERVATION HÔTEL

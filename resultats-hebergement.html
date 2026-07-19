@@ -269,6 +269,10 @@
 <script>
 var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
 var params = new URLSearchParams(window.location.search);
+var hotelsData = [];
+var hotelsContainer = null;
+var resultsCount = null;
+var isFirstBatch = true;
 
 function generateSkeleton() {
   var container = document.getElementById('resultsContainer');
@@ -296,67 +300,257 @@ function generateSkeleton() {
 }
 
 // ============================================
-// RECHERCHE HÔTELS - LE BACKEND GÈRE LE PLACE ID
+// AFFICHAGE D'UN HÔTEL
 // ============================================
-function searchHotels(searchParams) {
-  var destination = searchParams.destination || '';
-  var checkin = searchParams.checkin || '';
-  var checkout = searchParams.checkout || '';
-  var adults = parseInt(searchParams.adults || '2', 10);
-  var countryCode = searchParams.countryCode || '';
-  var placeId = searchParams.placeId || '';
+function createHotelElement(hotel, index) {
+  var stars = hotel.starRating || 3;
+  var starHtml = '★'.repeat(Math.min(stars, 5));
+  
+  var div = document.createElement('div');
+  div.className = 'hotel-result';
+  div.id = 'hotel-' + (hotel.id || index);
+  
+  var priceDisplay = hotel.loading 
+    ? '<span class="loading-price">⏳ Chargement...</span>'
+    : hotel.minPrice > 0 
+      ? `$${hotel.minPrice} <span class="per">/ nuit</span>`
+      : '<span class="no-price">Prix non disponible</span>';
+  
+  var ratingDisplay = hotel.rating >= 8 ? 'Excellent' : hotel.rating >= 7 ? 'Très bien' : 'Bien';
+  
+  div.innerHTML = `
+    <div class="photo">
+      <img src="${hotel.main_photo || 'https://picsum.photos/seed/hotel' + (hotel.id || index) + '/460/380'}" 
+           alt="${hotel.name || 'Hôtel'}" 
+           loading="lazy">
+      <button class="wishlist-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/></svg></button>
+    </div>
+    <div class="info">
+      <div class="stars">${starHtml}</div>
+      <h3>${hotel.name || 'Hôtel sans nom'}</h3>
+      <div class="addr-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>${hotel.address || hotel.city || 'Adresse non disponible'}</div>
+      <div class="dist-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 5l7 7-7 7M5 12h15"/></svg>${hotel.roomName || 'Chambre standard'}</div>
+      ${!hotel.loading && hotel.minPrice > 0 ? `<div class="coins-line"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>Validez votre commande et gagnez ${Math.floor(hotel.minPrice / 10)} LuviaCoins</div>` : ''}
+    </div>
+    <div class="side">
+      <div class="review-row">
+        <div class="review-text">${ratingDisplay}<b>${hotel.reviewCount || 0} avis</b></div>
+        <div class="review-num">${hotel.rating || '8.5'}</div>
+      </div>
+      ${!hotel.loading && hotel.minPrice > 0 ? `<div class="savings-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>Connectez-vous et économisez $${Math.floor(hotel.minPrice * 0.08)}</div>` : ''}
+      <div class="price-block">
+        <div class="amount">${priceDisplay}</div>
+        ${!hotel.loading && hotel.minPrice > 0 ? '<div class="note">1 nuit, 1 chambre, taxes et frais inclus</div>' : ''}
+      </div>
+      <button class="cta-btn-sm" onclick="voirHotel('${hotel.id || ''}')" ${hotel.loading ? 'disabled style="opacity:0.5;"' : ''}>
+        ${hotel.loading ? '⏳ Chargement...' : 'Voir les disponibilités'}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  `;
+  return div;
+}
 
-  console.log('🔍 searchHotels appelé avec:', { destination, checkin, checkout, adults, countryCode, placeId });
-
-  // ✅ Construire les paramètres - le backend gère le placeId automatiquement
-  var queryParams = new URLSearchParams({
-    checkin: checkin,
-    checkout: checkout,
-    adults: adults,
-    environment: 'production',
-    limit: 2000
-  });
-
-  // ✅ Si on a un placeId, on le transmet (le backend l'utilisera en priorité)
-  if (placeId) {
-    queryParams.append('placeId', placeId);
-    console.log('📍 PlaceId fourni:', placeId);
-  } else if (destination) {
-    // ✅ Sinon, on transmet la ville (le backend récupérera le placeId)
-    queryParams.append('city', destination);
-    if (countryCode) {
-      queryParams.append('countryCode', countryCode);
-    }
-    console.log('📍 Ville fournie:', destination);
-  } else {
-    console.error('❌ Aucune destination fournie');
-    return Promise.resolve(null);
+// ============================================
+// AFFICHAGE DES HÔTELS (STREAMING)
+// ============================================
+function displayHotelsStream(data) {
+  if (!hotelsContainer) {
+    hotelsContainer = document.getElementById('resultsContainer');
+  }
+  if (!resultsCount) {
+    resultsCount = document.getElementById('resultsCount');
   }
 
-  var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
-  console.log('📦 URL:', url);
+  // ✅ Premier lot : on affiche directement
+  if (isFirstBatch) {
+    hotelsContainer.innerHTML = '';
+    isFirstBatch = false;
+  }
 
-  return fetch(url, {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json'
+  // ✅ Ajouter les nouveaux hôtels
+  var fragment = document.createDocumentFragment();
+  data.hotels.forEach(function(hotel, index) {
+    var el = createHotelElement(hotel, index);
+    fragment.appendChild(el);
+  });
+  hotelsContainer.appendChild(fragment);
+
+  // ✅ Mettre à jour le compteur
+  var loaded = data.loaded || data.hotels.length;
+  var total = data.total || loaded;
+  resultsCount.textContent = loaded + ' / ' + total + ' propriétés trouvées';
+}
+
+// ============================================
+// METTRE À JOUR UN HÔTEL EXISTANT
+// ============================================
+function updateHotel(hotel) {
+  var element = document.getElementById('hotel-' + hotel.id);
+  if (element) {
+    var newElement = createHotelElement(hotel, 0);
+    element.parentNode.replaceChild(newElement, element);
+  }
+}
+
+// ============================================
+// RECHERCHE HÔTELS AVEC STREAMING (SSE)
+// ============================================
+function searchHotelsStream(searchParams) {
+  return new Promise(function(resolve, reject) {
+    var destination = searchParams.destination || '';
+    var checkin = searchParams.checkin || '';
+    var checkout = searchParams.checkout || '';
+    var adults = parseInt(searchParams.adults || '2', 10);
+    var placeId = searchParams.placeId || '';
+
+    console.log('🔍 searchHotelsStream appelé avec:', { destination, checkin, checkout, adults, placeId });
+
+    var queryParams = new URLSearchParams({
+      checkin: checkin,
+      checkout: checkout,
+      adults: adults,
+      environment: 'production',
+      limit: 2000
+    });
+
+    if (placeId) {
+      queryParams.append('placeId', placeId);
+    } else if (destination) {
+      queryParams.append('city', destination);
     }
-  })
-  .then(function(response) {
-    if (!response.ok) {
-      return response.text().then(function(text) {
-        throw new Error('HTTP ' + response.status + ': ' + text);
+
+    var url = API_BASE_URL + '/search-hotels-stream?' + queryParams.toString();
+    console.log('📦 URL SSE:', url);
+
+    // ✅ Utiliser EventSource pour le streaming
+    var eventSource = new EventSource(url);
+    var finalResult = null;
+    var hotelsMap = {};
+
+    eventSource.addEventListener('status', function(e) {
+      var data = JSON.parse(e.data);
+      console.log('📊 Status:', data);
+      // Afficher le statut dans l'interface
+      var statusEl = document.getElementById('searchStatus');
+      if (statusEl) {
+        statusEl.textContent = data.message;
+        statusEl.style.display = 'block';
+      }
+    });
+
+    eventSource.addEventListener('hotels', function(e) {
+      var data = JSON.parse(e.data);
+      console.log('🏨 Hôtels de base reçus:', data.hotels.length);
+      
+      // Stocker les hôtels de base
+      data.hotels.forEach(function(hotel) {
+        hotelsMap[hotel.id] = hotel;
       });
-    }
-    return response.json();
-  })
-  .then(function(data) {
-    console.log('✅ /search-hotels réponse:', data);
-    return data.success ? data : null;
-  })
-  .catch(function(error) {
-    console.error('❌ searchHotels error:', error.message);
-    return null;
+      
+      displayHotelsStream(data);
+    });
+
+    eventSource.addEventListener('batch', function(e) {
+      var data = JSON.parse(e.data);
+      console.log('📦 Lot reçu:', data.batch + '/' + data.totalBatches, data.hotels.length + ' hôtels');
+      
+      // Mettre à jour ou ajouter les hôtels
+      data.hotels.forEach(function(hotel) {
+        if (hotelsMap[hotel.id]) {
+          // Mettre à jour l'hôtel existant
+          hotelsMap[hotel.id] = hotel;
+          updateHotel(hotel);
+        } else {
+          // Ajouter un nouvel hôtel
+          hotelsMap[hotel.id] = hotel;
+        }
+      });
+      
+      // Mettre à jour le compteur
+      var countEl = document.getElementById('resultsCount');
+      if (countEl) {
+        var loaded = data.loaded || Object.keys(hotelsMap).length;
+        var total = data.total || loaded;
+        countEl.textContent = loaded + ' / ' + total + ' propriétés trouvées';
+      }
+    });
+
+    eventSource.addEventListener('complete', function(e) {
+      var data = JSON.parse(e.data);
+      console.log('✅ Streaming terminé:', data);
+      
+      // Trier les hôtels par prix
+      var sortedHotels = Object.values(hotelsMap)
+        .filter(h => h.minPrice > 0)
+        .sort((a, b) => a.minPrice - b.minPrice);
+      
+      finalResult = {
+        success: true,
+        hotels: sortedHotels,
+        total: sortedHotels.length,
+        rawTotal: data.rawTotal || sortedHotels.length
+      };
+      
+      // Cacher le statut
+      var statusEl = document.getElementById('searchStatus');
+      if (statusEl) {
+        statusEl.style.display = 'none';
+      }
+      
+      eventSource.close();
+      resolve(finalResult);
+    });
+
+    eventSource.addEventListener('error', function(e) {
+      console.error('❌ Erreur SSE:', e);
+      
+      // Si on a déjà des hôtels, on les retourne quand même
+      if (Object.keys(hotelsMap).length > 0) {
+        var sortedHotels = Object.values(hotelsMap)
+          .filter(h => h.minPrice > 0)
+          .sort((a, b) => a.minPrice - b.minPrice);
+        
+        finalResult = {
+          success: true,
+          hotels: sortedHotels,
+          total: sortedHotels.length,
+          partial: true,
+          message: 'Résultats partiels (erreur de connexion)'
+        };
+        
+        eventSource.close();
+        resolve(finalResult);
+      } else {
+        eventSource.close();
+        reject(new Error('Erreur de connexion au serveur'));
+      }
+    });
+
+    // Timeout de sécurité (60 secondes)
+    setTimeout(function() {
+      if (!finalResult) {
+        console.warn('⏳ Timeout SSE');
+        eventSource.close();
+        
+        if (Object.keys(hotelsMap).length > 0) {
+          var sortedHotels = Object.values(hotelsMap)
+            .filter(h => h.minPrice > 0)
+            .sort((a, b) => a.minPrice - b.minPrice);
+          
+          finalResult = {
+            success: true,
+            hotels: sortedHotels,
+            total: sortedHotels.length,
+            partial: true,
+            message: 'Résultats partiels (timeout)'
+          };
+          resolve(finalResult);
+        } else {
+          reject(new Error('Timeout - Aucun résultat reçu'));
+        }
+      }
+    }, 60000);
   });
 }
 
@@ -364,87 +558,6 @@ function formatDate(dateStr) {
   if (!dateStr) return '';
   var d = new Date(dateStr);
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-}
-
-// ============================================
-// AFFICHAGE DES HÔTELS
-// ============================================
-function displayHotels(data) {
-  var container = document.getElementById('resultsContainer');
-  var count = document.getElementById('resultsCount');
-  
-  console.log('📊 displayHotels appelé avec:', data);
-  
-  if (!data || !data.success || !data.hotels || data.hotels.length === 0) {
-    container.innerHTML = `
-      <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-        <h3>${data?.message || 'Aucun hôtel trouvé'}</h3>
-        <p>Essayez de modifier votre destination ou vos dates.</p>
-        <p style="font-size:14px;color:#999;margin-top:10px;">
-          💡 Astuce: Vérifiez que les dates sont valides (format YYYY-MM-DD)
-        </p>
-        ${data?.debug ? `<p style="font-size:12px;color:#999;margin-top:5px;">🔍 Debug: ${JSON.stringify(data.debug)}</p>` : ''}
-        <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
-          🔄 Réessayer
-        </button>
-      </div>
-    `;
-    count.textContent = '0 propriété trouvée';
-    return;
-  }
-
-  var hotels = data.hotels;
-  count.textContent = hotels.length + ' propriétés trouvées';
-  container.innerHTML = '';
-
-  for (var j = 0; j < hotels.length; j++) {
-    var hotel = hotels[j];
-    
-    if (!hotel.minPrice || hotel.minPrice === 0) continue;
-
-    var stars = hotel.starRating || 3;
-    var starHtml = '★'.repeat(Math.min(stars, 5));
-
-    var div = document.createElement('div');
-    div.className = 'hotel-result';
-    div.innerHTML = `
-      <div class="photo">
-        <img src="${hotel.main_photo || 'https://picsum.photos/seed/hotel' + j + '/460/380'}" alt="${hotel.name || 'Hôtel'}">
-        <button class="wishlist-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/></svg></button>
-      </div>
-      <div class="info">
-        <div class="stars">${starHtml}</div>
-        <h3>${hotel.name || 'Hôtel sans nom'}</h3>
-        <div class="addr-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>${hotel.address || hotel.city || 'Adresse non disponible'}</div>
-        <div class="dist-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 5l7 7-7 7M5 12h15"/></svg>${hotel.roomName || 'Chambre standard'}</div>
-        <div class="coins-line"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>Validez votre commande et gagnez ${Math.floor(hotel.minPrice / 10)} LuviaCoins</div>
-        ${hotel.tags && hotel.tags.length > 0 ? `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">${hotel.tags.slice(0,3).map(function(t) { return `<span style="background:#f0f0f0;padding:2px 8px;border-radius:12px;font-size:11px;">${t}</span>`; }).join('')}</div>` : ''}
-      </div>
-      <div class="side">
-        <div class="review-row">
-          <div class="review-text">${hotel.rating >= 8 ? 'Excellent' : hotel.rating >= 7 ? 'Très bien' : 'Bien'}<b>${hotel.reviewCount || 0} avis</b></div>
-          <div class="review-num">${hotel.rating || '8.5'}</div>
-        </div>
-        <div class="savings-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>Connectez-vous et économisez $${Math.floor(hotel.minPrice * 0.08)}</div>
-        <div class="price-block">
-          <div class="amount">$${hotel.minPrice} <span class="per">/ nuit</span></div>
-          <div class="note">1 nuit, 1 chambre, taxes et frais inclus</div>
-        </div>
-        <button class="cta-btn-sm" onclick="voirHotel('${hotel.id || ''}')">Voir les disponibilités<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></button>
-      </div>
-    `;
-    container.appendChild(div);
-  }
-  
-  if (container.innerHTML === '') {
-    container.innerHTML = `
-      <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-        <h3>Aucun tarif disponible</h3>
-        <p>Les hôtels trouvés n'ont pas de tarifs disponibles pour ces dates.</p>
-        <p style="font-size:14px;color:#999;margin-top:10px;">Essayez de modifier vos dates.</p>
-      </div>
-    `;
-  }
 }
 
 // ============================================
@@ -476,6 +589,12 @@ function loadResults() {
 
   console.log('📋 Paramètres reçus:', { destination, checkin, checkout, adults, countryCode, placeId });
 
+  // Réinitialiser
+  hotelsData = [];
+  isFirstBatch = true;
+  hotelsContainer = document.getElementById('resultsContainer');
+  resultsCount = document.getElementById('resultsCount');
+
   // Mettre à jour le résumé
   var sumDest = document.getElementById('sumDest');
   var sumDates = document.getElementById('sumDates');
@@ -485,21 +604,28 @@ function loadResults() {
   if (sumDates) sumDates.textContent = checkin && checkout ? formatDate(checkin) + ' - ' + formatDate(checkout) : 'Sélectionnez vos dates';
   if (sumGuests) sumGuests.textContent = adults + ' adulte' + (adults > 1 ? 's' : '');
 
-  generateSkeleton();
+  // Ajouter un indicateur de statut
+  var statusHtml = `<div id="searchStatus" style="text-align:center;padding:10px;color:var(--ink-soft);font-size:14px;">🔍 Recherche en cours...</div>`;
+  if (hotelsContainer) {
+    hotelsContainer.innerHTML = statusHtml;
+  }
 
   if (!checkin || !checkout || !destination) {
-    document.getElementById('resultsContainer').innerHTML = `
-      <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-        <h3>Paramètres de recherche manquants</h3>
-        <p>Veuillez retourner à la page d'accueil et effectuer une recherche.</p>
-        <a href="index.html" style="display:inline-block;margin-top:16px;padding:10px 20px;background:var(--blue);color:#FFF;border-radius:var(--radius);text-decoration:none;">Retour à l'accueil</a>
-      </div>
-    `;
-    document.getElementById('resultsCount').textContent = 'Paramètres manquants';
+    if (hotelsContainer) {
+      hotelsContainer.innerHTML = `
+        <div style="text-align:center;padding:60px;color:var(--ink-soft);">
+          <h3>Paramètres de recherche manquants</h3>
+          <p>Veuillez retourner à la page d'accueil et effectuer une recherche.</p>
+          <a href="index.html" style="display:inline-block;margin-top:16px;padding:10px 20px;background:var(--blue);color:#FFF;border-radius:var(--radius);text-decoration:none;">Retour à l'accueil</a>
+        </div>
+      `;
+    }
+    if (resultsCount) resultsCount.textContent = 'Paramètres manquants';
     return;
   }
 
-  searchHotels({ 
+  // Lancer la recherche streaming
+  searchHotelsStream({ 
     destination: destination, 
     checkin: checkin, 
     checkout: checkout, 
@@ -508,32 +634,51 @@ function loadResults() {
     placeId: placeId
   })
     .then(function(results) {
-      if (results) {
-        displayHotels(results);
+      if (results && results.success) {
+        // Si on a des résultats, ils sont déjà affichés
+        // Mais on peut faire un affichage final si nécessaire
+        if (results.hotels.length === 0) {
+          if (hotelsContainer) {
+            hotelsContainer.innerHTML = `
+              <div style="text-align:center;padding:60px;color:var(--ink-soft);">
+                <h3>${results.message || 'Aucun hôtel trouvé'}</h3>
+                <p>Essayez de modifier votre destination ou vos dates.</p>
+                <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
+                  🔄 Réessayer
+                </button>
+              </div>
+            `;
+          }
+          if (resultsCount) resultsCount.textContent = '0 propriété trouvée';
+        }
       } else {
-        document.getElementById('resultsContainer').innerHTML = `
+        if (hotelsContainer) {
+          hotelsContainer.innerHTML = `
+            <div style="text-align:center;padding:60px;color:var(--ink-soft);">
+              <h3>❌ Aucun résultat</h3>
+              <p>Impossible de trouver des hôtels pour "${destination}".</p>
+              <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
+                🔄 Réessayer
+              </button>
+            </div>
+          `;
+        }
+        if (resultsCount) resultsCount.textContent = '0 propriété trouvée';
+      }
+    })
+    .catch(function(error) {
+      console.error('❌ Erreur lors de la recherche:', error);
+      if (hotelsContainer) {
+        hotelsContainer.innerHTML = `
           <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-            <h3>❌ Aucun résultat</h3>
-            <p>Impossible de trouver des hôtels pour "${destination}".</p>
-            <p style="font-size:14px;color:#999;margin-top:10px;">Essayez une autre destination ou modifiez vos dates.</p>
+            <h3>❌ Une erreur est survenue</h3>
+            <p>${error.message || 'Veuillez réessayer plus tard.'}</p>
             <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
               🔄 Réessayer
             </button>
           </div>
         `;
       }
-    })
-    .catch(function(error) {
-      console.error('❌ Erreur lors de la recherche:', error);
-      document.getElementById('resultsContainer').innerHTML = `
-        <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-          <h3>❌ Une erreur est survenue</h3>
-          <p>${error.message || 'Veuillez réessayer plus tard.'}</p>
-          <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
-            🔄 Réessayer
-          </button>
-        </div>
-      `;
     });
 }
 

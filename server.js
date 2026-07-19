@@ -269,24 +269,25 @@ app.post("/search-hotels", async (req, res) => {
 });
 
 // ============================================
-// TARIFS DÉTAILLÉS HÔTEL - VERSION POST (CORRIGÉE)
+// RECHERCHE HÔTELS - VERSION POST (CORRIGÉE)
 // ============================================
-app.post("/search-rates", async (req, res) => {
-  console.log("\n💰 ===== SEARCH RATES (POST) ===== 💰");
-
+app.post("/search-hotels", async (req, res) => {
+  console.log("\n🔍 ===== SEARCH HOTELS (POST) ===== 🔍");
+  
   const {
     checkin,
     checkout,
     adults = 2,
-    hotelId,
     placeId,
+    hotelId,
     aiSearch,
     environment,
-    maxRatesPerHotel = 20,
+    maxRatesPerHotel = 10,
     includeHotelData = true,
     roomMapping = true,
     currency = "USD",
-    guestNationality = "US"
+    guestNationality = "US",
+    limit = 200
   } = req.body;
 
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
@@ -307,30 +308,33 @@ app.post("/search-rates", async (req, res) => {
   }
 
   try {
-    // Construction du corps de la requête
+    // Construction du corps de la requête LiteAPI
     const requestBody = {
-      occupancies: [{ adults: parseInt(adults, 10) || 2 }],
+      occupancies: [{ adults: parseInt(adults, 10) }],
       currency: currency,
       guestNationality: guestNationality,
       checkin: checkin,
       checkout: checkout,
-      maxRatesPerHotel: parseInt(maxRatesPerHotel, 10) || 20,
+      maxRatesPerHotel: parseInt(maxRatesPerHotel, 10),
       roomMapping: roomMapping === "true" || roomMapping === true,
       includeHotelData: includeHotelData === "true" || includeHotelData === true,
-      timeout: 8,
+      timeout: 8
     };
 
     // Ajout du critère de recherche
-    if (hotelId) {
-      requestBody.hotelIds = [hotelId];
+    if (aiSearch) {
+      requestBody.aiSearch = aiSearch;
+      console.log(`🔍 Recherche IA: "${aiSearch}"`);
     } else if (placeId) {
       requestBody.placeId = placeId;
-    } else if (aiSearch) {
-      requestBody.aiSearch = aiSearch;
+      console.log(`📍 Recherche par lieu: ${placeId}`);
+    } else if (hotelId) {
+      requestBody.hotelIds = [hotelId];
+      console.log(`🏨 Recherche par hôtel: ${hotelId}`);
     } else {
       return res.status(400).json({
         success: false,
-        error: "Missing search criteria: hotelId, placeId or aiSearch required",
+        error: "Missing search criteria: placeId, hotelId, or aiSearch required"
       });
     }
 
@@ -338,22 +342,126 @@ app.post("/search-rates", async (req, res) => {
 
     const response = await sdk.getFullRates(requestBody);
 
-    // Extraire les données
+    // Extraction des données
     const ratesData = Array.isArray(response?.data?.data) ? response.data.data : [];
-    const hotelsData = response?.data?.hotels || []; // Tableau enrichi (pour AI search)
+    const hotelsData = response?.data?.hotels || [];
 
-    console.log(`✅ ${ratesData.length} hôtels trouvés dans data`);
+    console.log(`✅ ${ratesData.length} tarifs trouvés`);
     console.log(`✅ ${hotelsData.length} hôtels enrichis (IA)`);
 
-    if (ratesData.length === 0) {
-      return res.json({
-        success: false,
-        error: "No availability found",
-        message: "Aucun hôtel trouvé pour ces critères",
-        hotelInfo: null,
-        rateInfo: []
+    // Fonction pour récupérer la meilleure image
+    function getMainPhoto(hotelObj) {
+      if (hotelObj.main_photo) return hotelObj.main_photo;
+      if (hotelObj.hotelImages && hotelObj.hotelImages.length > 0) {
+        return hotelObj.hotelImages[0].url || '';
+      }
+      return '';
+    }
+
+    let hotels = [];
+
+    if (aiSearch && hotelsData.length > 0) {
+      // Cas AI : on utilise les données enrichies du tableau `hotels`
+      hotels = hotelsData.map((hotel) => {
+        const rateData = ratesData.find((r) => r.hotelId === hotel.id);
+        let minPrice = 0;
+        let currency = 'USD';
+        let offerId = null;
+        let roomName = 'Chambre standard';
+        let refundable = false;
+        let boardName = 'Non spécifié';
+
+        if (rateData && rateData.roomTypes && rateData.roomTypes.length > 0) {
+          const firstRoom = rateData.roomTypes[0];
+          if (firstRoom.rates && firstRoom.rates.length > 0) {
+            const rate = firstRoom.rates[0];
+            minPrice = rate.retailRate?.total?.[0]?.amount || 0;
+            currency = rate.retailRate?.total?.[0]?.currency || 'USD';
+            offerId = firstRoom.offerId;
+            roomName = rate.name || 'Chambre standard';
+            refundable = rate.cancellationPolicies?.refundableTag === 'RFN';
+            boardName = rate.boardName || 'Non spécifié';
+          }
+        }
+
+        return {
+          id: hotel.id,
+          name: hotel.name || 'Hôtel sans nom',
+          address: hotel.address || '',
+          city: hotel.city || '',
+          country: hotel.country || '',
+          main_photo: getMainPhoto(hotel),
+          rating: hotel.rating || 0,
+          reviewCount: hotel.reviewCount || 0,
+          starRating: hotel.starRating || 0,
+          minPrice: minPrice,
+          currency: currency,
+          offerId: offerId,
+          roomName: roomName,
+          boardName: boardName,
+          refundable: refundable,
+          tags: hotel.tags || [],
+          persona: hotel.persona || '',
+          style: hotel.style || '',
+          location_type: hotel.location_type || '',
+          story: hotel.story || ''
+        };
+      });
+    } else {
+      // Cas standard (placeId ou hotelId)
+      hotels = ratesData.map((rateData) => {
+        const hotel = rateData.hotel || {};
+        const firstRoom = rateData.roomTypes?.[0];
+        const rate = firstRoom?.rates?.[0];
+        const main_photo = getMainPhoto(hotel);
+
+        return {
+          id: rateData.hotelId,
+          name: hotel.name || 'Hôtel sans nom',
+          address: hotel.address || '',
+          city: hotel.city || '',
+          country: hotel.country || '',
+          main_photo: main_photo,
+          rating: hotel.rating || 0,
+          reviewCount: hotel.reviewCount || 0,
+          starRating: hotel.starRating || 0,
+          minPrice: rate?.retailRate?.total?.[0]?.amount || 0,
+          currency: rate?.retailRate?.total?.[0]?.currency || 'USD',
+          offerId: firstRoom?.offerId || null,
+          roomName: rate?.name || 'Chambre standard',
+          boardName: rate?.boardName || 'Non spécifié',
+          refundable: rate?.cancellationPolicies?.refundableTag === 'RFN'
+        };
       });
     }
+
+    // Filtrer ceux avec un prix > 0 et limiter le nombre
+    hotels = hotels.filter(h => h.minPrice > 0);
+    if (limit && hotels.length > limit) {
+      hotels = hotels.slice(0, limit);
+    }
+
+    res.json({
+      success: true,
+      hotels: hotels,
+      total: hotels.length,
+      aiSearch: aiSearch || false
+    });
+
+  } catch (error) {
+    console.error("❌ Error searching for hotels:", error);
+    console.error("📝 Message:", error.message);
+    if (error.response) {
+      console.error("📄 Response data:", error.response.data);
+    }
+    res.status(500).json({
+      success: false,
+      error: "Failed to search hotels",
+      message: error.message,
+      details: error.response?.data || null
+    });
+  }
+});
 
     // ------------------------------------------------------------
     // 1. Construire hotelInfo à partir du premier hôtel trouvé

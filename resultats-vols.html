@@ -72,15 +72,6 @@
   .results-count{ font-family:var(--font-head); font-weight:800; font-size:20px; }
   .ai-refine{ display:flex; align-items:center; gap:8px; border:1px solid var(--blue); color:var(--blue); border-radius:100px; padding:9px 16px; font-size:13px; font-weight:700; background:#fff; cursor:pointer; }
 
-  .sort-tabs{ display:flex; border:1px solid var(--line); border-radius:14px; overflow:hidden; margin-bottom:20px; }
-  .sort-tab{ flex:1; padding:14px 10px; text-align:center; border-right:1px solid var(--line); background:#fff; cursor:pointer; }
-  .sort-tab:last-child{ border-right:none; }
-  .sort-tab.active{ background:var(--bg-soft); }
-  .sort-tab .name{ font-weight:700; font-size:13px; color:var(--ink-soft); }
-  .sort-tab.active .name{ color:var(--blue); }
-  .sort-tab .price{ font-weight:800; font-size:15px; margin-top:3px; font-family:var(--font-head); }
-  .sort-tab .dur{ font-size:11.5px; color:var(--ink-soft); }
-
   .flight-result{ border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:16px; position:relative; background:#fff; }
   .price-top{ position:absolute; top:22px; right:22px; text-align:right; }
   .price-top .amount{ font-family:var(--font-head); font-weight:800; font-size:22px; }
@@ -108,11 +99,11 @@
   @keyframes pulse{ 0%,100%{ opacity:.4; } 50%{ opacity:.8; } }
   .skeleton-flight{ border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:16px; }
   .skeleton-line{ height:14px; border-radius:8px; background:var(--bg-soft); margin-bottom:8px; }
-  .skeleton-line.w70{ width:70%; }
-  .skeleton-line.w50{ width:50%; }
-  .skeleton-line.w40{ width:40%; }
-  .skeleton-line.w30{ width:30%; }
-  .skeleton-line.w90{ width:90%; }
+  .skeleton-line.w70{ width:70%; } .skeleton-line.w50{ width:50%; } .skeleton-line.w40{ width:40%; } .skeleton-line.w30{ width:30%; } .skeleton-line.w60{ width:60%; }
+
+  .state-msg{ text-align:center; padding:60px 20px; color:var(--ink-soft); }
+  .state-msg h3{ font-family:var(--font-head); font-size:19px; margin-bottom:8px; color:var(--ink); }
+  .retry-btn{ margin-top:18px; padding:10px 24px; background:var(--blue); color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer; }
 
   footer{ background:var(--ink); color:rgba(255,255,255,0.7); padding:56px 0 28px; }
   .footer-grid{ display:grid; grid-template-columns:1.4fr repeat(4,1fr); gap:32px; margin-bottom:40px; }
@@ -176,16 +167,6 @@
     </details>
 
     <details class="filter-group">
-      <summary>Horaires</summary>
-      <div class="fg-body">
-        <div class="toggle-row"><button class="active">Aller</button><button>Retour</button></div>
-        <div class="range-mini"><span>Heure de départ</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-soft);">00:00 <span>→</span> 23:59</div>
-        <div class="range-track"><div class="fill"></div><div class="handle" style="left:0;"></div><div class="handle" style="left:100%;"></div></div>
-      </div>
-    </details>
-
-    <details class="filter-group">
       <summary>Filtres d'accessibilité</summary>
       <div class="fg-body">
         <label class="check-item"><input type="checkbox">Assistance en fauteuil roulant à l'embarquement</label>
@@ -196,7 +177,7 @@
 
     <details class="filter-group">
       <summary>Compagnies</summary>
-      <div class="fg-body" id="airlineFilters"></div>
+      <div class="fg-body" id="airlineFilters"><span style="font-size:12.5px;color:var(--ink-soft);">Disponible une fois les résultats chargés</span></div>
     </details>
   </aside>
 
@@ -232,130 +213,115 @@
 <script>
 var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
 var params = new URLSearchParams(window.location.search);
+var lastJourneys = [];
 
-function generateSkeleton() {
-  var container = document.getElementById('resultsContainer');
-  var html = '';
-  for (var i = 0; i < 6; i++) {
-    html += `
-      <div class="skeleton-flight">
-        <div class="skeleton-line w70"></div>
-        <div class="skeleton-line w50"></div>
-        <div class="skeleton-line w40"></div>
-        <div class="skeleton-line w30"></div>
-        <div class="skeleton-line w60"></div>
-      </div>
-    `;
+async function searchFlights(opts){
+  try{
+    var res = await fetch(API_BASE_URL + '/search-flights', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        legs: opts.legs,
+        adults: opts.adults || 1,
+        children: opts.children || 0,
+        infants: opts.infants || 0,
+        currency: opts.currency || 'USD',
+        country: opts.country || 'US',
+        cabinClass: opts.cabin || opts.cabinClass || 'ECONOMY',
+        environment: opts.environment || 'sandbox'
+      })
+    });
+    var data = await res.json();
+    if (!data.success) { console.error('search-flights a echoue:', data); return null; }
+    return data.data;
+  }catch(e){
+    console.error('Erreur searchFlights:', e);
+    return null;
   }
-  container.innerHTML = html;
 }
 
-// Recherche aller-retour
-searchFlights({
-  legs: [
-    { origin: 'FIH', destination: 'BRU', date: '2026-08-12' },
-    { origin: 'BRU', destination: 'FIH', date: '2026-08-19' }
-  ],
-  adults: 1,
-  cabin: 'ECONOMY'
-}).then(function(results) {
-  if (results) {
-    var journeys = results[0]?.journeys || [];
-    journeys.forEach(function(journey, index) {
-      console.log('Vol ' + (index + 1) + ':', journey.offers[0]?.pricing?.display?.total);
-    });
+function generateSkeleton(){
+  var html = '';
+  for (var i = 0; i < 4; i++){
+    html += '<div class="skeleton-flight skeleton"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div><div class="skeleton-line w30"></div><div class="skeleton-line w60"></div></div>';
   }
-});
+  document.getElementById('resultsContainer').innerHTML = html;
+}
 
-// Recherche aller simple
-searchFlights({
-  legs: [
-    { origin: 'FIH', destination: 'CDG', date: '2026-08-12' }
-  ],
-  adults: 2
-}).then(function(results) {
-  if (results) {
-    console.log('Vols trouvés:', results[0]?.journeys?.length || 0);
-  }
-});
-
-function displayFlights(data) {
+function displayFlights(rawData){
   var container = document.getElementById('resultsContainer');
   var count = document.getElementById('resultsCount');
+  console.log('Reponse brute /search-flights:', rawData);
 
-  if (!data || !data[0] || !data[0].journeys || data[0].journeys.length === 0) {
-    container.innerHTML = `
-      <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-        <h3>Aucun vol trouvé</h3>
-        <p>Essayez de modifier votre origine, destination ou dates.</p>
-      </div>
-    `;
-    count.textContent = '0 résultat';
+  var journeys = [];
+  if (Array.isArray(rawData)){
+    journeys = (rawData[0] && rawData[0].journeys) || rawData;
+  } else if (rawData && rawData.journeys){
+    journeys = rawData.journeys;
+  }
+
+  if (!journeys || journeys.length === 0){
+    container.innerHTML = '<div class="state-msg"><h3>Aucun vol trouve</h3><p>Essayez de modifier votre origine, destination ou vos dates.</p><button class="retry-btn" onclick="loadResults()">Reessayer</button></div>';
+    count.textContent = '0 resultat';
     return;
   }
 
-  var journeys = data[0].journeys || [];
-  count.textContent = journeys.length + ' vols trouvés';
+  lastJourneys = journeys;
+  count.textContent = journeys.length + ' vol' + (journeys.length > 1 ? 's' : '') + ' trouve' + (journeys.length > 1 ? 's' : '');
   container.innerHTML = '';
 
-  for (var i = 0; i < Math.min(journeys.length, 20); i++) {
-    var journey = journeys[i];
+  journeys.slice(0, 20).forEach(function(journey, index){
     var offers = journey.offers || [];
-    var bestOffer = offers[0] || null;
+    var bestOffer = offers[0] || {};
     var segments = journey.segments || [];
+    var price = (bestOffer.pricing && bestOffer.pricing.display && bestOffer.pricing.display.total) || (bestOffer.price && bestOffer.price.total) || null;
+    var currency = (bestOffer.pricing && bestOffer.pricing.display && bestOffer.pricing.display.currency) || (bestOffer.price && bestOffer.price.currency) || 'USD';
 
-    var price = bestOffer ? (bestOffer.pricing?.display?.total || 'N/A') : 'N/A';
-    var currency = bestOffer ? (bestOffer.pricing?.display?.currency || 'USD') : 'USD';
-    var airline = segments[0]?.carrier?.marketingName || 'Compagnie inconnue';
-    var airlineCode = segments[0]?.carrier?.marketingCode || 'XX';
-    var duration = journey.totalDuration?.iso8601 || 'N/A';
-
-    var legHtml = '';
-    var legIndex = 0;
     var legLabels = ['Aller', 'Retour'];
+    var legIndex = 0;
+    var legHtml = '';
+    segments.forEach(function(seg, s){
+      if (s > 0 && seg.direction !== segments[s-1].direction) legIndex++;
+      var dep = seg.departureTime ? new Date(seg.departureTime) : null;
+      var arr = seg.arrivalTime ? new Date(seg.arrivalTime) : null;
+      legHtml += '<div class="flight-leg">'
+        + '<div class="leg-label"><b>' + (legLabels[legIndex] || 'Vol') + '</b>' + (dep ? dep.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}) : '') + '</div>'
+        + '<div class="airline-badge">' + ((seg.carrier && seg.carrier.marketingCode) || seg.marketingCarrier || 'XX') + '</div>'
+        + '<div class="flight-route">'
+        + '<div class="flight-time">' + (dep ? dep.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '--:--') + '<span class="code">' + (seg.originCode || seg.origin || '???') + '</span></div>'
+        + '<div class="flight-line-wrap"><div class="flight-line"><div class="stop-dot"></div></div><div class="flight-meta">' + ((seg.duration && seg.duration.minutes) ? Math.round(seg.duration.minutes/60)+'h '+(seg.duration.minutes%60)+'m' : '') + '</div></div>'
+        + '<div class="flight-time">' + (arr ? arr.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '--:--') + '<span class="code">' + (seg.destinationCode || seg.destination || '???') + '</span></div>'
+        + '</div></div>';
+    });
 
-    for (var s = 0; s < segments.length; s++) {
-      var seg = segments[s];
-      var isNewLeg = (s === 0 || seg.direction !== segments[s-1]?.direction);
-      if (isNewLeg && s > 0) legIndex++;
-      
-      legHtml += `
-        <div class="flight-leg">
-          <div class="leg-label"><b>${legLabels[legIndex] || 'Vol'}</b>${seg.departureTime ? new Date(seg.departureTime).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) : ''}</div>
-          <div class="airline-badge">${airlineCode}</div>
-          <div class="flight-route">
-            <div class="flight-time">${seg.departureTime ? new Date(seg.departureTime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}<span class="code">${seg.originCode || '???'}</span></div>
-            <div class="flight-line-wrap">
-              <div class="flight-line"><div class="stop-dot"></div></div>
-              <div class="flight-meta">${seg.duration?.minutes ? Math.round(seg.duration.minutes / 60) + 'h ' + (seg.duration.minutes % 60) + 'm' : 'N/A'}</div>
-            </div>
-            <div class="flight-time">${seg.arrivalTime ? new Date(seg.arrivalTime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}<span class="code">${seg.destinationCode || '???'}</span></div>
-          </div>
-        </div>
-      `;
+    if (!segments.length){
+      legHtml = '<div class="flight-leg"><div class="leg-label"><b>Vol ' + (index+1) + '</b></div><div class="flight-route"><div class="flight-meta">Detail du trajet a confirmer - voir la console pour la reponse brute.</div></div></div>';
     }
 
     var div = document.createElement('div');
     div.className = 'flight-result';
-    div.innerHTML = `
-      <div class="price-top">
-        <div class="amount">${currency} ${typeof price === 'number' ? price.toFixed(2) : price}</div>
-        <div class="note">Total, 1 passager</div>
-      </div>
-      ${legHtml}
-      <div class="flight-bottom">
-        <div class="amenity-icons">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="7" width="12" height="14" rx="1"/><path d="M9 7V4h6v3"/></svg>
-        </div>
-        <a class="details-link" onclick="alert('Détails du vol ${airline}')">Détails</a>
-        <button class="cta-btn-sm" onclick="alert('Réservation pour ${airline}')">Voir les tarifs</button>
-      </div>
-    `;
+    div.innerHTML = '<div class="price-top">'
+      + '<div class="amount">' + (price !== null ? (currency + ' ' + Number(price).toFixed(2)) : 'Prix indisponible') + '</div>'
+      + '<div class="note">Total, ' + (params.get('adults') || 1) + ' passager(s)</div>'
+      + '</div>'
+      + legHtml
+      + '<div class="flight-bottom">'
+      + '<div class="amenity-icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="7" width="12" height="14" rx="1"/><path d="M9 7V4h6v3"/></svg></div>'
+      + '<a class="details-link" onclick="voirVol(' + index + ')">Details</a>'
+      + '<button class="cta-btn-sm" onclick="voirVol(' + index + ')">Voir les tarifs</button>'
+      + '</div>';
     container.appendChild(div);
-  }
+  });
 }
 
-function swapFlight() {
+function voirVol(index){
+  var journey = lastJourneys[index];
+  if (!journey){ alert('Details du vol indisponibles.'); return; }
+  sessionStorage.setItem('luvia_selected_journey', JSON.stringify(journey));
+  window.location.href = 'vol-detail.html?index=' + index;
+}
+
+function swapFlight(){
   var origin = document.getElementById('flightOrigin');
   var dest = document.getElementById('flightDest');
   var temp = origin.textContent;
@@ -363,56 +329,56 @@ function swapFlight() {
   dest.textContent = temp;
 }
 
-function loadResults() {
+function loadResults(){
   var origin = params.get('origin') || 'Kinshasa (FIH)';
   var destination = params.get('destination') || 'Bruxelles (BRU)';
   var departure = params.get('departure') || '';
   var returnDate = params.get('return') || '';
   var adults = parseInt(params.get('adults') || '1', 10);
+  var cabinClass = params.get('cabinClass') || 'ECONOMY';
 
   document.getElementById('flightOrigin').textContent = origin;
   document.getElementById('flightDest').textContent = destination;
-  document.getElementById('flightDates').textContent = departure ? (returnDate ? new Date(departure).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' - ' + new Date(returnDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : new Date(departure).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })) : 'Sélectionnez vos dates';
-  document.getElementById('flightPassengers').textContent = adults + ' Passager' + (adults > 1 ? 's' : '') + ' · Économie';
+  document.getElementById('flightDates').textContent = departure
+    ? (returnDate
+        ? new Date(departure).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) + ' - ' + new Date(returnDate).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})
+        : new Date(departure).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}))
+    : 'Selectionnez vos dates';
+  document.getElementById('flightPassengers').textContent = adults + ' Passager' + (adults > 1 ? 's' : '') + ' - ' + cabinClass;
+
+  if (!origin || !destination || !departure){
+    document.getElementById('resultsContainer').innerHTML = '<div class="state-msg"><h3>Parametres de recherche manquants</h3><p>Veuillez retourner a la page d accueil et effectuer une recherche.</p><a class="retry-btn" style="display:inline-block;text-decoration:none;" href="index-v2.html">Retour a l accueil</a></div>';
+    document.getElementById('resultsCount').textContent = 'Parametres manquants';
+    return;
+  }
 
   generateSkeleton();
 
-  if (origin && destination && departure) {
-    var legs = [
-      { origin: origin.split('(')[0].trim() || origin, destination: destination.split('(')[0].trim() || destination, date: departure }
-    ];
-    if (returnDate) {
-      legs.push({ origin: destination.split('(')[0].trim() || destination, destination: origin.split('(')[0].trim() || origin, date: returnDate });
-    }
+  var originMatch = origin.match(/\(([^)]+)\)/);
+  var destMatch = destination.match(/\(([^)]+)\)/);
+  var originCode = originMatch ? originMatch[1].trim() : origin;
+  var destCode = destMatch ? destMatch[1].trim() : destination;
 
-    searchFlights({ legs: legs, adults: adults })
-      .then(function(results) { displayFlights(results); })
-      .catch(function() {
-        document.getElementById('resultsContainer').innerHTML = `
-          <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-            <h3>❌ Une erreur est survenue</h3>
-            <p>Veuillez réessayer plus tard.</p>
-          </div>
-        `;
-      });
-  } else {
-    document.getElementById('resultsContainer').innerHTML = `
-      <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-        <h3>Paramètres de recherche manquants</h3>
-        <p>Veuillez retourner à la page d'accueil et effectuer une recherche.</p>
-        <a href="index.html" style="display:inline-block;margin-top:16px;padding:10px 20px;background:var(--blue);color:#FFF;border-radius:var(--radius);text-decoration:none;">Retour à l'accueil</a>
-      </div>
-    `;
-    document.getElementById('resultsCount').textContent = 'Paramètres manquants';
-  }
+  var legs = [{ origin: originCode, destination: destCode, date: departure }];
+  if (returnDate) legs.push({ origin: destCode, destination: originCode, date: returnDate });
+
+  searchFlights({ legs: legs, adults: adults, cabin: cabinClass })
+    .then(function(data){
+      if (!data){
+        document.getElementById('resultsContainer').innerHTML = '<div class="state-msg"><h3>Une erreur est survenue</h3><p>Impossible de contacter le serveur de recherche de vols. Verifiez que le backend autorise ce domaine (CORS).</p><button class="retry-btn" onclick="loadResults()">Reessayer</button></div>';
+        document.getElementById('resultsCount').textContent = 'Erreur';
+        return;
+      }
+      displayFlights(data);
+    });
 }
 
 document.addEventListener('DOMContentLoaded', loadResults);
 
 var btn = document.getElementById('switcherBtn');
 var menu = document.getElementById('switcherMenu');
-btn.addEventListener('click', function(e) { e.stopPropagation(); menu.classList.toggle('open'); });
-document.addEventListener('click', function() { menu.classList.remove('open'); });
+btn.addEventListener('click', function(e){ e.stopPropagation(); menu.classList.toggle('open'); });
+document.addEventListener('click', function(){ menu.classList.remove('open'); });
 </script>
 </body>
 </html>

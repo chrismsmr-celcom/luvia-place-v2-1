@@ -6,6 +6,7 @@
 <title>Séjours — LuviaPlace</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root{
     --blue:#155EEF; --blue-dark:#0E3FB0; --ink:#101828; --ink-soft:#475467;
@@ -64,12 +65,14 @@
   @media (max-width:960px){ .results-layout{ grid-template-columns:1fr; } }
 
   .sidebar{ position:sticky; top:90px; display:flex; flex-direction:column; gap:14px; }
-  .map-thumb{ height:190px; border-radius:var(--radius-md); overflow:hidden; position:relative; border:1px solid var(--line); }
-  .map-thumb .map-pin{ position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); width:34px; height:34px; }
+  .map-thumb{ height:220px; border-radius:var(--radius-md); overflow:hidden; position:relative; border:1px solid var(--line); background:var(--bg-soft); min-height:220px; }
+  .map-thumb .leaflet-container{ height:100%; width:100%; min-height:220px; }
   .map-btn{
     position:absolute; left:50%; bottom:14px; transform:translateX(-50%); background:#fff; border:none;
-    padding:9px 16px; border-radius:100px; font-weight:700; font-size:13px; box-shadow:0 6px 16px rgba(16,24,40,0.18); cursor:pointer;
+    padding:9px 16px; border-radius:100px; font-weight:700; font-size:13px; box-shadow:0 6px 16px rgba(16,24,40,0.18); cursor:pointer; z-index:10;
   }
+  .map-btn:hover{ background:var(--bg-soft); }
+
   details.filter-group{ border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff; }
   details.filter-group summary{ display:flex; justify-content:space-between; align-items:center; padding:14px 16px; font-weight:700; font-size:14.5px; cursor:pointer; list-style:none; font-family:var(--font-head); }
   details.filter-group summary::-webkit-details-marker{ display:none; }
@@ -77,34 +80,49 @@
   details.filter-group[open] summary::after{ transform:rotate(180deg); }
   .fg-body{ padding:0 16px 16px; display:flex; flex-direction:column; gap:10px; }
   .clear-btn{ display:flex; align-items:center; gap:8px; width:100%; padding:11px; border:1px solid var(--line); border-radius:10px; background:#fff; font-weight:600; font-size:13.5px; color:var(--ink-soft); cursor:pointer; }
+  .clear-btn:hover{ background:var(--bg-soft); }
   .clear-btn svg{ width:14px; height:14px; }
   .fg-input{ width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:9px; font-size:13.5px; font-family:inherit; }
   .price-range-label{ display:flex; justify-content:space-between; font-size:13px; font-weight:700; }
   .range-track{ height:4px; background:var(--line); border-radius:100px; position:relative; margin:14px 4px; }
   .range-track .fill{ position:absolute; left:15%; right:20%; top:0; bottom:0; background:var(--blue); border-radius:100px; }
   .range-track .handle{ position:absolute; top:50%; width:16px; height:16px; border-radius:100px; background:#fff; border:2px solid var(--blue); transform:translate(-50%,-50%); }
-  .check-item{ display:flex; align-items:center; gap:10px; font-size:13.5px; }
+  .check-item{ display:flex; align-items:center; gap:10px; font-size:13.5px; cursor:pointer; }
   .check-item input{ accent-color:var(--blue); width:16px; height:16px; }
 
   .results-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:12px; }
   .results-count{ font-family:var(--font-head); font-weight:800; font-size:20px; }
   .results-actions{ display:flex; align-items:center; gap:10px; }
-  .sort-select{ display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:10px; padding:9px 14px; font-size:13.5px; font-weight:600; background:#fff; }
+  .sort-select{ 
+    display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:10px; padding:9px 14px; 
+    font-size:13.5px; font-weight:600; background:#fff; cursor:pointer; position:relative; 
+  }
+  .sort-select:hover{ background:var(--bg-soft); }
   .sort-select svg{ width:14px; height:14px; color:var(--ink-soft); }
+  .sort-dropdown{
+    position:absolute; top:calc(100% + 4px); left:0; background:#fff; border:1px solid var(--line); 
+    border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12); min-width:200px; display:none; overflow:hidden; z-index:50;
+  }
+  .sort-dropdown.open{ display:block; }
+  .sort-dropdown .sort-item{ padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer; transition:background .15s; }
+  .sort-dropdown .sort-item:hover{ background:var(--bg-soft); }
+  .sort-dropdown .sort-item.active{ color:var(--blue); background:var(--bg-soft); }
+
   .view-toggle{ display:flex; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
   .view-toggle button{ display:flex; align-items:center; gap:6px; padding:9px 14px; font-size:13px; font-weight:600; background:#fff; border:none; color:var(--ink-soft); cursor:pointer; }
   .view-toggle button.active{ background:var(--bg-soft); color:var(--ink); }
+  .view-toggle button:hover:not(.active){ background:var(--bg-soft); }
   .view-toggle svg{ width:14px; height:14px; }
 
-  .alert-banner{ display:flex; align-items:center; gap:10px; background:#FEF3E8; color:#9A4B12; border:1px solid #FCE0BD; border-radius:12px; padding:12px 16px; font-size:13.5px; margin-bottom:18px; }
-  .alert-banner svg{ width:16px; height:16px; flex-shrink:0; }
-
-  .hotel-result{ display:flex; gap:20px; border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px; background:#fff; }
+  .hotel-result{ display:flex; gap:20px; border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px; background:#fff; transition:box-shadow .2s ease; }
+  .hotel-result:hover{ box-shadow:0 4px 20px rgba(0,0,0,0.06); }
   @media (max-width:700px){ .hotel-result{ flex-direction:column; } }
   .hotel-result .photo{ width:230px; height:180px; border-radius:12px; overflow:hidden; flex-shrink:0; position:relative; background:var(--bg-soft); }
   @media (max-width:700px){ .hotel-result .photo{ width:100%; height:200px; } }
-  .hotel-result .photo img{ width:100%; height:100%; object-fit:cover; }
-  .wishlist-btn{ position:absolute; top:10px; left:10px; width:32px; height:32px; border-radius:100px; background:#fff; display:flex; align-items:center; justify-content:center; color:var(--ink); box-shadow:0 2px 6px rgba(0,0,0,0.15); border:none; cursor:pointer; }
+  .hotel-result .photo img{ width:100%; height:100%; object-fit:cover; transition:transform .3s ease; }
+  .hotel-result:hover .photo img{ transform:scale(1.03); }
+  .wishlist-btn{ position:absolute; top:10px; left:10px; width:32px; height:32px; border-radius:100px; background:#fff; display:flex; align-items:center; justify-content:center; color:var(--ink); box-shadow:0 2px 6px rgba(0,0,0,0.15); border:none; cursor:pointer; transition:background .2s; }
+  .wishlist-btn:hover{ background:var(--bg-soft); }
   .wishlist-btn svg{ width:15px; height:15px; }
   .hotel-result .info{ flex:1; min-width:0; display:flex; flex-direction:column; }
   .stars{ color:var(--amber); font-size:13px; margin-bottom:6px; }
@@ -115,8 +133,6 @@
   .dist-row svg{ width:13px; height:13px; flex-shrink:0; }
   .coins-line{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--blue); font-weight:600; margin-top:auto; }
   .coins-line svg{ width:14px; height:14px; color:var(--amber); }
-  .a11y-badges{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
-  .a11y-badge{ display:flex; align-items:center; gap:5px; background:var(--bg-soft); border:1px solid var(--line); border-radius:100px; padding:4px 10px; font-size:11px; font-weight:600; color:var(--ink-soft); }
 
   .hotel-result .side{ width:220px; flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; text-align:right; gap:8px; }
   @media (max-width:700px){ .hotel-result .side{ width:100%; align-items:flex-start; text-align:left; } }
@@ -130,20 +146,25 @@
   .price-block .amount{ font-family:var(--font-head); font-weight:800; font-size:22px; }
   .price-block .per{ font-size:12px; color:var(--ink-soft); font-weight:600; }
   .price-block .note{ font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; }
-  .public-price{ background:var(--bg-soft); border-radius:8px; padding:4px 9px; font-size:11.5px; color:var(--ink-soft); display:inline-block; margin-bottom:8px; }
   .cta-btn-sm{ background:var(--blue); color:#fff; font-weight:700; font-size:13.5px; padding:10px 18px; border-radius:9px; border:none; display:inline-flex; align-items:center; gap:6px; cursor:pointer; transition:background .2s; }
   .cta-btn-sm:hover{ background:var(--blue-dark); }
   .cta-btn-sm svg{ width:13px; height:13px; }
+  .cta-btn-sm:disabled{ opacity:0.5; cursor:not-allowed; }
 
+  /* ========== SQUELLETTES ========== */
   .skeleton{ animation:pulse 1.5s ease-in-out infinite; }
   @keyframes pulse{ 0%,100%{ opacity:.4; } 50%{ opacity:.8; } }
   .skeleton-photo{ width:230px; height:180px; border-radius:12px; background:var(--bg-soft); }
+  @media (max-width:700px){ .skeleton-photo{ width:100%; height:200px; } }
   .skeleton-line{ height:14px; border-radius:8px; background:var(--bg-soft); margin-bottom:8px; }
   .skeleton-line.w70{ width:70%; }
   .skeleton-line.w50{ width:50%; }
   .skeleton-line.w40{ width:40%; }
   .skeleton-line.w30{ width:30%; }
   .skeleton-line.w90{ width:90%; }
+
+  .hotel-result.skeleton .info .skeleton-line:last-child{ margin-bottom:0; }
+  .hotel-result.skeleton .side .skeleton-line{ margin-bottom:6px; }
 
   footer{ background:var(--ink); color:rgba(255,255,255,0.7); padding:56px 0 28px; }
   .footer-grid{ display:grid; grid-template-columns:1.4fr repeat(4,1fr); gap:32px; margin-bottom:40px; }
@@ -186,26 +207,30 @@
 
 <div class="results-layout">
   <aside class="sidebar">
-    <div class="map-thumb">
-      <img src="https://picsum.photos/seed/luvia-map-kin/400/380" alt="">
-      <svg class="map-pin" viewBox="0 0 24 24" fill="#155EEF" stroke="#fff" stroke-width="1"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/></svg>
-      <button class="map-btn">Afficher sur la carte</button>
-    </div>
+    <div class="map-thumb" id="mapContainer" style="height:220px; min-height:220px;"></div>
 
     <details class="filter-group" open>
       <summary>Filtres</summary>
       <div class="fg-body">
-        <button class="clear-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Effacer les filtres</button>
-        <label class="hint" style="font-size:12px;font-weight:700;">Nom de la propriété</label>
-        <input class="fg-input" type="text" placeholder="Par exemple : Fleuve Congo Palace" id="filterName">
+        <button class="clear-btn" onclick="clearFilters()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Effacer les filtres</button>
+        <label style="font-size:12px;font-weight:700;">Nom de la propriété</label>
+        <input class="fg-input" type="text" placeholder="Par exemple : Fleuve Congo Palace" id="filterName" oninput="applyFilters()">
         <div class="price-range-label"><span>Prix (par nuit)</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);">$US0 <span>→</span> $US1000+</div>
-        <div class="range-track"><div class="fill"></div><div class="handle" style="left:15%;"></div><div class="handle" style="left:80%;"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);">$0 <span>→</span> $1000+</div>
+        <div class="range-track">
+          <div class="fill" id="priceFill" style="left:0%; right:0%;"></div>
+          <div class="handle" id="priceMinHandle" style="left:0%;"></div>
+          <div class="handle" id="priceMaxHandle" style="left:100%;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);">
+          <span id="priceMinLabel">$0</span>
+          <span id="priceMaxLabel">$1000+</span>
+        </div>
         <label style="font-size:12px;font-weight:700;margin-top:6px;">Filtres populaires</label>
-        <label class="check-item"><input type="checkbox">Annulation gratuite</label>
-        <label class="check-item"><input type="checkbox">Parking</label>
-        <label class="check-item"><input type="checkbox">Petit déjeuner inclus</label>
-        <label class="check-item"><input type="checkbox">Piscine</label>
+        <label class="check-item"><input type="checkbox" id="filterFreeCancellation" onchange="applyFilters()">Annulation gratuite</label>
+        <label class="check-item"><input type="checkbox" id="filterParking" onchange="applyFilters()">Parking</label>
+        <label class="check-item"><input type="checkbox" id="filterBreakfast" onchange="applyFilters()">Petit déjeuner inclus</label>
+        <label class="check-item"><input type="checkbox" id="filterPool" onchange="applyFilters()">Piscine</label>
       </div>
     </details>
 
@@ -216,7 +241,7 @@
         <label class="check-item"><input type="checkbox">Ascenseur disponible</label>
         <label class="check-item"><input type="checkbox">Salle de bain adaptée</label>
         <label class="check-item"><input type="checkbox">Stationnement accessible</label>
-        <label class="check-item"><input type="checkbox">Personnel formé (accueil handicap)</label>
+        <label class="check-item"><input type="checkbox">Personnel formé</label>
       </div>
     </details>
 
@@ -235,10 +260,20 @@
     <div class="results-top">
       <div class="results-count" id="resultsCount">Recherche en cours...</div>
       <div class="results-actions">
-        <div class="sort-select">Trier par : nos meilleures ventes <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+        <div class="sort-select" id="sortSelect" onclick="toggleSortDropdown()">
+          <span id="sortLabel">Trier par : nos meilleures ventes</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+          <div class="sort-dropdown" id="sortDropdown">
+            <div class="sort-item active" data-sort="popularity" onclick="applySort('popularity')">Nos meilleures ventes</div>
+            <div class="sort-item" data-sort="price_asc" onclick="applySort('price_asc')">Prix croissant</div>
+            <div class="sort-item" data-sort="price_desc" onclick="applySort('price_desc')">Prix décroissant</div>
+            <div class="sort-item" data-sort="rating" onclick="applySort('rating')">Note des clients</div>
+            <div class="sort-item" data-sort="stars" onclick="applySort('stars')">Nombre d'étoiles</div>
+          </div>
+        </div>
         <div class="view-toggle">
-          <button class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Liste</button>
-          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v18M3 9h18"/></svg>Carte</button>
+          <button class="active" onclick="setView('list')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Liste</button>
+          <button onclick="setView('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v18M3 9h18"/></svg>Carte</button>
         </div>
       </div>
     </div>
@@ -266,13 +301,20 @@
   </div>
 </footer>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
 var params = new URLSearchParams(window.location.search);
-var hotelsData = [];
+var allHotels = [];
+var displayedHotels = [];
 var hotelsContainer = null;
 var resultsCount = null;
 var isFirstBatch = true;
+var map = null;
+var mapMarkers = [];
+var mapInitialized = false;
+var currentSort = 'popularity';
+var currentView = 'list';
 
 // ============================================
 // CALCUL DU NOMBRE DE NUITS
@@ -286,134 +328,283 @@ function getNights(checkin, checkout) {
     return diffDays > 0 ? diffDays : 1;
 }
 
-function generateSkeleton() {
-  var container = document.getElementById('resultsContainer');
-  var html = '';
-  for (var i = 0; i < 6; i++) {
-    html += `
-      <div class="hotel-result skeleton">
-        <div class="skeleton-photo"></div>
-        <div class="info">
-          <div class="skeleton-line w70"></div>
-          <div class="skeleton-line w50"></div>
-          <div class="skeleton-line w40"></div>
-          <div class="skeleton-line w90"></div>
-          <div class="skeleton-line w30"></div>
-        </div>
-        <div class="side">
-          <div class="skeleton-line w50"></div>
-          <div class="skeleton-line w40"></div>
-          <div class="skeleton-line w60"></div>
-        </div>
-      </div>
-    `;
-  }
-  container.innerHTML = html;
+// ============================================
+// INITIALISATION DE LA CARTE - OpenStreetMap NORMAL
+// ============================================
+function initMap(lat, lng, hotels) {
+    if (mapInitialized) {
+        if (hotels && hotels.length) {
+            addMarkers(hotels);
+        }
+        return;
+    }
+    
+    var container = document.getElementById('mapContainer');
+    if (!container) return;
+    
+    if (container.offsetHeight === 0) {
+        setTimeout(function() { initMap(lat, lng, hotels); }, 300);
+        return;
+    }
+    
+    var centerLat = lat || -4.325;
+    var centerLng = lng || 15.322;
+    
+    try {
+        map = L.map(container, {
+            center: [centerLat, centerLng],
+            zoom: 13,
+            zoomControl: true
+        });
+        
+        // ✅ OpenStreetMap NORMAL (pas coloré)
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+        
+        mapInitialized = true;
+        
+        if (hotels && hotels.length) {
+            addMarkers(hotels);
+        }
+        
+        setTimeout(function() { map.invalidateSize(); }, 400);
+    } catch (error) {
+        console.error('Erreur carte:', error);
+    }
 }
 
 // ============================================
-// AFFICHAGE D'UN HÔTEL - CORRIGÉ
+// AJOUTER LES MARQUEURS
 // ============================================
-function createHotelElement(hotel, index) {
-  // ✅ ÉTOILES DYNAMIQUES
-  var starRating = hotel.starRating || 0;
-  var starHtml = '';
-  for (var s = 0; s < Math.min(Math.round(starRating), 5); s++) {
-      starHtml += '★';
-  }
-  if (starRating === 0) {
-      starHtml = '☆'.repeat(3);
-  }
-  
-  // ✅ PRIX PAR NUIT
-  var checkin = params.get('checkin') || getDefaultCheckin();
-  var checkout = params.get('checkout') || getDefaultCheckout();
-  var nights = getNights(checkin, checkout);
-  var pricePerNight = hotel.minPrice > 0 ? Math.round(hotel.minPrice / nights) : 0;
-  var totalPrice = hotel.minPrice > 0 ? Math.round(hotel.minPrice) : 0;
-  
-  var div = document.createElement('div');
-  div.className = 'hotel-result';
-  div.id = 'hotel-' + (hotel.id || index);
-  
-  var priceDisplay = hotel.loading 
-    ? '<span class="loading-price">⏳ Chargement...</span>'
-    : hotel.minPrice > 0 
-      ? `$${pricePerNight} <span class="per">/ nuit</span>`
-      : '<span class="no-price">Prix non disponible</span>';
-  
-  var ratingDisplay = hotel.rating >= 8 ? 'Excellent' : hotel.rating >= 7 ? 'Très bien' : 'Bien';
-  
-  div.innerHTML = `
-    <div class="photo">
-      <img src="${hotel.main_photo || 'https://picsum.photos/seed/hotel' + (hotel.id || index) + '/460/380'}" 
-           alt="${hotel.name || 'Hôtel'}" 
-           loading="lazy">
-      <button class="wishlist-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/></svg></button>
-    </div>
-    <div class="info">
-      <div class="stars">${starHtml}</div>
-      <h3>${hotel.name || 'Hôtel sans nom'}</h3>
-      <div class="addr-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>${hotel.address || hotel.city || 'Adresse non disponible'}</div>
-      <div class="dist-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 5l7 7-7 7M5 12h15"/></svg>${hotel.roomName || 'Chambre standard'}</div>
-      ${!hotel.loading && hotel.minPrice > 0 ? `<div class="coins-line"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>Validez votre commande et gagnez ${Math.floor(hotel.minPrice / 10)} LuviaCoins</div>` : ''}
-    </div>
-    <div class="side">
-      <div class="review-row">
-        <div class="review-text">${ratingDisplay}<b>${hotel.reviewCount || 0} avis</b></div>
-        <div class="review-num">${hotel.rating || '8.5'}</div>
-      </div>
-      ${!hotel.loading && hotel.minPrice > 0 ? `<div class="savings-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>Connectez-vous et économisez $${Math.floor(hotel.minPrice * 0.08)}</div>` : ''}
-      <div class="price-block">
-        <div class="amount">${priceDisplay}</div>
-        ${!hotel.loading && hotel.minPrice > 0 ? `<div class="note">Total $${totalPrice} pour ${nights} nuit${nights > 1 ? 's' : ''}, taxes et frais inclus</div>` : ''}
-      </div>
-      <button class="cta-btn-sm" onclick="voirHotel('${hotel.id || ''}')" ${hotel.loading ? 'disabled style="opacity:0.5;"' : ''}>
-        ${hotel.loading ? '⏳ Chargement...' : 'Voir les disponibilités'}
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-    </div>
-  `;
-  return div;
+function addMarkers(hotels) {
+    if (!map) return;
+    
+    mapMarkers.forEach(function(marker) { map.removeLayer(marker); });
+    mapMarkers = [];
+    var bounds = [];
+    var count = 0;
+    
+    hotels.forEach(function(hotel, index) {
+        var lat = hotel.latitude || hotel.lat || null;
+        var lng = hotel.longitude || hotel.lon || null;
+        
+        if (lat && lng) {
+            lat = parseFloat(lat);
+            lng = parseFloat(lng);
+            
+            if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                count++;
+                var icon = L.divIcon({
+                    className: 'custom-marker',
+                    html: '<div style="background:#155EEF;color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(21,94,239,0.35);border:2px solid #fff;">' + count + '</div>',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                });
+                
+                var marker = L.marker([lat, lng], { icon: icon })
+                    .addTo(map)
+                    .bindPopup('<strong>' + (hotel.name || 'Hôtel') + '</strong>' + 
+                        (hotel.address ? '<br>' + hotel.address : '') +
+                        '<br><a href="hotel-detail.html?hotelId=' + hotel.id + '" style="color:#155EEF;font-weight:600;">Voir les tarifs</a>');
+                
+                mapMarkers.push(marker);
+                bounds.push([lat, lng]);
+            }
+        }
+    });
+    
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [40, 40] });
+    }
 }
 
 // ============================================
-// AFFICHAGE DES HÔTELS (STREAMING)
+// TRI ET FILTRES
 // ============================================
-function displayHotelsStream(data) {
-  if (!hotelsContainer) {
-    hotelsContainer = document.getElementById('resultsContainer');
-  }
-  if (!resultsCount) {
-    resultsCount = document.getElementById('resultsCount');
-  }
+function toggleSortDropdown() {
+    var dropdown = document.getElementById('sortDropdown');
+    dropdown.classList.toggle('open');
+}
 
-  if (isFirstBatch) {
-    hotelsContainer.innerHTML = '';
-    isFirstBatch = false;
-  }
+function applySort(sortType) {
+    currentSort = sortType;
+    var items = document.querySelectorAll('.sort-item');
+    items.forEach(function(item) {
+        item.classList.remove('active');
+        if (item.dataset.sort === sortType) {
+            item.classList.add('active');
+        }
+    });
+    
+    var labels = {
+        'popularity': 'Nos meilleures ventes',
+        'price_asc': 'Prix croissant',
+        'price_desc': 'Prix décroissant',
+        'rating': 'Note des clients',
+        'stars': 'Nombre d\'étoiles'
+    };
+    document.getElementById('sortLabel').textContent = 'Trier par : ' + (labels[sortType] || sortType);
+    document.getElementById('sortDropdown').classList.remove('open');
+    
+    applyFiltersAndSort();
+}
 
-  var fragment = document.createDocumentFragment();
-  data.hotels.forEach(function(hotel, index) {
-    var el = createHotelElement(hotel, index);
-    fragment.appendChild(el);
-  });
-  hotelsContainer.appendChild(fragment);
+function applyFilters() {
+    applyFiltersAndSort();
+}
 
-  var loaded = data.loaded || data.hotels.length;
-  var total = data.total || loaded;
-  resultsCount.textContent = loaded + ' / ' + total + ' propriétés trouvées';
+function applyFiltersAndSort() {
+    var filtered = allHotels.filter(function(hotel) {
+        // Filtre par nom
+        var nameFilter = document.getElementById('filterName').value.toLowerCase();
+        if (nameFilter && !hotel.name.toLowerCase().includes(nameFilter)) {
+            return false;
+        }
+        
+        // Filtre prix (on garde tous pour l'instant, le slider est visuel)
+        // Filtres populaires
+        if (document.getElementById('filterFreeCancellation').checked && !hotel.refundable) {
+            return false;
+        }
+        if (document.getElementById('filterParking').checked && !hotel.tags?.includes('Parking')) {
+            return false;
+        }
+        if (document.getElementById('filterBreakfast').checked && !hotel.tags?.includes('Breakfast')) {
+            return false;
+        }
+        if (document.getElementById('filterPool').checked && !hotel.tags?.includes('Pool')) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // Tri
+    var sorted = applySortToArray(filtered, currentSort);
+    displayedHotels = sorted;
+    renderHotels(sorted);
+}
+
+function applySortToArray(hotels, sortType) {
+    var sorted = [...hotels];
+    switch(sortType) {
+        case 'price_asc':
+            sorted.sort(function(a, b) { return a.minPrice - b.minPrice; });
+            break;
+        case 'price_desc':
+            sorted.sort(function(a, b) { return b.minPrice - a.minPrice; });
+            break;
+        case 'rating':
+            sorted.sort(function(a, b) { return (b.rating || 0) - (a.rating || 0); });
+            break;
+        case 'stars':
+            sorted.sort(function(a, b) { return (b.starRating || 0) - (a.starRating || 0); });
+            break;
+        case 'popularity':
+        default:
+            // Garder l'ordre existant (meilleures ventes)
+            break;
+    }
+    return sorted;
+}
+
+function clearFilters() {
+    document.getElementById('filterName').value = '';
+    document.getElementById('filterFreeCancellation').checked = false;
+    document.getElementById('filterParking').checked = false;
+    document.getElementById('filterBreakfast').checked = false;
+    document.getElementById('filterPool').checked = false;
+    document.getElementById('priceMinHandle').style.left = '0%';
+    document.getElementById('priceMaxHandle').style.left = '100%';
+    document.getElementById('priceFill').style.left = '0%';
+    document.getElementById('priceFill').style.right = '0%';
+    document.getElementById('priceMinLabel').textContent = '$0';
+    document.getElementById('priceMaxLabel').textContent = '$1000+';
+    applyFiltersAndSort();
+}
+
+function setView(view) {
+    currentView = view;
+    var buttons = document.querySelectorAll('.view-toggle button');
+    buttons.forEach(function(btn) {
+        btn.classList.remove('active');
+    });
+    if (view === 'list') {
+        buttons[0].classList.add('active');
+        document.getElementById('resultsContainer').style.display = '';
+        document.querySelector('.sidebar').style.display = '';
+        document.querySelector('.results-layout').style.gridTemplateColumns = '290px 1fr';
+    } else {
+        buttons[1].classList.add('active');
+        document.getElementById('resultsContainer').style.display = 'none';
+        document.querySelector('.sidebar').style.display = 'none';
+        document.querySelector('.results-layout').style.gridTemplateColumns = '1fr';
+        setTimeout(function() { if (map) map.invalidateSize(); }, 300);
+    }
 }
 
 // ============================================
-// METTRE À JOUR UN HÔTEL EXISTANT
+// RENDU DES HÔTELS
 // ============================================
-function updateHotel(hotel) {
-  var element = document.getElementById('hotel-' + hotel.id);
-  if (element) {
-    var newElement = createHotelElement(hotel, 0);
-    element.parentNode.replaceChild(newElement, element);
-  }
+function renderHotels(hotels) {
+    var container = document.getElementById('resultsContainer');
+    var count = document.getElementById('resultsCount');
+    
+    if (!hotels || hotels.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--ink-soft);"><h3>Aucun hôtel ne correspond</h3><p>Essayez de modifier vos filtres.</p></div>';
+        count.textContent = '0 propriété trouvée';
+        return;
+    }
+    
+    count.textContent = hotels.length + ' propriétés trouvées';
+    container.innerHTML = '';
+    
+    var checkin = params.get('checkin') || getDefaultCheckin();
+    var checkout = params.get('checkout') || getDefaultCheckout();
+    var nights = getNights(checkin, checkout);
+    
+    hotels.forEach(function(hotel, index) {
+        var starRating = hotel.starRating || 0;
+        var starHtml = '';
+        var fullStars = Math.min(Math.round(starRating), 5);
+        for (var s = 0; s < fullStars; s++) starHtml += '★';
+        for (var s = fullStars; s < 5; s++) starHtml += '☆';
+        if (starRating === 0) starHtml = '☆☆☆';
+        
+        var pricePerNight = hotel.minPrice > 0 ? Math.round(hotel.minPrice / nights) : 0;
+        var totalPrice = hotel.minPrice > 0 ? Math.round(hotel.minPrice) : 0;
+        
+        var div = document.createElement('div');
+        div.className = 'hotel-result';
+        div.innerHTML = `
+            <div class="photo">
+                <img src="${hotel.main_photo || 'https://picsum.photos/seed/hotel' + (hotel.id || index) + '/460/380'}" alt="${hotel.name || 'Hôtel'}" loading="lazy">
+                <button class="wishlist-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/></svg></button>
+            </div>
+            <div class="info">
+                <div class="stars">${starHtml}</div>
+                <h3>${hotel.name || 'Hôtel sans nom'}</h3>
+                <div class="addr-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>${hotel.address || hotel.city || 'Adresse non disponible'}</div>
+                <div class="dist-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 5l7 7-7 7M5 12h15"/></svg>${hotel.roomName || 'Chambre standard'}</div>
+                ${hotel.minPrice > 0 ? `<div class="coins-line"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>Validez votre commande et gagnez ${Math.floor(hotel.minPrice / 10)} LuviaCoins</div>` : ''}
+            </div>
+            <div class="side">
+                <div class="review-row">
+                    <div class="review-text">${hotel.rating >= 8 ? 'Excellent' : hotel.rating >= 7 ? 'Très bien' : 'Bien'}<b>${hotel.reviewCount || 0} avis</b></div>
+                    <div class="review-num">${hotel.rating || '8.5'}</div>
+                </div>
+                ${hotel.minPrice > 0 ? `<div class="savings-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>Connectez-vous et économisez $${Math.floor(hotel.minPrice * 0.08)}</div>` : ''}
+                <div class="price-block">
+                    <div class="amount">${hotel.minPrice > 0 ? '$' + pricePerNight + ' <span class="per">/ nuit</span>' : '<span style="font-size:14px;color:var(--ink-soft);">Prix non disponible</span>'}</div>
+                    ${hotel.minPrice > 0 ? `<div class="note">Total $${totalPrice} pour ${nights} nuit${nights > 1 ? 's' : ''}, taxes et frais inclus</div>` : ''}
+                </div>
+                <button class="cta-btn-sm" onclick="voirHotel('${hotel.id || ''}')">Voir les disponibilités<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
 }
 
 // ============================================
@@ -432,289 +623,203 @@ function getDefaultCheckout() {
 }
 
 // ============================================
-// RECHERCHE HÔTELS AVEC STREAMING (SSE)
-// ============================================
-function searchHotelsStream(searchParams) {
-  return new Promise(function(resolve, reject) {
-    var destination = searchParams.destination || '';
-    var checkin = searchParams.checkin || '';
-    var checkout = searchParams.checkout || '';
-    var adults = parseInt(searchParams.adults || '2', 10);
-    var placeId = searchParams.placeId || '';
-
-    console.log('🔍 searchHotelsStream appelé avec:', { destination, checkin, checkout, adults, placeId });
-
-    var queryParams = new URLSearchParams({
-      checkin: checkin,
-      checkout: checkout,
-      adults: adults,
-      environment: 'production',
-      limit: 2000
-    });
-
-    if (placeId) {
-      queryParams.append('placeId', placeId);
-    } else if (destination) {
-      queryParams.append('city', destination);
-    }
-
-    var url = API_BASE_URL + '/search-hotels-stream?' + queryParams.toString();
-    console.log('📦 URL SSE:', url);
-
-    var eventSource = new EventSource(url);
-    var finalResult = null;
-    var hotelsMap = {};
-
-    eventSource.addEventListener('status', function(e) {
-      var data = JSON.parse(e.data);
-      console.log('📊 Status:', data);
-      var statusEl = document.getElementById('searchStatus');
-      if (statusEl) {
-        statusEl.textContent = data.message;
-        statusEl.style.display = 'block';
-      }
-    });
-
-    eventSource.addEventListener('hotels', function(e) {
-      var data = JSON.parse(e.data);
-      console.log('🏨 Hôtels de base reçus:', data.hotels.length);
-      
-      data.hotels.forEach(function(hotel) {
-        hotelsMap[hotel.id] = hotel;
-      });
-      
-      displayHotelsStream(data);
-    });
-
-    eventSource.addEventListener('batch', function(e) {
-      var data = JSON.parse(e.data);
-      console.log('📦 Lot reçu:', data.batch + '/' + data.totalBatches, data.hotels.length + ' hôtels');
-      
-      data.hotels.forEach(function(hotel) {
-        if (hotelsMap[hotel.id]) {
-          hotelsMap[hotel.id] = hotel;
-          updateHotel(hotel);
-        } else {
-          hotelsMap[hotel.id] = hotel;
-        }
-      });
-      
-      var countEl = document.getElementById('resultsCount');
-      if (countEl) {
-        var loaded = data.loaded || Object.keys(hotelsMap).length;
-        var total = data.total || loaded;
-        countEl.textContent = loaded + ' / ' + total + ' propriétés trouvées';
-      }
-    });
-
-    eventSource.addEventListener('complete', function(e) {
-      var data = JSON.parse(e.data);
-      console.log('✅ Streaming terminé:', data);
-      
-      var sortedHotels = Object.values(hotelsMap)
-        .filter(h => h.minPrice > 0)
-        .sort((a, b) => a.minPrice - b.minPrice);
-      
-      finalResult = {
-        success: true,
-        hotels: sortedHotels,
-        total: sortedHotels.length,
-        rawTotal: data.rawTotal || sortedHotels.length
-      };
-      
-      var statusEl = document.getElementById('searchStatus');
-      if (statusEl) {
-        statusEl.style.display = 'none';
-      }
-      
-      eventSource.close();
-      resolve(finalResult);
-    });
-
-    eventSource.addEventListener('error', function(e) {
-      console.error('❌ Erreur SSE:', e);
-      
-      if (Object.keys(hotelsMap).length > 0) {
-        var sortedHotels = Object.values(hotelsMap)
-          .filter(h => h.minPrice > 0)
-          .sort((a, b) => a.minPrice - b.minPrice);
-        
-        finalResult = {
-          success: true,
-          hotels: sortedHotels,
-          total: sortedHotels.length,
-          partial: true,
-          message: 'Résultats partiels (erreur de connexion)'
-        };
-        
-        eventSource.close();
-        resolve(finalResult);
-      } else {
-        eventSource.close();
-        reject(new Error('Erreur de connexion au serveur'));
-      }
-    });
-
-    setTimeout(function() {
-      if (!finalResult) {
-        console.warn('⏳ Timeout SSE');
-        eventSource.close();
-        
-        if (Object.keys(hotelsMap).length > 0) {
-          var sortedHotels = Object.values(hotelsMap)
-            .filter(h => h.minPrice > 0)
-            .sort((a, b) => a.minPrice - b.minPrice);
-          
-          finalResult = {
-            success: true,
-            hotels: sortedHotels,
-            total: sortedHotels.length,
-            partial: true,
-            message: 'Résultats partiels (timeout)'
-          };
-          resolve(finalResult);
-        } else {
-          reject(new Error('Timeout - Aucun résultat reçu'));
-        }
-      }
-    }, 60000);
-  });
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  var d = new Date(dateStr);
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-}
-
-// ============================================
 // VOIR HÔTEL
 // ============================================
 function voirHotel(hotelId) {
-  if (!hotelId) {
-    alert('ID de l\'hôtel non disponible.');
-    return;
-  }
-  var query = new URLSearchParams(window.location.search);
-  var url = 'hotel-detail.html?hotelId=' + encodeURIComponent(hotelId);
-  if (query.get('checkin')) url += '&checkin=' + query.get('checkin');
-  if (query.get('checkout')) url += '&checkout=' + query.get('checkout');
-  if (query.get('adults')) url += '&adults=' + query.get('adults');
-  window.location.href = url;
+    if (!hotelId) return;
+    var query = new URLSearchParams(window.location.search);
+    var url = 'hotel-detail.html?hotelId=' + encodeURIComponent(hotelId);
+    if (query.get('checkin')) url += '&checkin=' + query.get('checkin');
+    if (query.get('checkout')) url += '&checkout=' + query.get('checkout');
+    if (query.get('adults')) url += '&adults=' + query.get('adults');
+    window.location.href = url;
+}
+
+// ============================================
+// GÉNÉRER LES SQUELLETTES
+// ============================================
+function generateSkeleton() {
+    var container = document.getElementById('resultsContainer');
+    var html = '';
+    for (var i = 0; i < 6; i++) {
+        html += `
+            <div class="hotel-result skeleton">
+                <div class="skeleton-photo"></div>
+                <div class="info">
+                    <div class="skeleton-line w70"></div>
+                    <div class="skeleton-line w50"></div>
+                    <div class="skeleton-line w40"></div>
+                    <div class="skeleton-line w90"></div>
+                    <div class="skeleton-line w30"></div>
+                </div>
+                <div class="side">
+                    <div class="skeleton-line w50"></div>
+                    <div class="skeleton-line w40"></div>
+                    <div class="skeleton-line w60"></div>
+                </div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
 }
 
 // ============================================
 // CHARGEMENT DES RÉSULTATS
 // ============================================
 function loadResults() {
-  var destination = params.get('destination') || '';
-  var checkin = params.get('checkin') || '';
-  var checkout = params.get('checkout') || '';
-  var adults = parseInt(params.get('adults') || '2', 10);
-  var countryCode = params.get('countryCode') || '';
-  var placeId = params.get('placeId') || '';
+    var destination = params.get('destination') || '';
+    var checkin = params.get('checkin') || '';
+    var checkout = params.get('checkout') || '';
+    var adults = parseInt(params.get('adults') || '2', 10);
+    var placeId = params.get('placeId') || '';
 
-  console.log('📋 Paramètres reçus:', { destination, checkin, checkout, adults, countryCode, placeId });
+    document.getElementById('sumDest').textContent = destination || 'Destination non spécifiée';
+    document.getElementById('sumDates').textContent = checkin && checkout ? formatDate(checkin) + ' - ' + formatDate(checkout) : 'Sélectionnez vos dates';
+    document.getElementById('sumGuests').textContent = adults + ' adulte' + (adults > 1 ? 's' : '');
 
-  hotelsData = [];
-  isFirstBatch = true;
-  hotelsContainer = document.getElementById('resultsContainer');
-  resultsCount = document.getElementById('resultsCount');
-
-  var sumDest = document.getElementById('sumDest');
-  var sumDates = document.getElementById('sumDates');
-  var sumGuests = document.getElementById('sumGuests');
-  
-  if (sumDest) sumDest.textContent = destination || 'Destination non spécifiée';
-  if (sumDates) sumDates.textContent = checkin && checkout ? formatDate(checkin) + ' - ' + formatDate(checkout) : 'Sélectionnez vos dates';
-  if (sumGuests) sumGuests.textContent = adults + ' adulte' + (adults > 1 ? 's' : '');
-
-  var statusHtml = `<div id="searchStatus" style="text-align:center;padding:10px;color:var(--ink-soft);font-size:14px;">🔍 Recherche en cours...</div>`;
-  if (hotelsContainer) {
-    hotelsContainer.innerHTML = statusHtml;
-  }
-
-  if (!checkin || !checkout || !destination) {
-    if (hotelsContainer) {
-      hotelsContainer.innerHTML = `
-        <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-          <h3>Paramètres de recherche manquants</h3>
-          <p>Veuillez retourner à la page d'accueil et effectuer une recherche.</p>
-          <a href="index.html" style="display:inline-block;margin-top:16px;padding:10px 20px;background:var(--blue);color:#FFF;border-radius:var(--radius);text-decoration:none;">Retour à l'accueil</a>
-        </div>
-      `;
-    }
-    if (resultsCount) resultsCount.textContent = 'Paramètres manquants';
-    return;
-  }
-
-  searchHotelsStream({ 
-    destination: destination, 
-    checkin: checkin, 
-    checkout: checkout, 
-    adults: adults,
-    countryCode: countryCode,
-    placeId: placeId
-  })
-    .then(function(results) {
-      if (results && results.success) {
-        if (results.hotels.length === 0) {
-          if (hotelsContainer) {
-            hotelsContainer.innerHTML = `
-              <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-                <h3>${results.message || 'Aucun hôtel trouvé'}</h3>
-                <p>Essayez de modifier votre destination ou vos dates.</p>
-                <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
-                  🔄 Réessayer
-                </button>
-              </div>
-            `;
-          }
-          if (resultsCount) resultsCount.textContent = '0 propriété trouvée';
-        }
-      } else {
-        if (hotelsContainer) {
-          hotelsContainer.innerHTML = `
+    if (!checkin || !checkout || !destination) {
+        document.getElementById('resultsContainer').innerHTML = `
             <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-              <h3>❌ Aucun résultat</h3>
-              <p>Impossible de trouver des hôtels pour "${destination}".</p>
-              <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
-                🔄 Réessayer
-              </button>
+                <h3>Paramètres de recherche manquants</h3>
+                <p>Veuillez retourner à la page d'accueil et effectuer une recherche.</p>
+                <a href="index.html" style="display:inline-block;margin-top:16px;padding:10px 20px;background:var(--blue);color:#FFF;border-radius:var(--radius);text-decoration:none;">Retour à l'accueil</a>
             </div>
-          `;
+        `;
+        document.getElementById('resultsCount').textContent = 'Paramètres manquants';
+        return;
+    }
+
+    generateSkeleton();
+
+    var queryParams = new URLSearchParams({
+        checkin: checkin,
+        checkout: checkout,
+        adults: adults,
+        environment: 'production',
+        limit: 200
+    });
+    if (placeId) {
+        queryParams.append('placeId', placeId);
+    } else if (destination) {
+        queryParams.append('city', destination);
+    }
+
+    var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
+    console.log('📦 URL:', url);
+
+    fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+    })
+    .then(function(response) {
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json();
+    })
+    .then(function(data) {
+        if (data.success && data.hotels && data.hotels.length > 0) {
+            allHotels = data.hotels;
+            applyFiltersAndSort();
+            initMap(null, null, allHotels);
+        } else {
+            document.getElementById('resultsContainer').innerHTML = `
+                <div style="text-align:center;padding:60px;color:var(--ink-soft);">
+                    <h3>Aucun hôtel trouvé</h3>
+                    <p>Essayez de modifier votre destination ou vos dates.</p>
+                    <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">Réessayer</button>
+                </div>
+            `;
+            document.getElementById('resultsCount').textContent = '0 propriété trouvée';
         }
-        if (resultsCount) resultsCount.textContent = '0 propriété trouvée';
-      }
     })
     .catch(function(error) {
-      console.error('❌ Erreur lors de la recherche:', error);
-      if (hotelsContainer) {
-        hotelsContainer.innerHTML = `
-          <div style="text-align:center;padding:60px;color:var(--ink-soft);">
-            <h3>❌ Une erreur est survenue</h3>
-            <p>${error.message || 'Veuillez réessayer plus tard.'}</p>
-            <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">
-              🔄 Réessayer
-            </button>
-          </div>
+        console.error('Erreur:', error);
+        document.getElementById('resultsContainer').innerHTML = `
+            <div style="text-align:center;padding:60px;color:var(--ink-soft);">
+                <h3>Une erreur est survenue</h3>
+                <p>${error.message || 'Veuillez réessayer plus tard.'}</p>
+                <button onclick="loadResults()" style="margin-top:20px;padding:10px 30px;background:var(--blue);color:#FFF;border:none;border-radius:var(--radius);cursor:pointer;">Réessayer</button>
+            </div>
         `;
-      }
+        document.getElementById('resultsCount').textContent = '0 propriété trouvée';
     });
 }
 
-document.addEventListener('DOMContentLoaded', loadResults);
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr);
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+// ============================================
+// INITIALISATION
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    loadResults();
+    
+    // Fermer le dropdown de tri au clic en dehors
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.sort-select')) {
+            document.getElementById('sortDropdown').classList.remove('open');
+        }
+    });
+    
+    // Gestion du slider de prix
+    var minHandle = document.getElementById('priceMinHandle');
+    var maxHandle = document.getElementById('priceMaxHandle');
+    var fill = document.getElementById('priceFill');
+    var minLabel = document.getElementById('priceMinLabel');
+    var maxLabel = document.getElementById('priceMaxLabel');
+    
+    function updatePriceSlider() {
+        var minLeft = parseFloat(minHandle.style.left) || 0;
+        var maxLeft = parseFloat(maxHandle.style.left) || 100;
+        if (minLeft > maxLeft) {
+            minHandle.style.left = maxLeft + '%';
+            minLabel.textContent = '$' + Math.round((maxLeft / 100) * 1000);
+        } else {
+            minLabel.textContent = '$' + Math.round((minLeft / 100) * 1000);
+        }
+        maxLabel.textContent = maxLeft >= 100 ? '$1000+' : '$' + Math.round((maxLeft / 100) * 1000);
+        fill.style.left = minHandle.style.left;
+        fill.style.right = (100 - parseFloat(maxHandle.style.left)) + '%';
+        applyFiltersAndSort();
+    }
+    
+    var isDragging = null;
+    function startDrag(e, handle) {
+        isDragging = handle;
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', stopDrag);
+        e.preventDefault();
+    }
+    
+    function onDrag(e) {
+        if (!isDragging) return;
+        var rect = isDragging.parentElement.getBoundingClientRect();
+        var x = (e.clientX - rect.left) / rect.width * 100;
+        x = Math.max(0, Math.min(100, x));
+        isDragging.style.left = x + '%';
+        updatePriceSlider();
+    }
+    
+    function stopDrag() {
+        isDragging = null;
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', stopDrag);
+    }
+    
+    minHandle.addEventListener('mousedown', function(e) { startDrag(e, minHandle); });
+    maxHandle.addEventListener('mousedown', function(e) { startDrag(e, maxHandle); });
+});
 
 var btn = document.getElementById('switcherBtn');
 var menu = document.getElementById('switcherMenu');
 if (btn && menu) {
-  btn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    menu.classList.toggle('open');
-  });
-  document.addEventListener('click', function() {
-    menu.classList.remove('open');
-  });
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        menu.classList.toggle('open');
+    });
+    document.addEventListener('click', function() { menu.classList.remove('open'); });
 }
 </script>
 </body>

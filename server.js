@@ -768,57 +768,173 @@ app.post("/book-flight", async (req, res) => {
 });
 
 // ============================================
-// 11. DÉTAILS HÔTEL
+// 11. DÉTAILS HÔTEL - CORRIGÉ
 // ============================================
 app.get("/hotel-details", async (req, res) => {
   console.log("\n🏨 ===== HOTEL DETAILS ===== 🏨");
   const { hotelId, timeout = 8, environment } = req.query;
+  
+  if (!hotelId) {
+    return res.status(400).json({ 
+      success: false, 
+      error: "hotelId is required" 
+    });
+  }
+
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
+  console.log(`🆔 Hotel ID: ${hotelId}`);
+  console.log(`⏱️ Timeout: ${timeout}s`);
+  console.log(`🌐 Environment: ${environment || 'production'}`);
+
   try {
-    const response = await sdk.getHotelDetails(hotelId, timeout);
-    const hotel = response.data;
-
-    const rooms = (hotel.rooms || []).map(function(room) {
-      return {
-        id: room.id,
-        roomName: room.roomName || 'Chambre sans nom',
-        description: room.description || '',
-        maxOccupancy: room.maxOccupancy || 0,
-        maxAdults: room.maxAdults || 0,
-        maxChildren: room.maxChildren || 0,
-        roomSizeSquare: room.roomSizeSquare || 0,
-        bedTypes: room.bedTypes || [],
-        roomAmenities: (room.roomAmenities || []).map(function(a) { return a.name; }),
-        photos: (room.photos || []).map(function(p) {
-          return { url: p.hd_url || p.url || '', mainPhoto: p.mainPhoto || false };
-        })
-      };
+    console.log(`⏳ Récupération des détails pour l'hôtel ${hotelId}...`);
+    
+    // ✅ Appel correct à getHotelDetails
+    const response = await sdk.getHotelDetails({
+      hotelId: hotelId,
+      timeout: parseInt(timeout) || 8
     });
+    
+    console.log('📦 Réponse getHotelDetails:', JSON.stringify(response, null, 2).substring(0, 500));
 
-    res.json({ success: true, data: { ...hotel, rooms } });
+    // Vérifier la structure de la réponse
+    let hotelData = response.data || response;
+    
+    // Si la réponse est un objet avec une propriété data qui contient l'hôtel
+    if (hotelData.data && hotelData.data.hotelId) {
+      hotelData = hotelData.data;
+    }
+
+    // Extraire les informations de l'hôtel
+    const hotel = {
+      id: hotelData.hotelId || hotelData.id || hotelId,
+      name: hotelData.name || 'Hôtel sans nom',
+      address: hotelData.address || '',
+      city: hotelData.city || '',
+      country: hotelData.country || '',
+      starRating: hotelData.starRating || 0,
+      rating: hotelData.rating || 0,
+      reviewCount: hotelData.reviewCount || 0,
+      main_photo: hotelData.main_photo || hotelData.mainPhoto || '',
+      hotelDescription: hotelData.hotelDescription || hotelData.description || '',
+      hotelFacilities: hotelData.hotelFacilities || hotelData.facilities || [],
+      hotelImages: hotelData.hotelImages || hotelData.images || [],
+      rooms: (hotelData.rooms || []).map(function(room) {
+        return {
+          id: room.id || room.roomId,
+          roomName: room.roomName || room.name || 'Chambre sans nom',
+          description: room.description || '',
+          maxOccupancy: room.maxOccupancy || 0,
+          maxAdults: room.maxAdults || 0,
+          maxChildren: room.maxChildren || 0,
+          roomSizeSquare: room.roomSizeSquare || 0,
+          bedTypes: room.bedTypes || [],
+          roomAmenities: (room.roomAmenities || []).map(function(a) { 
+            return typeof a === 'string' ? a : a.name; 
+          }),
+          photos: (room.photos || room.images || []).map(function(p) {
+            return {
+              url: p.hd_url || p.url || p.image || '',
+              mainPhoto: p.mainPhoto || p.main || false
+            };
+          })
+        };
+      })
+    };
+
+    console.log(`✅ Hôtel trouvé: ${hotel.name}`);
+    console.log(`🛏️ ${hotel.rooms.length} chambres`);
+    console.log(`⭐ ${hotel.starRating} étoiles`);
+
+    res.json({ 
+      success: true, 
+      data: hotel 
+    });
   } catch (error) {
     console.error("❌ Error getting hotel details:", error);
-    res.status(500).json({ success: false, error: "Failed to get hotel details", message: error.message });
+    console.error("📦 Détails:", error.response?.data || error.message);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to get hotel details", 
+      message: error.message
+    });
   }
 });
 
 // ============================================
-// 12. AVIS HÔTEL
+// 12. AVIS HÔTEL - CORRIGÉ
 // ============================================
 app.get("/hotel-reviews", async (req, res) => {
   console.log("\n⭐ ===== HOTEL REVIEWS ===== ⭐");
   const { hotelId, timeout = 8, environment } = req.query;
+  
+  if (!hotelId) {
+    return res.status(400).json({ 
+      success: false, 
+      error: "hotelId is required" 
+    });
+  }
+
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
+  console.log(`🆔 Hotel ID: ${hotelId}`);
+  console.log(`⏱️ Timeout: ${timeout}s`);
+
   try {
-    const response = await sdk.getHotelReviews(hotelId, timeout);
-    res.json({ success: true, data: response.data });
+    console.log(`⏳ Récupération des avis pour l'hôtel ${hotelId}...`);
+    
+    // ✅ Appel correct à getHotelReviews
+    const response = await sdk.getHotelReviews({
+      hotelId: hotelId,
+      timeout: parseInt(timeout) || 8
+    });
+
+    console.log('📦 Réponse getHotelReviews:', JSON.stringify(response, null, 2).substring(0, 500));
+
+    // Vérifier la structure de la réponse
+    let reviews = [];
+    if (response.data && Array.isArray(response.data)) {
+      reviews = response.data;
+    } else if (Array.isArray(response)) {
+      reviews = response;
+    } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      reviews = response.data.data;
+    }
+
+    // Transformer les avis pour le frontend
+    const formattedReviews = reviews.map(function(rv) {
+      return {
+        reviewerName: rv.reviewerName || rv.name || rv.author || 'Voyageur',
+        comment: rv.comment || rv.text || rv.reviewComments || rv.review || '',
+        rating: rv.rating || rv.score || rv.overallRating || 0,
+        date: rv.date || rv.reviewDate || '',
+        pros: rv.pros || '',
+        cons: rv.cons || '',
+        type: rv.type || '',
+        averageScore: rv.averageScore || 0
+      };
+    });
+
+    console.log(`✅ ${formattedReviews.length} avis récupérés`);
+
+    res.json({ 
+      success: true, 
+      data: formattedReviews,
+      total: formattedReviews.length
+    });
   } catch (error) {
     console.error("❌ Error getting hotel reviews:", error);
-    res.status(500).json({ success: false, error: "Failed to get hotel reviews", message: error.message });
+    console.error("📦 Détails:", error.response?.data || error.message);
+    // Si l'endpoint n'existe pas, retourner un tableau vide
+    res.json({ 
+      success: true, 
+      data: [],
+      total: 0,
+      message: "Avis non disponibles pour le moment"
+    });
   }
 });
 

@@ -741,7 +741,102 @@ app.get("/hotel-reviews", async (req, res) => {
     res.json({ success: true, data: [], total: 0, message: "Avis non disponibles pour le moment" });
   }
 });
+// ============================================
+// 13. CHATBOT - Récupération de la clé (sécurisée)
+// ============================================
+app.get("/api/chatbot-key", (req, res) => {
+  console.log("\n🤖 ===== CHATBOT KEY ===== 🤖");
+  
+  // Récupérer l'environnement depuis la requête ou utiliser la valeur par défaut
+  const environment = req.query.environment || process.env.NODE_ENV || 'sandbox';
+  
+  // Sélectionner la clé appropriée
+  let apiKey;
+  if (environment === 'production') {
+    apiKey = process.env.CHATBOT_API_KEY || process.env.PROD_API_KEY;
+  } else {
+    apiKey = process.env.CHATBOT_API_KEY || process.env.SAND_API_KEY;
+  }
+  
+  if (!apiKey) {
+    console.error('❌ CHATBOT_API_KEY non définie dans .env');
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Configuration du chatbot manquante',
+      message: 'Veuillez contacter l\'administrateur'
+    });
+  }
+  
+  // Optionnel : vérifier l'origine de la requête
+  const allowedOrigins = [
+    'https://votre-domaine.com',
+    'https://www.votre-domaine.com',
+    'http://localhost:3000',
+    'http://localhost:10000'
+  ];
+  
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  console.log(`✅ Clé chatbot envoyée (mode: ${environment})`);
+  
+  res.json({ 
+    success: true,
+    key: apiKey,
+    environment: environment,
+    // Optionnel : ajouter des configurations personnalisées
+    config: {
+      language: 'fr',
+      defaultPersonality: process.env.DEFAULT_PERSONALITY || 'standard'
+    }
+  });
+});
 
+// ============================================
+// 14. CHATBOT - Proxy pour le script (optionnel)
+// ============================================
+app.get("/api/chatbot-script", async (req, res) => {
+  console.log("\n📦 ===== CHATBOT SCRIPT PROXY ===== 📦");
+  
+  const environment = req.query.environment || process.env.NODE_ENV || 'sandbox';
+  let apiKey;
+  
+  if (environment === 'production') {
+    apiKey = process.env.CHATBOT_API_KEY || process.env.PROD_API_KEY;
+  } else {
+    apiKey = process.env.CHATBOT_API_KEY || process.env.SAND_API_KEY;
+  }
+  
+  if (!apiKey) {
+    return res.status(500).send('Configuration du chatbot manquante');
+  }
+  
+  try {
+    // Récupérer le script depuis l'API Nuitee
+    const scriptUrl = `https://components.liteapi.travel/chatbot/v1.js?liteApiKey=${apiKey}`;
+    const response = await fetch(scriptUrl);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const script = await response.text();
+    
+    // Optionnel : modifier le script pour ajouter des configurations
+    // Par exemple, injecter des variables personnalisées
+    
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache 1 heure
+    res.send(script);
+    
+    console.log('✅ Script chatbot envoyé');
+  } catch (error) {
+    console.error('❌ Erreur proxy chatbot:', error);
+    res.status(500).send('Erreur de chargement du chatbot');
+  }
+});
 // ============================================
 // ROUTES FRONTEND
 // ============================================

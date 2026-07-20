@@ -177,28 +177,36 @@ app.get("/search-hotels", async (req, res) => {
     }
 
     const hotels = hotelList.map(function(hotel) {
-      const hotelId = hotel.hotelId || hotel.id;
-      const rateItem = rateMap[hotelId] || {};
-      const bestRate = rateItem.roomTypes?.[0]?.rates?.[0];
-      const stars = hotel.stars ?? hotel.starRating ?? hotel.hotel?.stars ?? hotel.hotel?.starRating ?? 0;
+  const hotelId = hotel.hotelId || hotel.id;
+  const rateItem = rateMap[hotelId] || {};
+  const bestRate = rateItem.roomTypes?.[0]?.rates?.[0];
+  
+  let name = hotel.name || hotel.hotelName || 'Hôtel sans nom';
+  let photo = hotel.main_photo || hotel.photo || hotel.image || 
+    `https://picsum.photos/seed/${hotelId || Math.random()}/460/380`;
 
-      return {
-        id: hotelId || `hotel-${Math.random()}`,
-        name: hotel.name || hotel.hotelName || 'Hôtel sans nom',
-        address: hotel.address || hotel.city || '',
-        city: hotel.city || '',
-        country: hotel.country || '',
-        main_photo: hotel.main_photo || hotel.photo || hotel.image || `https://picsum.photos/seed/${hotelId || Math.random()}/460/380`,
-        rating: hotel.rating || 0,
-        reviewCount: hotel.reviewCount || hotel.review_count || 0,
-        starRating: stars,
-        minPrice: bestRate?.retailRate?.total?.[0]?.amount || 0,
-        currency: bestRate?.retailRate?.total?.[0]?.currency || 'USD',
-        offerId: rateItem.roomTypes?.[0]?.offerId || null,
-        roomName: bestRate?.name || 'Chambre standard',
-        refundable: bestRate?.cancellationPolicies?.refundableTag === 'RFN'
-      };
-    });
+  const stars = hotel.stars ?? hotel.starRating ?? hotel.hotel?.stars ?? hotel.hotel?.starRating ?? 0;
+
+  return {
+    id: hotelId || `hotel-${Math.random()}`,
+    name: name,
+    address: hotel.address || hotel.city || city,
+    city: hotel.city || city,
+    country: hotel.country || '',
+    main_photo: photo,
+    rating: hotel.rating || 0,
+    reviewCount: hotel.reviewCount || hotel.review_count || 0,
+    starRating: stars,
+    minPrice: bestRate?.retailRate?.total?.[0]?.amount || 0,
+    currency: bestRate?.retailRate?.total?.[0]?.currency || 'USD',
+    offerId: rateItem.roomTypes?.[0]?.offerId || null,
+    roomName: bestRate?.name || 'Chambre standard',
+    refundable: bestRate?.cancellationPolicies?.refundableTag === 'RFN',
+    // ✅ AJOUTER LES COORDONNÉES
+    latitude: hotel.latitude || hotel.lat || null,
+    longitude: hotel.longitude || hotel.lon || null
+  };
+});
 
     const validHotels = hotels.filter(h => h.minPrice > 0).sort((a, b) => a.minPrice - b.minPrice);
     const finalHotels = validHotels.slice(0, 500);

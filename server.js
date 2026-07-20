@@ -747,75 +747,58 @@ app.get("/hotel-reviews", async (req, res) => {
 app.get("/api/chatbot-key", (req, res) => {
   console.log("\n🤖 ===== CHATBOT KEY ===== 🤖");
   
-  // Récupérer l'environnement depuis la requête ou utiliser la valeur par défaut
   const environment = req.query.environment || process.env.NODE_ENV || 'sandbox';
   
-  // Sélectionner la clé appropriée
+  // Utilisez la même clé que pour les hôtels
   let apiKey;
-  if (environment === 'production') {
-    apiKey = process.env.CHATBOT_API_KEY || process.env.PROD_API_KEY;
+  if (environment === 'production' || environment === 'prod') {
+    apiKey = process.env.PROD_API_KEY;  // <- Utilise PROD_API_KEY
   } else {
-    apiKey = process.env.CHATBOT_API_KEY || process.env.SAND_API_KEY;
+    apiKey = process.env.SAND_API_KEY;  // <- Utilise SAND_API_KEY
   }
+  
+  console.log(`🔑 Environnement: ${environment}`);
+  console.log(`🔑 Clé trouvée: ${apiKey ? '✅ Oui (${apiKey.substring(0, 10)}...)' : '❌ Non'}`);
   
   if (!apiKey) {
-    console.error('❌ CHATBOT_API_KEY non définie dans .env');
+    console.error('❌ Aucune clé API configurée');
     return res.status(500).json({ 
       success: false, 
-      error: 'Configuration du chatbot manquante',
-      message: 'Veuillez contacter l\'administrateur'
+      error: 'Configuration API manquante'
     });
   }
-  
-  // Optionnel : vérifier l'origine de la requête
-  const allowedOrigins = [
-    'https://votre-domaine.com',
-    'https://www.votre-domaine.com',
-    'http://localhost:3000',
-    'http://localhost:10000'
-  ];
-  
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  
-  console.log(`✅ Clé chatbot envoyée (mode: ${environment})`);
   
   res.json({ 
     success: true,
     key: apiKey,
-    environment: environment,
-    // Optionnel : ajouter des configurations personnalisées
-    config: {
-      language: 'fr',
-      defaultPersonality: process.env.DEFAULT_PERSONALITY || 'standard'
-    }
+    environment: environment
   });
 });
-
 // ============================================
-// 14. CHATBOT - Proxy pour le script (optionnel)
+// 14. CHATBOT - Proxy pour le script
 // ============================================
 app.get("/api/chatbot-script", async (req, res) => {
   console.log("\n📦 ===== CHATBOT SCRIPT PROXY ===== 📦");
   
   const environment = req.query.environment || process.env.NODE_ENV || 'sandbox';
-  let apiKey;
   
-  if (environment === 'production') {
-    apiKey = process.env.CHATBOT_API_KEY || process.env.PROD_API_KEY;
+  // Utilisez la même clé que pour les hôtels
+  let apiKey;
+  if (environment === 'production' || environment === 'prod') {
+    apiKey = process.env.PROD_API_KEY;
   } else {
-    apiKey = process.env.CHATBOT_API_KEY || process.env.SAND_API_KEY;
+    apiKey = process.env.SAND_API_KEY;
   }
   
   if (!apiKey) {
-    return res.status(500).send('Configuration du chatbot manquante');
+    return res.status(500).send('Configuration API manquante');
   }
   
   try {
     // Récupérer le script depuis l'API Nuitee
     const scriptUrl = `https://components.liteapi.travel/chatbot/v1.js?liteApiKey=${apiKey}`;
+    console.log(`📡 Chargement depuis: ${scriptUrl}`);
+    
     const response = await fetch(scriptUrl);
     
     if (!response.ok) {
@@ -824,11 +807,8 @@ app.get("/api/chatbot-script", async (req, res) => {
     
     const script = await response.text();
     
-    // Optionnel : modifier le script pour ajouter des configurations
-    // Par exemple, injecter des variables personnalisées
-    
     res.setHeader('Content-Type', 'application/javascript');
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache 1 heure
+    res.setHeader('Cache-Control', 'public, max-age=3600');
     res.send(script);
     
     console.log('✅ Script chatbot envoyé');

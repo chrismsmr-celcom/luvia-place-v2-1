@@ -1449,7 +1449,7 @@ function scrollCollections(direction) {
 }
 
 // ============================================
-// 15. CHARGEMENT DES RECOMMANDATIONS - CORRIGÉ
+// 15. CHARGEMENT DES RECOMMANDATIONS - CORRIGÉ AVEC SQUELETTES
 // ============================================
 async function loadRecommendations() {
     console.log('🌟 Chargement des recommandations...');
@@ -1459,10 +1459,11 @@ async function loadRecommendations() {
 
     var container = document.getElementById('recommendedHotels');
     if (container) {
+        // ✅ Afficher les squelettes au lieu d'un simple message
         container.innerHTML = `
-            <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-soft);">
-                <p>⏳ Chargement des meilleures offres...</p>
-            </div>
+            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
         `;
     }
 
@@ -1493,13 +1494,23 @@ async function loadRecommendations() {
 }
 
 // ============================================
-// 16. CHARGEMENT DES HÔTELS À PROXIMITÉ
+// 16. CHARGEMENT DES HÔTELS À PROXIMITÉ - CORRIGÉ AVEC SQUELETTES
 // ============================================
 async function loadNearbyHotels() {
     console.log('📍 Chargement des hôtels à proximité...');
     var checkin = getDefaultCheckin();
     var checkout = getDefaultCheckout();
     var adults = 2;
+    
+    // ✅ Afficher les squelettes
+    var container = document.getElementById('nearbyHotels');
+    if (container) {
+        container.innerHTML = `
+            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+        `;
+    }
     
     var userLocation = await getUserLocation();
     var city = userLocation ? userLocation.city : 'Kinshasa';

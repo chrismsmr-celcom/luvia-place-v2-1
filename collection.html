@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collections - LuviaPlace</title>
+    <style>
+        /* Styles identiques à index.html */
+        .collection-header {
+            padding: 60px 0 30px;
+            text-align: center;
+        }
+        .collection-header h1 {
+            font-family: var(--font-head);
+            font-weight: 800;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .collection-header p {
+            color: var(--ink-soft);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .collection-hero {
+            width: 100%;
+            height: 250px;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        .collection-hero img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .hotel-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 22px;
+        }
+        @media (max-width: 900px) {
+            .hotel-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @media (max-width: 600px) {
+            .hotel-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .hotel-collection-card {
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--line);
+            background: #fff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+        .hotel-collection-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+        .hotel-collection-card .photo {
+            height: 190px;
+            background: var(--bg-soft);
+            overflow: hidden;
+            position: relative;
+        }
+        .hotel-collection-card .photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .hotel-collection-card .body {
+            padding: 16px;
+        }
+        .hotel-collection-card h3 {
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 16.5px;
+            margin-bottom: 4px;
+        }
+        .hotel-collection-card .location {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--ink-soft);
+            font-size: 13.5px;
+            margin-bottom: 14px;
+        }
+        .hotel-collection-card .location svg {
+            width: 13px;
+            height: 13px;
+            flex-shrink: 0;
+        }
+        .hotel-collection-card .card-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .hotel-collection-card .score-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hotel-collection-card .score-num {
+            background: var(--green);
+            color: #fff;
+            font-weight: 800;
+            font-size: 12.5px;
+            padding: 3px 7px;
+            border-radius: 6px;
+        }
+        .hotel-collection-card .score-text {
+            font-size: 12px;
+            color: var(--ink-soft);
+            line-height: 1.25;
+        }
+        .hotel-collection-card .score-text b {
+            display: block;
+            color: var(--ink);
+            font-size: 12.5px;
+        }
+        .badge-collection {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation identique à index.html -->
+    
+    <div class="wrap">
+        <div class="collection-header reveal">
+            <div class="section-eyebrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                    <path d="M2 12c4 0 4-6 8-6s4 12 8 12c2 0 3-2 4-4"/>
+                </svg>
+                Collections
+            </div>
+            <h1 id="collectionTitle">Loading...</h1>
+            <p id="collectionDescription"></p>
+        </div>
+        
+        <div class="collection-hero reveal">
+            <img id="collectionImage" src="" alt="">
+        </div>
+        
+        <div class="hotel-grid" id="collectionHotels">
+            <!-- Squelettes -->
+            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+        </div>
+    </div>
+
+    <!-- Footer identique -->
+
+    <script>
+    // ============================================
+    // CHARGEMENT DE LA COLLECTION
+    // ============================================
+    var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
+    var params = new URLSearchParams(window.location.search);
+    var collectionSlug = params.get('slug') || 'nairobi-top-20';
+
+    // ============================================
+    // DÉFINITION DES COLLECTIONS
+    // ============================================
+    var COLLECTIONS = {
+        'nairobi-top-20': {
+            id: 'nairobi-top-20',
+            title: 'Our Top 20 Hotels in Nairobi',
+            description: 'Une sélection des meilleurs hôtels de Nairobi, soigneusement choisis pour vous offrir le meilleur séjour.',
+            image: 'https://images.unsplash.com/photo-1574321018380-59c7be9c6b6f?w=1200&h=400&fit=crop',
+            hotelIds: [
+                // À remplacer par les vrais IDs
+                'lp_12345', 'lp_23456', 'lp_34567', 'lp_45678', 'lp_56789',
+                'lp_67890', 'lp_78901', 'lp_89012', 'lp_90123', 'lp_01234',
+                'lp_11223', 'lp_22334', 'lp_33445', 'lp_44556', 'lp_55667',
+                'lp_66778', 'lp_77889', 'lp_88990', 'lp_99001'
+            ]
+        },
+        'kinshasa-exception': {
+            id: 'kinshasa-exception',
+            title: 'Séjours d\'exception à Kinshasa',
+            description: 'Découvrez le meilleur de l\'hébergement à Kinshasa, pour un séjour inoubliable au cœur de la RDC.',
+            image: 'https://images.unsplash.com/photo-1585148785744-0e58d35e0a98?w=1200&h=400&fit=crop',
+            hotelIds: [
+                'lp_45678', 'lp_56789', 'lp_67890', 'lp_78901', 'lp_89012',
+                'lp_90123', 'lp_01234', 'lp_11223', 'lp_22334', 'lp_33445',
+                'lp_44556', 'lp_55667', 'lp_66778', 'lp_77889', 'lp_88990',
+                'lp_99001'
+            ]
+        },
+        'international-ideal': {
+            id: 'international-ideal',
+            title: 'Votre hébergement idéal pour l\'international',
+            description: 'Des hôtels sélectionnés aux quatre coins du monde pour vos voyages internationaux.',
+            image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&h=400&fit=crop',
+            hotelIds: [
+                'lp_10001', 'lp_10002', 'lp_10003', 'lp_10004', 'lp_10005',
+                'lp_10006', 'lp_10007', 'lp_10008', 'lp_10009', 'lp_10010',
+                'lp_10011'
+            ]
+        }
+    };
+
+    // ============================================
+    // RÉCUPÉRATION DES INFOS HÔTELS DEPUIS L'API
+    // ============================================
+    async function fetchHotelsByIds(hotelIds) {
+        if (!hotelIds || hotelIds.length === 0) return [];
+        
+        try {
+            // L'API /search-hotels accepte plusieurs hotelIds
+            var queryParams = new URLSearchParams({
+                hotelIds: hotelIds.join(','),
+                environment: 'production',
+                limit: hotelIds.length
+            });
+
+            var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
+            console.log('📦 URL:', url);
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const data = await response.json();
+            console.log('✅ Hôtels récupérés:', data);
+
+            return data.success && data.hotels ? data.hotels : [];
+        } catch (error) {
+            console.error('❌ Erreur fetch hotels:', error);
+            return [];
+        }
+    }
+
+    // ============================================
+    // AFFICHAGE DE LA COLLECTION
+    // ============================================
+    function displayCollection(hotels, collection) {
+        var titleEl = document.getElementById('collectionTitle');
+        var descEl = document.getElementById('collectionDescription');
+        var imageEl = document.getElementById('collectionImage');
+        var container = document.getElementById('collectionHotels');
+
+        if (titleEl) titleEl.textContent = collection.title;
+        if (descEl) descEl.textContent = collection.description;
+        if (imageEl) imageEl.src = collection.image;
+
+        if (!hotels || hotels.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--ink-soft);">
+                    <h3>Aucun hôtel trouvé</h3>
+                    <p>Cette collection est en cours de préparation.</p>
+                </div>
+            `;
+            return;
+        }
+
+        var html = '';
+        for (var i = 0; i < hotels.length; i++) {
+            var hotel = hotels[i];
+            var stars = hotel.starRating || 3;
+            var starHtml = '★'.repeat(Math.min(Math.round(stars), 5));
+            var rating = hotel.rating || 0;
+            var ratingText = rating >= 8 ? 'Excellent' : rating >= 7 ? 'Très bien' : 'Bien';
+            var reviewCount = hotel.reviewCount || 0;
+            var hotelId = hotel.id || '';
+
+            html += `
+                <div class="hotel-collection-card" onclick="window.location.href='hotel-detail.html?hotelId=${hotelId}'">
+                    <div class="photo">
+                        <img src="${hotel.main_photo || 'https://picsum.photos/seed/' + hotelId + '/500/380'}" alt="${hotel.name || 'Hôtel'}">
+                        <span class="badge-collection">Collection</span>
+                    </div>
+                    <div class="body">
+                        <div class="stars">${starHtml}</div>
+                        <h3>${hotel.name || 'Hôtel sans nom'}</h3>
+                        <div class="location">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/>
+                                <circle cx="12" cy="9" r="2.4"/>
+                            </svg>
+                            ${hotel.address || hotel.city || 'Adresse non disponible'}
+                        </div>
+                        <div class="card-bottom">
+                            <div class="score-pill">
+                                <div class="score-num">${rating > 0 ? rating.toFixed(1) : 'N/A'}</div>
+                                <div class="score-text">${ratingText}<b>${reviewCount} avis</b></div>
+                            </div>
+                            <div style="color:var(--blue);font-weight:600;font-size:13px;">
+                                Voir les tarifs →
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html;
+    }
+
+    // ============================================
+    // CHARGEMENT
+    // ============================================
+    async function loadCollection() {
+        var collection = COLLECTIONS[collectionSlug];
+        
+        if (!collection) {
+            document.getElementById('collectionTitle').textContent = 'Collection non trouvée';
+            document.getElementById('collectionHotels').innerHTML = `
+                <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--ink-soft);">
+                    <h3>⚠️ Collection introuvable</h3>
+                    <p>La collection "${collectionSlug}" n'existe pas.</p>
+                    <a href="index.html" style="display:inline-block;margin-top:16px;padding:10px 20px;background:var(--blue);color:#FFF;border-radius:var(--radius);text-decoration:none;">
+                        Retour à l'accueil
+                    </a>
+                </div>
+            `;
+            return;
+        }
+
+        // Afficher les infos de la collection
+        document.getElementById('collectionTitle').textContent = collection.title;
+        document.getElementById('collectionDescription').textContent = collection.description;
+        document.getElementById('collectionImage').src = collection.image;
+
+        // Récupérer les hôtels
+        var hotels = await fetchHotelsByIds(collection.hotelIds);
+        displayCollection(hotels, collection);
+    }
+
+    // ============================================
+    // INITIALISATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCollection();
+    });
+
+    console.log('🚀 Collection chargée:', collectionSlug);
+    </script>
+</body>
+</html>

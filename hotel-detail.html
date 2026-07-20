@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Détail de l'hôtel — LuviaPlace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#155EEF; --blue-dark:#0E3FB0; --ink:#101828; --ink-soft:#475467;
+    --line:#E7EAF0; --bg:#FFFFFF; --bg-soft:#F7F9FC; --green:#12805C; --green-bg:#E7F6EF;
+    --amber:#F5A623; --pink:#D6409F; --pink-bg:#FDF2FA;
+    --font-head:'Manrope', sans-serif; --font-body:'Inter', sans-serif;
+    --radius-lg:20px; --radius-md:14px;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{ font-family:var(--font-body); color:var(--ink); background:var(--bg); line-height:1.55; }
+  a{ text-decoration:none; color:inherit; }
+  img{ display:block; width:100%; height:100%; object-fit:cover; }
+  button{ font-family:inherit; cursor:pointer; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 clamp(20px,4vw,48px); }
+
+  /* ========== HEADER ========== */
+  header.results-header{ display:flex; align-items:center; gap:18px; padding:14px clamp(20px,4vw,48px); border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(255,255,255,0.95); backdrop-filter:blur(8px); z-index:200; flex-wrap:wrap; }
+  .logo-img{ height:34px; width:auto; flex-shrink:0; }
+  .rh-left{ display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .service-switcher{ position:relative; }
+  .service-switcher-btn{ display:flex; align-items:center; gap:6px; font-weight:700; font-size:14.5px; font-family:var(--font-head); padding:8px 10px; border-radius:8px; border:none; background:transparent; color:var(--ink); }
+  .service-switcher-btn:hover{ background:var(--bg-soft); }
+  .service-switcher-btn svg{ width:14px; height:14px; color:var(--ink-soft); }
+  .service-switcher-menu{ position:absolute; top:calc(100% + 8px); left:0; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 16px 40px rgba(16,24,40,0.16); min-width:190px; display:none; overflow:hidden; z-index:220; }
+  .service-switcher-menu.open{ display:block; }
+  .service-switcher-menu a{ display:flex; align-items:center; gap:10px; padding:11px 14px; font-size:13.5px; font-weight:600; }
+  .service-switcher-menu a:hover{ background:var(--bg-soft); }
+  .search-condensed{ flex:1; display:flex; align-items:center; gap:0; border:1px solid var(--line); border-radius:100px; padding:6px 6px 6px 18px; max-width:560px; min-width:260px; }
+  .search-condensed .seg{ padding:0 14px; font-size:13.5px; font-weight:700; border-right:1px solid var(--line); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .search-condensed .seg:last-of-type{ border-right:none; }
+  .search-condensed .go-btn{ margin-left:auto; width:34px; height:34px; border-radius:100px; background:var(--blue); color:#fff; display:flex; align-items:center; justify-content:center; border:none; flex-shrink:0; }
+  .search-condensed .go-btn svg{ width:15px; height:15px; }
+  .rh-right{ display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0; }
+  .icon-btn{ width:40px; height:40px; border-radius:10px; background:var(--bg-soft); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
+  .icon-btn svg{ width:18px; height:18px; }
+  .btn-primary{ background:var(--blue); color:#fff; font-weight:700; font-size:14.5px; padding:11px 20px; border-radius:10px; border:none; }
+  @media (max-width:900px){ .search-condensed{ display:none; } }
+
+  /* ========== SQUELLETTES ========== */
+  .skeleton{ animation:pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:.4; } 50%{ opacity:.8; } }
+  .skeleton-photo{ width:100%; height:190px; border-radius:12px 12px 0 0; background:var(--bg-soft); }
+  .skeleton-line{ height:14px; border-radius:8px; background:var(--bg-soft); margin-bottom:8px; }
+  .skeleton-line.w70{ width:70%; }
+  .skeleton-line.w50{ width:50%; }
+  .skeleton-line.w40{ width:40%; }
+  .skeleton-line.w30{ width:30%; }
+  .skeleton-line.w90{ width:90%; }
+  .skeleton-card{ border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--line); background:#fff; }
+  .skeleton-card .body{ padding:16px; }
+  .skeleton-gallery{ display:grid; grid-template-columns:1.6fr 1fr 1fr; grid-template-rows:1fr 1fr; gap:8px; height:420px; border-radius:var(--radius-lg); overflow:hidden; margin-bottom:22px; }
+  .skeleton-gallery > div{ background:var(--bg-soft); }
+  .skeleton-gallery > div:first-child{ grid-row:1/3; }
+  @media (max-width:760px){ .skeleton-gallery{ grid-template-columns:1fr; grid-template-rows:none; height:260px; } .skeleton-gallery > div:not(:first-child){ display:none; } }
+  .skeleton-pills{ display:flex; flex-wrap:wrap; gap:10px; }
+  .skeleton-pill{ width:120px; height:36px; border-radius:100px; background:var(--bg-soft); }
+  .skeleton-room-group{ border:1px solid var(--line); border-radius:16px; overflow:hidden; margin-bottom:18px; display:flex; flex-wrap:wrap; }
+  .skeleton-room-group .skeleton-room-head{ width:260px; flex-shrink:0; padding:16px; border-right:1px solid var(--line); }
+  .skeleton-room-group .skeleton-room-head .skeleton-photo{ height:140px; border-radius:10px; margin-bottom:10px; }
+  .skeleton-room-group .skeleton-room-head .skeleton-line{ margin-bottom:6px; }
+  .skeleton-room-group .skeleton-room-rates{ flex:1; min-width:280px; padding:16px; }
+  .skeleton-room-group .skeleton-room-rates .skeleton-rate{ display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--line); }
+  .skeleton-room-group .skeleton-room-rates .skeleton-rate:last-child{ border-bottom:none; }
+  @media (max-width:760px){ .skeleton-room-group .skeleton-room-head{ width:100%; border-right:none; border-bottom:1px solid var(--line); } }
+
+  .state-msg{ text-align:center; padding:80px 20px; color:var(--ink-soft); }
+  .state-msg h3{ font-family:var(--font-head); font-size:20px; margin-bottom:8px; color:var(--ink); }
+  .hidden{ display:none !important; }
+
+  /* ========== TOP ROW ========== */
+  .top-row{ display:flex; justify-content:space-between; align-items:center; margin:20px 0 14px; }
+  .back-link{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; }
+  .back-circle{ width:30px; height:30px; border-radius:100px; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; }
+  .back-circle svg{ width:14px; height:14px; }
+  .save-btn{ display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:100px; padding:9px 16px; font-weight:700; font-size:13.5px; background:#fff; }
+  .save-btn svg{ width:15px; height:15px; }
+
+  /* ========== HOTEL INFO ========== */
+  .stars{ color:var(--amber); font-size:16px; }
+  h1.hotel-name{ font-family:var(--font-head); font-weight:800; font-size:clamp(22px,3vw,28px); display:inline-flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .addr-row{ display:flex; align-items:center; gap:7px; color:var(--ink-soft); font-size:14.5px; margin-bottom:18px; }
+  .addr-row svg{ width:15px; height:15px; flex-shrink:0; }
+  .addr-row a{ text-decoration:underline; color:var(--ink); font-weight:600; }
+
+  .coins-banner{ display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:12px; padding:12px 16px; font-size:13.5px; color:var(--blue); font-weight:600; margin-bottom:20px; }
+  .coins-banner svg{ width:18px; height:18px; color:var(--amber); flex-shrink:0; }
+
+  /* ========== GALERIE ========== */
+  .gallery{ display:grid; grid-template-columns:1.6fr 1fr 1fr; grid-template-rows:1fr 1fr; gap:8px; height:420px; border-radius:var(--radius-lg); overflow:hidden; margin-bottom:22px; }
+  .gallery > div{ overflow:hidden; background:var(--bg-soft); position:relative; cursor:pointer; }
+  .gallery > div:first-child{ grid-row:1/3; }
+  .gallery > div img{ transition:transform .4s ease; }
+  .gallery > div:hover img{ transform:scale(1.05); }
+  .gallery-more{ position:absolute; right:12px; bottom:12px; background:#fff; border:none; padding:9px 14px; border-radius:100px; font-weight:700; font-size:12.5px; display:flex; align-items:center; gap:7px; box-shadow:0 6px 16px rgba(16,24,40,0.18); cursor:pointer; z-index:5; }
+  .gallery-more:hover{ background:var(--bg-soft); }
+  .gallery-more svg{ width:14px; height:14px; }
+  @media (max-width:760px){ .gallery{ grid-template-columns:1fr; grid-template-rows:none; height:260px; } .gallery > div:not(:first-child){ display:none; } }
+
+  /* ========== MODAL GALERIE ========== */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1000; display:none; align-items:center; justify-content:center; padding:20px; }
+  .modal-overlay.open{ display:flex; }
+  .modal-content{ max-width:900px; width:100%; max-height:90vh; background:transparent; position:relative; }
+  .modal-content .modal-close{ position:absolute; top:-44px; right:0; background:none; border:none; color:#fff; font-size:28px; cursor:pointer; opacity:.7; transition:opacity .2s; }
+  .modal-content .modal-close:hover{ opacity:1; }
+  .modal-content .modal-img{ width:100%; height:70vh; object-fit:contain; border-radius:8px; background:rgba(0,0,0,0.3); }
+  .modal-content .modal-nav{ position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.2); border:none; color:#fff; font-size:30px; padding:16px 10px; cursor:pointer; border-radius:8px; transition:background .2s; backdrop-filter:blur(4px); }
+  .modal-content .modal-nav:hover{ background:rgba(255,255,255,0.35); }
+  .modal-content .modal-nav.prev{ left:-60px; }
+  .modal-content .modal-nav.next{ right:-60px; }
+  .modal-content .modal-counter{ position:absolute; bottom:-36px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,0.7); font-size:14px; }
+  @media (max-width:760px){ .modal-content .modal-nav.prev{ left:0; } .modal-content .modal-nav.next{ right:0; } .modal-content .modal-img{ height:50vh; } }
+
+  /* ========== MODAL DÉTAILS CHAMBRE ========== */
+  .room-detail-modal .modal-content{ background:#fff; border-radius:var(--radius-lg); max-width:700px; padding:0; overflow:hidden; max-height:90vh; }
+  .room-detail-modal .modal-content .modal-close{ top:12px; right:16px; color:var(--ink); font-size:24px; }
+  .room-detail-modal .modal-content .modal-body{ padding:32px; overflow-y:auto; max-height:80vh; }
+  .room-detail-modal .modal-content .modal-body h2{ font-family:var(--font-head); font-weight:800; font-size:22px; margin-bottom:6px; }
+  .room-detail-modal .modal-content .modal-body .room-meta{ display:flex; flex-wrap:wrap; gap:12px; color:var(--ink-soft); font-size:14px; margin-bottom:16px; }
+  .room-detail-modal .modal-content .modal-body .room-meta span{ display:flex; align-items:center; gap:6px; }
+  .room-detail-modal .modal-content .modal-body .room-description{ color:var(--ink-soft); font-size:14px; line-height:1.7; margin-bottom:20px; }
+  .room-detail-modal .modal-content .modal-body .room-amenities{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+  .room-detail-modal .modal-content .modal-body .room-amenities span{ background:var(--bg-soft); padding:6px 14px; border-radius:100px; font-size:13px; }
+  .room-detail-modal .modal-content .modal-body .rate-option{ border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+  .room-detail-modal .modal-content .modal-body .rate-option .rate-name{ font-weight:700; font-size:14px; }
+  .room-detail-modal .modal-content .modal-body .rate-option .rate-sub{ font-size:12px; color:var(--ink-soft); }
+  .room-detail-modal .modal-content .modal-body .rate-option .rate-price{ font-weight:800; font-size:18px; color:var(--blue); }
+  .room-detail-modal .modal-content .modal-body .rate-option .rate-price .per{ font-size:12px; font-weight:400; color:var(--ink-soft); }
+  .room-detail-modal .modal-content .modal-body .rate-option .refund-badge{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:100px; }
+  .room-detail-modal .modal-content .modal-body .rate-option .refund-badge.rfn{ background:var(--green-bg); color:var(--green); }
+  .room-detail-modal .modal-content .modal-body .rate-option .refund-badge.nrfn{ background:#FFF0E6; color:#9A4B12; }
+
+  /* ========== TABS ========== */
+  .tabs-bar{ display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:0; margin-bottom:32px; flex-wrap:wrap; gap:14px; }
+  .tabs{ display:flex; gap:26px; flex-wrap:wrap; }
+  .tab-link{ padding:12px 0; font-weight:700; font-size:14px; color:var(--ink-soft); border-bottom:2px solid transparent; cursor:pointer; }
+  .tab-link.active{ color:var(--blue); border-bottom-color:var(--blue); }
+  .tab-link.ai-tab{ color:var(--pink); display:flex; align-items:center; gap:6px; }
+  .ai-badge{ background:var(--pink-bg); color:var(--pink); font-size:10px; font-weight:800; padding:2px 7px; border-radius:100px; }
+  .tabs-price{ display:flex; align-items:center; gap:16px; padding-bottom:12px; }
+  .tabs-price .from{ font-size:13px; color:var(--ink-soft); }
+  .tabs-price .amount{ font-family:var(--font-head); font-weight:800; font-size:22px; color:var(--blue); }
+  .cta-btn{ background:var(--blue); color:#fff; font-weight:700; font-size:13.5px; padding:11px 18px; border-radius:10px; border:none; display:flex; align-items:center; gap:6px; white-space:nowrap; cursor:pointer; }
+  .cta-btn:hover{ background:var(--blue-dark); }
+
+  /* ========== SECTIONS ========== */
+  .section{ margin-bottom:44px; scroll-margin-top:90px; }
+  .section-title{ font-family:var(--font-head); font-weight:800; font-size:18px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+  .section-title .see-all{ font-size:13px; font-weight:700; color:var(--blue); cursor:pointer; background:none; border:none; font-family:inherit; }
+  .section-title .see-all:hover{ text-decoration:underline; }
+
+  /* ========== POINTS FORTS ========== */
+  .highlight-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width:760px){ .highlight-grid{ grid-template-columns:1fr; } }
+  .highlight-card{ border:1px solid var(--line); border-radius:14px; padding:16px; }
+  .highlight-card .h-icon{ width:32px; height:32px; border-radius:9px; background:var(--green-bg); color:var(--green); display:flex; align-items:center; justify-content:center; margin-bottom:10px; }
+  .highlight-card .h-icon svg{ width:16px; height:16px; }
+  .highlight-card h4{ font-family:var(--font-head); font-weight:700; font-size:14.5px; margin-bottom:5px; }
+  .highlight-card p{ font-size:13px; color:var(--ink-soft); }
+
+  /* ========== INSTALLATIONS ========== */
+  .amenity-pills{ display:flex; flex-wrap:wrap; gap:10px; }
+  .amenity-pill{ display:flex; align-items:center; gap:7px; border:1px solid var(--line); border-radius:100px; padding:8px 14px; font-size:13px; color:var(--ink-soft); }
+  .amenity-pill svg{ width:14px; height:14px; color:var(--ink-soft); }
+  .amenity-pills .amenity-hidden{ display:none; }
+
+  /* ========== AVIS ========== */
+  .score-header{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+  .score-badge-lg{ background:var(--green); color:#fff; font-weight:800; font-size:16px; padding:8px 12px; border-radius:10px; }
+  .score-meta b{ display:block; font-size:15px; }
+  .score-meta span{ font-size:12.5px; color:var(--ink-soft); }
+  .quote-pills{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+  .quote-pill{ background:var(--bg-soft); border-radius:100px; padding:6px 12px; font-size:12.5px; font-weight:600; }
+  .review-card{ border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px; }
+  .review-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+  .review-author{ font-weight:700; font-size:14px; }
+  .review-meta{ font-size:12px; color:var(--ink-soft); }
+  .review-score{ background:var(--green); color:#fff; font-weight:800; font-size:13px; padding:4px 9px; border-radius:8px; }
+  .review-text{ font-size:13.5px; color:var(--ink-soft); }
+
+  /* ========== CHAMBRES ========== */
+  .modify-bar{ display:flex; gap:10px; align-items:center; border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:16px; flex-wrap:wrap; }
+  .modify-bar input, .modify-bar select{ border:none; font-size:13.5px; font-weight:600; padding:6px; font-family:inherit; }
+  .modify-bar .mfield{ border:1px solid var(--line); border-radius:9px; padding:4px 10px; display:flex; align-items:center; gap:6px; }
+  .modify-bar label{ font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; font-weight:700; margin-right:4px; }
+  .filter-chip{ display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:100px; padding:8px 14px; font-size:13px; font-weight:600; margin-bottom:20px; cursor:pointer; }
+  .filter-chip input{ accent-color:var(--blue); }
+
+  .room-group{ border:1px solid var(--line); border-radius:16px; overflow:hidden; margin-bottom:18px; display:flex; flex-wrap:wrap; }
+  .room-group-head{ width:260px; flex-shrink:0; padding:16px; border-right:1px solid var(--line); }
+  @media (max-width:760px){ .room-group-head{ width:100%; border-right:none; border-bottom:1px solid var(--line); } }
+  .room-group-head .thumb{ width:100%; height:140px; border-radius:10px; overflow:hidden; margin-bottom:10px; background:var(--bg-soft); position:relative; }
+  .room-group-head .thumb img{ width:100%; height:100%; object-fit:cover; }
+  .room-group-head .thumb .room-gallery-nav{ position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.4); border:none; color:#fff; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:18px; transition:background .2s; z-index:2; }
+  .room-group-head .thumb .room-gallery-nav:hover{ background:rgba(0,0,0,0.6); }
+  .room-group-head .thumb .room-gallery-nav.prev{ left:4px; }
+  .room-group-head .thumb .room-gallery-nav.next{ right:4px; }
+  .room-group-head .thumb .room-image-counter{ position:absolute; bottom:4px; right:8px; background:rgba(0,0,0,0.6); color:#fff; font-size:11px; padding:2px 10px; border-radius:12px; }
+  .room-group-head h4{ font-family:var(--font-head); font-weight:700; font-size:14.5px; margin-bottom:6px; }
+  .room-group-head .meta{ font-size:12px; color:var(--ink-soft); display:flex; flex-direction:column; gap:3px; margin-bottom:6px; }
+  .room-group-head .details-link{ font-size:12.5px; font-weight:700; color:var(--blue); cursor:pointer; background:none; border:none; font-family:inherit; }
+  .room-group-head .details-link:hover{ text-decoration:underline; }
+
+  .room-rates{ flex:1; min-width:280px; }
+  .rate-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .rate-row:last-child{ border-bottom:none; }
+  .rate-info .board{ font-weight:700; font-size:13.5px; margin-bottom:3px; }
+  .rate-info .sub{ font-size:12px; color:var(--ink-soft); }
+  .refund-tag{ font-size:11.5px; font-weight:700; }
+  .refund-tag.rfn{ color:var(--green); }
+  .refund-tag.nrfn{ color:#9A4B12; }
+  .rate-side{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .savings-pill{ background:var(--green-bg); color:var(--green); font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:8px; }
+  .rate-price{ text-align:right; }
+  .rate-price .strike{ font-size:11.5px; color:var(--ink-soft); text-decoration:line-through; }
+  .rate-price .amount{ font-family:var(--font-head); font-weight:800; font-size:18px; }
+  .rate-price .note{ font-size:11px; color:var(--ink-soft); }
+  .cta-btn-sm{ background:var(--blue); color:#fff; font-weight:700; font-size:13px; padding:9px 16px; border-radius:9px; border:none; white-space:nowrap; cursor:pointer; }
+  .cta-btn-sm:hover{ background:var(--blue-dark); }
+
+  /* ========== AI ========== */
+  .ask-ai-box{ border:1px solid #F3D6EA; background:var(--pink-bg); border-radius:16px; padding:20px; }
+  .ask-ai-box .title-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .ask-ai-box h4{ font-family:var(--font-head); font-weight:700; font-size:15px; color:var(--pink); }
+  .ai-chips{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .ai-chip{ background:#fff; border:1px solid #F3D6EA; border-radius:100px; padding:8px 14px; font-size:12.5px; font-weight:600; color:var(--ink); cursor:pointer; }
+  .ai-input-row{ display:flex; gap:8px; background:#fff; border:1px solid #F3D6EA; border-radius:12px; padding:6px 6px 6px 14px; }
+  .ai-input-row input{ flex:1; border:none; font-size:13.5px; font-family:inherit; }
+  .ai-input-row input:focus{ outline:none; }
+  .ai-send{ background:var(--pink); color:#fff; border:none; border-radius:9px; padding:9px 14px; cursor:pointer; }
+
+  /* ========== DESCRIPTION ========== */
+  .description-text{ color:var(--ink-soft); font-size:14px; line-height:1.75; }
+  .description-text p{ margin-bottom:12px; }
+
+  /* ========== FOOTER ========== */
+  footer.mini-footer{ border-top:1px solid var(--line); padding:24px 0; margin-top:20px; }
+  .mini-footer-inner{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; font-size:12.5px; color:var(--ink-soft); }
+  .mini-footer-links{ display:flex; gap:18px; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+
+<header class="results-header">
+  <div class="rh-left">
+    <img class="logo-img" src="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png" alt="LuviaPlace">
+    <div class="service-switcher" id="serviceSwitcher">
+      <button class="service-switcher-btn" id="switcherBtn" type="button">Séjours <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="service-switcher-menu" id="switcherMenu">
+        <a href="resultats-hebergement.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>Séjours</a>
+        <a href="resultats-vols.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M2 16l20-8-8 20-3-8-9-4z"/></svg>Vols</a>
+        <a href="resultats-voiture.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M3 13l2-6h14l2 6M5 13h14v5H5z"/></svg>Voiture</a>
+        <a href="resultats-experiences.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><circle cx="12" cy="12" r="10"/></svg>Expériences</a>
+        <a href="resultats-assurance.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>Assurance</a>
+      </div>
+    </div>
+  </div>
+  <div class="search-condensed">
+    <div class="seg" id="sumDestSeg">—</div>
+    <div class="seg" id="sumDatesSeg">—</div>
+    <div class="seg" id="sumGuestsSeg">—</div>
+    <a class="go-btn" href="resultats-hebergement.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></a>
+  </div>
+  <div class="rh-right">
+    <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg></button>
+    <button class="btn-primary">Se connecter</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- ========== SQUELLETTES DE CHARGEMENT ========== -->
+  <div id="loadingSkeleton">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 14px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:30px;height:30px;border-radius:100px;background:var(--bg-soft);"></div>
+        <div style="width:150px;height:18px;border-radius:8px;background:var(--bg-soft);"></div>
+      </div>
+      <div style="width:120px;height:36px;border-radius:100px;background:var(--bg-soft);"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+      <div style="width:200px;height:28px;border-radius:8px;background:var(--bg-soft);"></div>
+      <div style="width:80px;height:20px;border-radius:8px;background:var(--bg-soft);"></div>
+    </div>
+    <div style="width:300px;height:18px;border-radius:8px;background:var(--bg-soft);margin-bottom:18px;"></div>
+    <div class="skeleton-gallery">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+    <div style="display:flex;gap:26px;border-bottom:1px solid var(--line);padding-bottom:0;margin-bottom:32px;flex-wrap:wrap;">
+      <div style="width:60px;height:36px;border-radius:4px;background:var(--bg-soft);"></div>
+      <div style="width:80px;height:36px;border-radius:4px;background:var(--bg-soft);"></div>
+      <div style="width:70px;height:36px;border-radius:4px;background:var(--bg-soft);"></div>
+      <div style="width:50px;height:36px;border-radius:4px;background:var(--bg-soft);"></div>
+      <div style="width:80px;height:36px;border-radius:4px;background:var(--bg-soft);"></div>
+    </div>
+    <div style="margin-bottom:44px;">
+      <div style="width:180px;height:22px;border-radius:8px;background:var(--bg-soft);margin-bottom:16px;"></div>
+      <div class="highlight-grid">
+        <div class="skeleton-card" style="border:none;padding:16px;border:1px solid var(--line);"><div style="width:32px;height:32px;border-radius:9px;background:var(--bg-soft);margin-bottom:10px;"></div><div style="width:100px;height:16px;border-radius:8px;background:var(--bg-soft);margin-bottom:5px;"></div><div style="width:150px;height:12px;border-radius:8px;background:var(--bg-soft);"></div></div>
+        <div class="skeleton-card" style="border:none;padding:16px;border:1px solid var(--line);"><div style="width:32px;height:32px;border-radius:9px;background:var(--bg-soft);margin-bottom:10px;"></div><div style="width:100px;height:16px;border-radius:8px;background:var(--bg-soft);margin-bottom:5px;"></div><div style="width:150px;height:12px;border-radius:8px;background:var(--bg-soft);"></div></div>
+        <div class="skeleton-card" style="border:none;padding:16px;border:1px solid var(--line);"><div style="width:32px;height:32px;border-radius:9px;background:var(--bg-soft);margin-bottom:10px;"></div><div style="width:100px;height:16px;border-radius:8px;background:var(--bg-soft);margin-bottom:5px;"></div><div style="width:150px;height:12px;border-radius:8px;background:var(--bg-soft);"></div></div>
+      </div>
+    </div>
+    <div style="margin-bottom:44px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><div style="width:180px;height:22px;border-radius:8px;background:var(--bg-soft);"></div><div style="width:80px;height:18px;border-radius:8px;background:var(--bg-soft);"></div></div>
+      <div class="skeleton-pills"><div class="skeleton-pill skeleton"></div><div class="skeleton-pill skeleton"></div><div class="skeleton-pill skeleton"></div><div class="skeleton-pill skeleton"></div><div class="skeleton-pill skeleton"></div><div class="skeleton-pill skeleton"></div><div class="skeleton-pill skeleton"></div><div class="skeleton-pill skeleton"></div></div>
+    </div>
+    <div style="margin-bottom:44px;">
+      <div style="width:220px;height:22px;border-radius:8px;background:var(--bg-soft);margin-bottom:16px;"></div>
+      <div class="skeleton-room-group"><div class="skeleton-room-head"><div class="skeleton-photo skeleton"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div><div class="skeleton-line w30"></div></div><div class="skeleton-room-rates"><div class="skeleton-rate"><div style="flex:1;"><div class="skeleton-line w60"></div><div class="skeleton-line w40"></div></div><div style="width:80px;"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div></div></div><div class="skeleton-rate"><div style="flex:1;"><div class="skeleton-line w60"></div><div class="skeleton-line w40"></div></div><div style="width:80px;"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div></div></div><div class="skeleton-rate"><div style="flex:1;"><div class="skeleton-line w60"></div><div class="skeleton-line w40"></div></div><div style="width:80px;"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div></div></div></div></div>
+      <div class="skeleton-room-group" style="margin-top:18px;"><div class="skeleton-room-head"><div class="skeleton-photo skeleton"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div><div class="skeleton-line w30"></div></div><div class="skeleton-room-rates"><div class="skeleton-rate"><div style="flex:1;"><div class="skeleton-line w60"></div><div class="skeleton-line w40"></div></div><div style="width:80px;"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div></div></div><div class="skeleton-rate"><div style="flex:1;"><div class="skeleton-line w60"></div><div class="skeleton-line w40"></div></div><div style="width:80px;"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div></div></div><div class="skeleton-rate"><div style="flex:1;"><div class="skeleton-line w60"></div><div class="skeleton-line w40"></div></div><div style="width:80px;"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div></div></div></div></div>
+    </div>
+    <div style="margin-bottom:44px;">
+      <div style="width:150px;height:22px;border-radius:8px;background:var(--bg-soft);margin-bottom:16px;"></div>
+      <div style="display:flex;gap:12px;margin-bottom:16px;"><div style="width:50px;height:36px;border-radius:10px;background:var(--bg-soft);"></div><div><div style="width:100px;height:18px;border-radius:8px;background:var(--bg-soft);"></div><div style="width:150px;height:14px;border-radius:8px;background:var(--bg-soft);margin-top:4px;"></div></div></div>
+      <div class="review-card skeleton"><div style="width:200px;height:14px;border-radius:8px;background:var(--bg-soft);margin-bottom:6px;"></div><div style="width:300px;height:12px;border-radius:8px;background:var(--bg-soft);"></div></div>
+      <div class="review-card skeleton"><div style="width:200px;height:14px;border-radius:8px;background:var(--bg-soft);margin-bottom:6px;"></div><div style="width:300px;height:12px;border-radius:8px;background:var(--bg-soft);"></div></div>
+    </div>
+  </div>
+
+  <!-- ========== CONTENU REEL ========== -->
+  <div id="hotelContent" class="hidden">
+    <div class="top-row">
+      <a class="back-link" href="javascript:history.back()"><span class="back-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></span>Voir toutes les propriétés</a>
+      <button class="save-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/></svg>Sauvegarder</button>
+    </div>
+
+    <h1 class="hotel-name"><span id="hName"></span><span class="stars" id="hStars"></span></h1>
+    <div class="addr-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg><span id="hAddress"></span>&nbsp;•&nbsp;<a id="mapLink" href="#" target="_blank" rel="noopener">Afficher la carte</a></div>
+
+    <div class="coins-banner" id="coinsBanner" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>
+      Validez votre commande et gagnez <span id="coinsAmount">&nbsp;</span> LuviaCoins
+    </div>
+
+    <div class="gallery" id="gallery"></div>
+
+    <!-- MODAL GALERIE -->
+    <div class="modal-overlay" id="galleryModal">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closeGalleryModal()">✕</button>
+        <button class="modal-nav prev" onclick="changeGalleryImage(-1)">‹</button>
+        <img class="modal-img" id="modalImage" src="" alt="Galerie">
+        <button class="modal-nav next" onclick="changeGalleryImage(1)">›</button>
+        <div class="modal-counter" id="modalCounter">1 / 1</div>
+      </div>
+    </div>
+
+    <!-- MODAL DÉTAILS CHAMBRE -->
+    <div class="modal-overlay room-detail-modal" id="roomDetailModal">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closeRoomDetailModal()">✕</button>
+        <div class="modal-body" id="roomDetailBody">
+          <!-- Rempli par JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs-bar">
+      <div class="tabs">
+        <a class="tab-link active" onclick="scrollToSection('apercu')">Aperçu</a>
+        <a class="tab-link" onclick="scrollToSection('installations')">Installations</a>
+        <a class="tab-link" onclick="scrollToSection('chambres')">Chambres</a>
+        <a class="tab-link" onclick="scrollToSection('avis')">Avis</a>
+        <a class="tab-link" onclick="scrollToSection('description')">Description</a>
+        <a class="tab-link ai-tab" onclick="scrollToSection('ask-ai')">Demander à l'IA <span class="ai-badge">Beta</span></a>
+      </div>
+      <div class="tabs-price">
+        <div><div class="from">à partir du</div><div class="amount" id="fromPrice">—</div></div>
+        <a class="cta-btn" onclick="scrollToSection('chambres')">Sélectionner les chambres <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></a>
+      </div>
+    </div>
+
+    <div class="section" id="apercu">
+      <div class="section-title">Points forts intelligents</div>
+      <div class="highlight-grid" id="highlightGrid"></div>
+    </div>
+
+    <div class="section" id="installations">
+      <div class="section-title">
+        <span>Installations populaires</span>
+        <button class="see-all" id="amenitiesToggle" onclick="toggleAmenities()">Voir plus</button>
+      </div>
+      <div class="amenity-pills" id="hAmenities"></div>
+    </div>
+
+    <div class="section" id="chambres">
+      <div class="section-title">Choisissez votre chambre</div>
+      <div class="modify-bar">
+        <div class="mfield"><label>Arrivée</label><input type="date" id="modCheckin"></div>
+        <div class="mfield"><label>Départ</label><input type="date" id="modCheckout"></div>
+        <div class="mfield"><label>Voyageurs</label><span id="modGuests" style="font-weight:600;font-size:13.5px;"></span></div>
+        <button class="cta-btn-sm" onclick="reloadRates()">Modifier la recherche</button>
+      </div>
+      <label class="filter-chip"><input type="checkbox" id="breakfastFilter">Petit-déjeuner inclus uniquement</label>
+      <div id="roomsContainer"></div>
+    </div>
+
+    <div class="section" id="ask-ai">
+      <div class="ask-ai-box">
+        <div class="title-row"><h4>Demandez à l'IA des informations sur cet hôtel</h4></div>
+        <div class="ai-chips">
+          <div class="ai-chip">L'hôtel a-t-il un parking ?</div>
+          <div class="ai-chip">Quels équipements sont disponibles ?</div>
+          <div class="ai-chip">Quelles options de restauration ?</div>
+        </div>
+        <div class="ai-input-row">
+          <input type="text" id="aiInput" placeholder="Posez n'importe quelle question ici...">
+          <button class="ai-send" onclick="askAi()"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="avis">
+      <div class="section-title">Avis des clients</div>
+      <div class="score-header" id="scoreHeader" style="display:none;">
+        <div class="score-badge-lg" id="hScoreNum"></div>
+        <div class="score-meta"><b id="scoreLabel">Excellent</b><span id="hReviewCount"></span></div>
+      </div>
+      <div class="quote-pills" id="quotePills"></div>
+      <div id="reviewsContainer"><p style="color:var(--ink-soft);font-size:13.5px;">Chargement des avis...</p></div>
+    </div>
+
+    <div class="section" id="description">
+      <div class="section-title">Voici la description de la propriété</div>
+      <div class="description-text" id="hDescription">Description non disponible pour le moment.</div>
+    </div>
+  </div>
+
+  <div class="state-msg hidden" id="errorMsg">
+    <h3>Impossible de charger cet hôtel</h3>
+    <p id="errorText">Veuillez réessayer ou retourner aux résultats.</p>
+  </div>
+</div>
+
+<footer class="mini-footer">
+  <div class="wrap mini-footer-inner">
+    <div class="mini-footer-links">
+      <a href="#">Conditions générales</a>
+      <a href="#">Politique de confidentialité</a>
+      <a href="#">Préférences en matière de cookies</a>
+      <a href="#">Contactez-nous</a>
+    </div>
+    <span>© 2026 LuviaPlace — Kinshasa, RDC</span>
+  </div>
+</footer>
+
+<script>
+// ============================================
+// CONFIGURATION
+// ============================================
+var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
+var qp = new URLSearchParams(window.location.search);
+var hotelId = qp.get('hotelId') || '';
+var checkin = qp.get('checkin') || '';
+var checkout = qp.get('checkout') || '';
+var adults = qp.get('adults') || '2';
+var currentHotel = null;
+var currentRateInfo = [];
+var currentImages = [];
+
+// ============================================
+// GALERIE MODALE
+// ============================================
+var galleryImages = [];
+var galleryIndex = 0;
+
+function openGalleryModal(index) {
+    galleryIndex = index || 0;
+    var modal = document.getElementById('galleryModal');
+    var img = document.getElementById('modalImage');
+    var counter = document.getElementById('modalCounter');
+    if (galleryImages.length === 0) return;
+    img.src = galleryImages[galleryIndex];
+    counter.textContent = (galleryIndex + 1) + ' / ' + galleryImages.length;
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeGalleryModal() {
+    document.getElementById('galleryModal').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+function changeGalleryImage(direction) {
+    galleryIndex = (galleryIndex + direction + galleryImages.length) % galleryImages.length;
+    var img = document.getElementById('modalImage');
+    var counter = document.getElementById('modalCounter');
+    img.src = galleryImages[galleryIndex];
+    counter.textContent = (galleryIndex + 1) + ' / ' + galleryImages.length;
+}
+
+// ============================================
+// MODAL DÉTAILS CHAMBRE
+// ============================================
+function openRoomDetailModal(room) {
+    var modal = document.getElementById('roomDetailModal');
+    var body = document.getElementById('roomDetailBody');
+    
+    var amenitiesHtml = (room.roomAmenities || []).map(function(a) {
+        return '<span>' + a + '</span>';
+    }).join('');
+    
+    var ratesHtml = (room.rates || []).map(function(rate) {
+        var refundClass = rate.refundableTag === 'RFN' ? 'rfn' : 'nrfn';
+        var refundLabel = rate.refundableTag === 'RFN' ? 'Annulation gratuite' : 'Non remboursable';
+        var savingsPct = rate.originalRate && rate.originalRate > rate.retailRate ? 
+            '<span style="font-size:12px;color:var(--green);font-weight:600;">Économisez ' + Math.round((1 - rate.retailRate / rate.originalRate) * 100) + '%</span>' : '';
+        
+        return '<div class="rate-option">' +
+            '<div><div class="rate-name">' + (rate.board || 'Chambre seule') + '</div>' +
+            '<div class="rate-sub">' + rate.rateName + ' ' + savingsPct + '</div>' +
+            '<span class="refund-badge ' + refundClass + '">' + refundLabel + '</span></div>' +
+            '<div style="text-align:right;"><div class="rate-price">$' + Math.round(rate.retailRate) + ' <span class="per">/ total</span></div>' +
+            '<button class="cta-btn-sm" onclick="reserverChambre(\'' + rate.offerId + '\', ' + rate.retailRate + ', \'' + room.roomName.replace(/'/g, "\\'") + '\', ' + (rate.refundableTag === 'RFN' ? 'true' : 'false') + ');closeRoomDetailModal();">Réserver</button></div>' +
+        '</div>';
+    }).join('');
+    
+    body.innerHTML = 
+        '<h2>' + room.roomName + '</h2>' +
+        '<div class="room-meta">' +
+            (room.maxOccupancy ? '<span>👤 Capacité ' + room.maxOccupancy + '</span>' : '') +
+            (room.roomSizeSquare ? '<span>📐 ' + room.roomSizeSquare + ' m²</span>' : '') +
+            (room.bedTypes && room.bedTypes.length ? '<span>🛏️ ' + room.bedTypes.join(', ') + '</span>' : '') +
+        '</div>' +
+        (room.description ? '<div class="room-description">' + room.description + '</div>' : '') +
+        (room.roomAmenities && room.roomAmenities.length ? '<div class="room-amenities">' + amenitiesHtml + '</div>' : '') +
+        '<h3 style="font-family:var(--font-head);font-weight:700;font-size:16px;margin-bottom:12px;">Tarifs disponibles</h3>' +
+        ratesHtml;
+    
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeRoomDetailModal() {
+    document.getElementById('roomDetailModal').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeGalleryModal();
+        closeRoomDetailModal();
+    }
+});
+
+// ============================================
+// INSTALLATIONS - VOIR PLUS
+// ============================================
+var amenitiesVisible = false;
+
+function toggleAmenities() {
+    amenitiesVisible = !amenitiesVisible;
+    var pills = document.querySelectorAll('#hAmenities .amenity-pill');
+    var btn = document.getElementById('amenitiesToggle');
+    pills.forEach(function(pill, index) {
+        if (index >= 8) {
+            pill.style.display = amenitiesVisible ? 'flex' : 'none';
+        }
+    });
+    btn.textContent = amenitiesVisible ? 'Voir moins' : 'Voir plus (' + (pills.length - 8) + ' autres)';
+}
+
+// ============================================
+// CHAMBRES - GALERIE PAR CHAMBRE
+// ============================================
+var roomGalleries = {};
+
+function changeRoomImage(roomId, direction) {
+    if (!roomGalleries[roomId]) return;
+    var gallery = roomGalleries[roomId];
+    gallery.index = (gallery.index + direction + gallery.images.length) % gallery.images.length;
+    var img = document.getElementById('roomImg-' + roomId);
+    var counter = document.getElementById('roomCounter-' + roomId);
+    if (img) img.src = gallery.images[gallery.index];
+    if (counter) counter.textContent = (gallery.index + 1) + ' / ' + gallery.images.length;
+}
+
+// ============================================
+// FONCTIONS UTILITAIRES
+// ============================================
+function fmtDate(s){
+  if (!s) return '';
+  var d = new Date(s);
+  if (isNaN(d)) return s;
+  return d.toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' });
+}
+
+function showError(msg){
+  document.getElementById('loadingSkeleton').classList.add('hidden');
+  document.getElementById('hotelContent').classList.add('hidden');
+  document.getElementById('errorMsg').classList.remove('hidden');
+  document.getElementById('errorText').textContent = msg;
+}
+
+function scrollToSection(id) {
+  var el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll('.tab-link').forEach(l => {
+    if (l.textContent.trim().toLowerCase() === id.replace('-', ' ')) {
+      l.classList.add('active');
+    }
+  });
+}
+
+function getNights(checkin, checkout) {
+    if (!checkin || !checkout) return 1;
+    var start = new Date(checkin);
+    var end = new Date(checkout);
+    var diffTime = Math.abs(end - start);
+    var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 1;
+}
+
+var AMENITY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
+var HIGHLIGHT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6h6l-5 4 2 6-6-4-6 4 2-6-5-4h6z"/></svg>';
+
+// ============================================
+// CHARGEMENT DES DONNÉES
+// ============================================
+async function loadHotel(){
+  if (!hotelId){ showError("Aucun identifiant d'hôtel fourni dans le lien."); return; }
+
+  document.getElementById('sumDestSeg').textContent = qp.get('hotelName') || 'Hôtel';
+  document.getElementById('sumDatesSeg').textContent = (checkin && checkout) ? (fmtDate(checkin) + ' - ' + fmtDate(checkout)) : '—';
+  document.getElementById('sumGuestsSeg').textContent = adults + ' Client' + (adults > 1 ? 's' : '');
+  document.getElementById('modCheckin').value = checkin;
+  document.getElementById('modCheckout').value = checkout;
+  document.getElementById('modGuests').textContent = adults + ' adulte' + (adults > 1 ? 's' : '');
+
+  document.getElementById('loadingSkeleton').classList.remove('hidden');
+
+  var detailsPromise = fetch(API_BASE_URL + '/hotel-details?hotelId=' + encodeURIComponent(hotelId) + '&environment=production')
+    .then(r => r.json())
+    .catch(() => null);
+
+  var ratesPromise = (checkin && checkout)
+    ? fetch(API_BASE_URL + '/search-rates?hotelId=' + encodeURIComponent(hotelId) + '&checkin=' + checkin + '&checkout=' + checkout + '&adults=' + adults + '&environment=production&maxRates=50')
+        .then(r => r.json())
+        .catch(() => null)
+    : Promise.resolve(null);
+
+  var reviewsPromise = fetch(API_BASE_URL + '/hotel-reviews?hotelId=' + encodeURIComponent(hotelId) + '&environment=production')
+    .then(r => r.json())
+    .catch(() => null);
+
+  var results = await Promise.all([detailsPromise, ratesPromise, reviewsPromise]);
+  var detailsRes = results[0], ratesRes = results[1], reviewsRes = results[2];
+
+  if ((!detailsRes || !detailsRes.success) && (!ratesRes || !ratesRes.success)){
+    showError('Cet hôtel est introuvable ou temporairement indisponible.');
+    return;
+  }
+
+  var hotel = (detailsRes && detailsRes.success) ? detailsRes.data : {};
+  var hotelInfoFallback = (ratesRes && ratesRes.success) ? ratesRes.hotelInfo : {};
+  currentHotel = hotel;
+
+  var name = hotel.name || hotelInfoFallback.name || 'Hôtel sans nom';
+  var address = hotel.address || hotelInfoFallback.address || '';
+  var city = hotel.city || hotelInfoFallback.city || '';
+  var country = hotel.country || hotelInfoFallback.country || '';
+  var fullAddress = [address, city, country].filter(Boolean).join(', ') || 'Adresse non disponible';
+  
+  var starRating = hotel.starRating || hotelInfoFallback.starRating || 0;
+  var rating = hotel.rating || hotelInfoFallback.rating || null;
+  var reviewCount = hotel.reviewCount || hotelInfoFallback.reviewCount || 0;
+  var mainPhoto = hotel.main_photo || hotelInfoFallback.main_photo || '';
+  
+  var images = (hotel.hotelImages || []).map(i => i.url).filter(Boolean);
+  if (mainPhoto) images.unshift(mainPhoto);
+  if (images.length === 0) images = ['https://picsum.photos/seed/hotel-' + hotelId + '/1200/800'];
+  currentImages = images;
+  galleryImages = images;
+
+  document.title = name + ' — LuviaPlace';
+  document.getElementById('hName').textContent = name;
+  document.getElementById('hAddress').textContent = fullAddress;
+  document.getElementById('mapLink').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(fullAddress);
+  
+  var starDisplay = starRating > 0 ? Math.min(Math.round(starRating), 5) : 3;
+  document.getElementById('hStars').textContent = '★'.repeat(starDisplay);
+
+  // Galerie
+  var galleryHtml = images.slice(0,5).map((url,i) => {
+    var last = i === Math.min(images.length,5) - 1;
+    var moreBtn = last && images.length > 5 ? 
+      '<button class="gallery-more" onclick="event.stopPropagation();openGalleryModal(0)">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/></svg>' +
+      'Afficher toutes les images</button>' : '';
+    return '<div onclick="openGalleryModal(' + i + ')"><img src="' + url + '" alt="' + name + '" loading="lazy">' + moreBtn + '</div>';
+  }).join('');
+  document.getElementById('gallery').innerHTML = galleryHtml;
+
+  // Points forts
+  var highlightGrid = document.getElementById('highlightGrid');
+  var facilities = hotel.hotelFacilities || [];
+  if (facilities.length){
+    highlightGrid.innerHTML = facilities.slice(0,6).map(f => 
+      '<div class="highlight-card"><div class="h-icon">' + HIGHLIGHT_ICON + '</div><h4>' + f + '</h4><p>Disponible dans cet établissement.</p></div>'
+    ).join('');
+  } else {
+    highlightGrid.innerHTML = '<p style="color:var(--ink-soft);font-size:13.5px;">Aucune information disponible pour le moment.</p>';
+  }
+
+  // Installations
+  var amenitiesContainer = document.getElementById('hAmenities');
+  if (facilities.length){
+    var allAmenities = facilities.map(f => '<div class="amenity-pill">' + AMENITY_ICON + f + '</div>').join('');
+    amenitiesContainer.innerHTML = allAmenities;
+    var pills = amenitiesContainer.querySelectorAll('.amenity-pill');
+    pills.forEach(function(pill, index) {
+      if (index >= 8) pill.style.display = 'none';
+    });
+    if (pills.length > 8) {
+      document.getElementById('amenitiesToggle').style.display = 'inline';
+      document.getElementById('amenitiesToggle').textContent = 'Voir plus (' + (pills.length - 8) + ' autres)';
+    } else {
+      document.getElementById('amenitiesToggle').style.display = 'none';
+    }
+  } else {
+    amenitiesContainer.innerHTML = '<p style="color:var(--ink-soft);font-size:13.5px;">Liste des équipements non disponible.</p>';
+    document.getElementById('amenitiesToggle').style.display = 'none';
+  }
+
+  // Note et avis
+  if (rating){
+    document.getElementById('scoreHeader').style.display = 'flex';
+    document.getElementById('hScoreNum').textContent = rating.toFixed(1);
+    document.getElementById('hReviewCount').textContent = 'Basé sur ' + reviewCount + ' avis';
+  }
+
+  // Description
+  var desc = hotel.hotelDescription || hotel.description || '';
+  document.getElementById('hDescription').innerHTML = desc || 'Description non disponible pour le moment.';
+
+  // Avis
+  if (reviewsRes && reviewsRes.success && Array.isArray(reviewsRes.data) && reviewsRes.data.length){
+    renderReviews(reviewsRes.data);
+  } else {
+    document.getElementById('reviewsContainer').innerHTML = '<p style="color:var(--ink-soft);font-size:13.5px;">Aucun avis détaillé disponible pour le moment.</p>';
+  }
+
+  // Tarifs (TOUTES les chambres avec tous les tarifs)
+  currentRateInfo = (ratesRes && ratesRes.success) ? ratesRes.rateInfo : [];
+  renderRooms(currentRateInfo, hotel);
+
+  document.getElementById('loadingSkeleton').classList.add('hidden');
+  document.getElementById('hotelContent').classList.remove('hidden');
+}
+
+// ============================================
+// AFFICHAGE DES AVIS
+// ============================================
+function renderReviews(reviews){
+  var container = document.getElementById('reviewsContainer');
+  container.innerHTML = reviews.slice(0,8).map(function(rv){
+    var author = rv.reviewerName || rv.author || rv.name || 'Voyageur';
+    var text = rv.comment || rv.text || rv.reviewComments || rv.review || '';
+    var score = rv.rating || rv.score || rv.overallRating || '';
+    var date = rv.date || rv.reviewDate || '';
+    return '<div class="review-card"><div class="review-top"><div><div class="review-author">' + author + '</div><div class="review-meta">' + (date ? fmtDate(date) : '') + '</div></div>' + (score ? '<div class="review-score">' + score + '</div>' : '') + '</div><div class="review-text">' + (text || 'Avis sans commentaire.') + '</div></div>';
+  }).join('');
+}
+
+// ============================================
+// AFFICHAGE DES CHAMBRES (TOUTES AVEC TOUS LES TARIFS)
+// ============================================
+function renderRooms(rateInfo, hotel){
+  var roomsById = {};
+  (hotel.rooms || []).forEach(function(r) { 
+    roomsById[r.id] = r; 
+  });
+  var container = document.getElementById('roomsContainer');
+
+  if (!rateInfo || !rateInfo.length){
+    container.innerHTML = '<div class="state-msg" style="padding:40px 0;"><h3>Aucune disponibilité</h3><p>Essayez d\'autres dates.</p></div>';
+    document.getElementById('fromPrice').textContent = '—';
+    return;
+  }
+
+  var nights = getNights(checkin, checkout);
+  var minAll = Infinity;
+  rateInfo.forEach(function(r) {
+    if (r.retailRate > 0 && r.retailRate < minAll) minAll = r.retailRate;
+  });
+  if (isFinite(minAll) && minAll > 0) {
+    var pricePerNight = Math.round(minAll / nights);
+    document.getElementById('fromPrice').textContent = '$' + pricePerNight + ' / nuit';
+  }
+
+  var breakfastOnly = document.getElementById('breakfastFilter').checked;
+
+  // Grouper par type de chambre (mappedRoomId ou rateName)
+  var groups = {};
+  rateInfo.forEach(function(rate) {
+    var key = rate.mappedRoomId || rate.rateName || 'chambre';
+    if (!groups[key]) {
+      groups[key] = { 
+        room: roomsById[rate.mappedRoomId] || null, 
+        rateName: rate.rateName, 
+        rates: [] 
+      };
+    }
+    groups[key].rates.push(rate);
+  });
+
+  var groupValues = Object.values(groups);
+  if (!groupValues.length){
+    container.innerHTML = '<div class="state-msg" style="padding:40px 0;"><h3>Aucune chambre ne correspond</h3><p>Essayez de désactiver le filtre petit-déjeuner.</p></div>';
+    return;
+  }
+
+  container.innerHTML = groupValues.map(function(group, groupIndex) {
+    var room = group.room;
+    var roomId = room ? room.id : 'room-' + groupIndex;
+    var roomName = (room && room.roomName) || group.rateName || 'Chambre';
+    
+    // Toutes les photos de la chambre
+    var roomPhotos = (room && room.photos && room.photos.length) ? 
+      room.photos.map(function(p) { return p.url; }).filter(Boolean) : 
+      (currentImages.length ? currentImages : ['https://picsum.photos/seed/room-' + roomId + '/500/380']);
+    
+    if (roomPhotos.length === 0) {
+      roomPhotos = ['https://picsum.photos/seed/room-' + roomId + '/500/380'];
+    }
+    
+    roomGalleries[roomId] = {
+      images: roomPhotos,
+      index: 0
+    };
+
+    var metaParts = [];
+    if (room && room.roomSizeSquare) metaParts.push(room.roomSizeSquare + ' m²');
+    if (room && room.maxOccupancy) metaParts.push('Capacité ' + room.maxOccupancy);
+    if (room && room.bedTypes && room.bedTypes.length) metaParts.push(room.bedTypes.join(', '));
+
+    // Tous les tarifs pour cette chambre
+    var ratesHtml = group.rates.map(function(rate) {
+      // Filtrer par petit-déjeuner si activé
+      if (breakfastOnly && !/petit|breakfast|dej|BB|BI/i.test(rate.board || '')) return '';
+      
+      var refundable = rate.refundableTag === 'RFN';
+      var boardLabel = /petit|breakfast|dej|BB|BI/i.test(rate.board || '') ? 'Chambre avec petit-déjeuner' : 'Chambre seule';
+      var savingsPct = rate.originalRate && rate.originalRate > rate.retailRate ? Math.round((1 - rate.retailRate / rate.originalRate) * 100) : 0;
+      var pricePerNight = Math.round(rate.retailRate / nights);
+      var totalPrice = Math.round(rate.retailRate);
+      
+      return '<div class="rate-row">' +
+        '<div class="rate-info"><div class="board">' + boardLabel + '</div>' +
+        '<div class="sub">' + (rate.board || 'Room Only') + '</div>' +
+        '<span class="refund-tag ' + (refundable ? 'rfn' : 'nrfn') + '">' + (refundable ? 'Annulation gratuite' : 'Non remboursable') + '</span></div>' +
+        '<div class="rate-side">' +
+        (savingsPct > 0 ? '<span class="savings-pill">Économisez ' + savingsPct + '%</span>' : '') +
+        '<div class="rate-price">' + (rate.originalRate && rate.originalRate > rate.retailRate ? '<div class="strike">$' + rate.originalRate.toFixed(0) + '</div>' : '') + 
+        '<div class="amount">$' + pricePerNight + ' <span class="per">/ nuit</span></div>' +
+        '<div class="note">Total $' + totalPrice + ' pour ' + nights + ' nuit' + (nights > 1 ? 's' : '') + '</div></div>' +
+        '<button class="cta-btn-sm" onclick="reserverChambre(\'' + rate.offerId + '\', ' + rate.retailRate + ', \'' + roomName.replace(/'/g, "\\'") + '\', ' + (refundable ? 'true' : 'false') + ')">Choisir</button>' +
+        '</div></div>';
+    }).filter(function(html) { return html !== ''; }).join('');
+
+    // Si après filtrage il n'y a plus de tarifs
+    if (!ratesHtml) return '';
+
+    // Préparer les données pour le modal
+    var roomData = {
+      roomName: roomName,
+      maxOccupancy: room.maxOccupancy || 0,
+      roomSizeSquare: room.roomSizeSquare || 0,
+      bedTypes: room.bedTypes || [],
+      description: room.description || '',
+      roomAmenities: room.roomAmenities || [],
+      rates: group.rates.map(function(rate) {
+        return {
+          rateName: rate.rateName || 'Chambre',
+          board: rate.board || 'Room Only',
+          retailRate: rate.retailRate,
+          originalRate: rate.originalRate,
+          refundableTag: rate.refundableTag,
+          offerId: rate.offerId
+        };
+      })
+    };
+
+    return '<div class="room-group">' +
+      '<div class="room-group-head">' +
+        '<div class="thumb">' +
+          '<button class="room-gallery-nav prev" onclick="event.stopPropagation();changeRoomImage(\'' + roomId + '\', -1)">‹</button>' +
+          '<img id="roomImg-' + roomId + '" src="' + roomPhotos[0] + '" alt="' + roomName + '" loading="lazy">' +
+          '<button class="room-gallery-nav next" onclick="event.stopPropagation();changeRoomImage(\'' + roomId + '\', 1)">›</button>' +
+          '<span class="room-image-counter" id="roomCounter-' + roomId + '">1 / ' + roomPhotos.length + '</span>' +
+        '</div>' +
+        '<h4>' + roomName + '</h4>' +
+        '<div class="meta">' + metaParts.map(function(m){ return '<span>' + m + '</span>'; }).join('') + '</div>' +
+        '<button class="details-link" onclick="openRoomDetailModal(' + JSON.stringify(roomData).replace(/"/g, '&quot;') + ')">Voir les détails</button>' +
+      '</div>' +
+      '<div class="room-rates">' + ratesHtml + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ============================================
+// RECHARGER LES TARIFS
+// ============================================
+function reloadRates(){
+  var newCheckin = document.getElementById('modCheckin').value;
+  var newCheckout = document.getElementById('modCheckout').value;
+  if (!newCheckin || !newCheckout) return;
+  var url = new URL(window.location.href);
+  url.searchParams.set('checkin', newCheckin);
+  url.searchParams.set('checkout', newCheckout);
+  window.location.href = url.toString();
+}
+
+document.getElementById('breakfastFilter').addEventListener('change', function(){
+  renderRooms(currentRateInfo, currentHotel || {});
+});
+
+// ============================================
+// RÉSERVER UNE CHAMBRE
+// ============================================
+function reserverChambre(offerId, price, roomName, refundable){
+  var hotelName = document.getElementById('hName') ? document.getElementById('hName').textContent : '';
+  var url = 'prebook.html?offerId=' + encodeURIComponent(offerId)
+    + '&hotelId=' + encodeURIComponent(hotelId)
+    + '&checkin=' + checkin + '&checkout=' + checkout + '&adults=' + adults
+    + '&price=' + encodeURIComponent(price || '')
+    + '&roomName=' + encodeURIComponent(roomName || '')
+    + '&hotelName=' + encodeURIComponent(hotelName)
+    + '&refundable=' + (refundable ? '1' : '0');
+  window.location.href = url;
+}
+
+// ============================================
+// IA
+// ============================================
+function askAi(){
+  var input = document.getElementById('aiInput');
+  if (!input.value.trim()) return;
+  alert("Cette fonctionnalité n'est pas encore branchée à un service IA — à connecter prochainement.");
+}
+document.querySelectorAll('.ai-chip').forEach(function(chip) {
+  chip.addEventListener('click', function() {
+    document.getElementById('aiInput').value = chip.textContent;
+  });
+});
+
+// ============================================
+// UI - MENU
+// ============================================
+var switcherBtn = document.getElementById('switcherBtn');
+var switcherMenu = document.getElementById('switcherMenu');
+if (switcherBtn && switcherMenu) {
+  switcherBtn.addEventListener('click', function(e){ e.stopPropagation(); switcherMenu.classList.toggle('open'); });
+  document.addEventListener('click', function(){ switcherMenu.classList.remove('open'); });
+}
+
+// ============================================
+// INITIALISATION
+// ============================================
+loadHotel();
+</script>
+</body>
+</html>

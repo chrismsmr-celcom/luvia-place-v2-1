@@ -281,7 +281,7 @@ app.get("/search-hotels", async (req, res) => {
 });
 
 // ============================================
-// 3. RECHERCHE HÔTELS - STREAMING (SSE)
+// 3. RECHERCHE HÔTELS - STREAMING (SSE) - CORRIGÉ
 // ============================================
 app.get("/search-hotels-stream", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS (STREAMING) ===== 🔍");
@@ -298,7 +298,6 @@ app.get("/search-hotels-stream", async (req, res) => {
   const apiKey = environment == "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
-  // ✅ Configuration SSE
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -379,24 +378,63 @@ app.get("/search-hotels-stream", async (req, res) => {
     }
 
     // ============================================
+    // ÉTAPE 2.5: Récupérer les starRatings pour tous les hôtels
+    // ============================================
+    sendEvent('status', { 
+      step: 'details', 
+      message: `⭐ Récupération des étoiles pour ${Math.min(hotelList.length, 100)} hôtels...` 
+    });
+
+    // Créer un map des starRatings par hotelId
+    const starRatingMap = {};
+    const hotelIds = hotelList.map(h => h.hotelId || h.id).filter(id => id);
+    
+    // Limiter à 100 hôtels pour éviter les timeouts
+    const limitedForDetails = hotelIds.slice(0, 100);
+    
+    // Récupérer les détails en parallèle (par lots de 10)
+    const DETAILS_BATCH_SIZE = 10;
+    for (let i = 0; i < limitedForDetails.length; i += DETAILS_BATCH_SIZE) {
+      const batch = limitedForDetails.slice(i, i + DETAILS_BATCH_SIZE);
+      console.log(`⏳ Récupération des étoiles lot ${i/DETAILS_BATCH_SIZE + 1}...`);
+      
+      await Promise.all(batch.map(async (hotelId) => {
+        try {
+          const detailsResponse = await sdk.getHotelDetails(hotelId, 4);
+          if (detailsResponse.data && detailsResponse.data.starRating !== undefined) {
+            starRatingMap[hotelId] = detailsResponse.data.starRating;
+          }
+        } catch (error) {
+          console.warn(`⚠️ Erreur détails pour ${hotelId}:`, error.message);
+        }
+      }));
+    }
+
+    console.log(`✅ ${Object.keys(starRatingMap).length} starRatings récupérés`);
+
+    // ============================================
     // ÉTAPE 3: Récupérer les tarifs par lots
     // ============================================
-    const hotelIds = hotelList.map(h => h.hotelId || h.id).filter(id => id);
+    const allHotelIds = hotelList.map(h => h.hotelId || h.id).filter(id => id);
     const BATCH_SIZE = 20;
     
-    // ✅ Envoyer les hôtels de base immédiatement
+    // ✅ Envoyer les hôtels de base immédiatement (avec starRating si disponible)
     const baseHotels = hotelList.slice(0, 100).map(function(hotel) {
+      const hotelId = hotel.hotelId || hotel.id;
+      // ✅ Récupérer starRating depuis le map
+      const starRating = starRatingMap[hotelId] || 0;
+      
       return {
-        id: hotel.hotelId || hotel.id,
+        id: hotelId,
         name: hotel.name || hotel.hotelName || 'Hôtel sans nom',
         address: hotel.address || hotel.city || city,
         city: hotel.city || city,
         country: hotel.country || '',
         main_photo: hotel.main_photo || hotel.photo || hotel.image || 
-          `https://picsum.photos/seed/${hotel.hotelId || Math.random()}/460/380`,
+          `https://picsum.photos/seed/${hotelId || Math.random()}/460/380`,
         rating: hotel.rating || 0,
         reviewCount: hotel.reviewCount || 0,
-        starRating: hotel.starRating || 0,
+        starRating: starRating,  // ← MAINTENANT AVEC LA VRAIE VALEUR
         minPrice: 0,
         currency: 'USD',
         loading: true
@@ -414,10 +452,10 @@ app.get("/search-hotels-stream", async (req, res) => {
     const allHotels = [];
     let totalWithRates = 0;
 
-    for (let i = 0; i < Math.min(hotelIds.length, 500); i += BATCH_SIZE) {
-      const batch = hotelIds.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < Math.min(allHotelIds.length, 500); i += BATCH_SIZE) {
+      const batch = allHotelIds.slice(i, i + BATCH_SIZE);
       const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-      const totalBatches = Math.ceil(Math.min(hotelIds.length, 500) / BATCH_SIZE);
+      const totalBatches = Math.ceil(Math.min(allHotelIds.length, 500) / BATCH_SIZE);
       
       sendEvent('status', { 
         step: 'rates',
@@ -461,6 +499,9 @@ app.get("/search-hotels-stream", async (req, res) => {
           
           if (!hotel) return null;
 
+          // ✅ Récupérer starRating depuis le map (ou depuis hotel.hotel si disponible)
+          const starRating = starRatingMap[hotelId] || hotel.hotel?.starRating || hotel.starRating || 0;
+
           return {
             id: hotelId,
             name: hotel.name || hotel.hotelName || 'Hôtel sans nom',
@@ -471,7 +512,7 @@ app.get("/search-hotels-stream", async (req, res) => {
               `https://picsum.photos/seed/${hotelId}/460/380`,
             rating: hotel.rating || 0,
             reviewCount: hotel.reviewCount || 0,
-            starRating: hotel.starRating || 0,
+            starRating: starRating,  // ← MAINTENANT AVEC LA VRAIE VALEUR
             minPrice: bestRate?.retailRate?.total?.[0]?.amount || 0,
             currency: bestRate?.retailRate?.total?.[0]?.currency || 'USD',
             offerId: rateItem.roomTypes?.[0]?.offerId || null,

@@ -274,6 +274,18 @@ var hotelsContainer = null;
 var resultsCount = null;
 var isFirstBatch = true;
 
+// ============================================
+// CALCUL DU NOMBRE DE NUITS
+// ============================================
+function getNights(checkin, checkout) {
+    if (!checkin || !checkout) return 1;
+    var start = new Date(checkin);
+    var end = new Date(checkout);
+    var diffTime = Math.abs(end - start);
+    var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 1;
+}
+
 function generateSkeleton() {
   var container = document.getElementById('resultsContainer');
   var html = '';
@@ -300,11 +312,25 @@ function generateSkeleton() {
 }
 
 // ============================================
-// AFFICHAGE D'UN HÔTEL
+// AFFICHAGE D'UN HÔTEL - CORRIGÉ
 // ============================================
 function createHotelElement(hotel, index) {
-  var stars = hotel.starRating || 3;
-  var starHtml = '★'.repeat(Math.min(stars, 5));
+  // ✅ ÉTOILES DYNAMIQUES
+  var starRating = hotel.starRating || 0;
+  var starHtml = '';
+  for (var s = 0; s < Math.min(Math.round(starRating), 5); s++) {
+      starHtml += '★';
+  }
+  if (starRating === 0) {
+      starHtml = '☆'.repeat(3);
+  }
+  
+  // ✅ PRIX PAR NUIT
+  var checkin = params.get('checkin') || getDefaultCheckin();
+  var checkout = params.get('checkout') || getDefaultCheckout();
+  var nights = getNights(checkin, checkout);
+  var pricePerNight = hotel.minPrice > 0 ? Math.round(hotel.minPrice / nights) : 0;
+  var totalPrice = hotel.minPrice > 0 ? Math.round(hotel.minPrice) : 0;
   
   var div = document.createElement('div');
   div.className = 'hotel-result';
@@ -313,7 +339,7 @@ function createHotelElement(hotel, index) {
   var priceDisplay = hotel.loading 
     ? '<span class="loading-price">⏳ Chargement...</span>'
     : hotel.minPrice > 0 
-      ? `$${hotel.minPrice} <span class="per">/ nuit</span>`
+      ? `$${pricePerNight} <span class="per">/ nuit</span>`
       : '<span class="no-price">Prix non disponible</span>';
   
   var ratingDisplay = hotel.rating >= 8 ? 'Excellent' : hotel.rating >= 7 ? 'Très bien' : 'Bien';
@@ -340,7 +366,7 @@ function createHotelElement(hotel, index) {
       ${!hotel.loading && hotel.minPrice > 0 ? `<div class="savings-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>Connectez-vous et économisez $${Math.floor(hotel.minPrice * 0.08)}</div>` : ''}
       <div class="price-block">
         <div class="amount">${priceDisplay}</div>
-        ${!hotel.loading && hotel.minPrice > 0 ? '<div class="note">1 nuit, 1 chambre, taxes et frais inclus</div>' : ''}
+        ${!hotel.loading && hotel.minPrice > 0 ? `<div class="note">Total $${totalPrice} pour ${nights} nuit${nights > 1 ? 's' : ''}, taxes et frais inclus</div>` : ''}
       </div>
       <button class="cta-btn-sm" onclick="voirHotel('${hotel.id || ''}')" ${hotel.loading ? 'disabled style="opacity:0.5;"' : ''}>
         ${hotel.loading ? '⏳ Chargement...' : 'Voir les disponibilités'}
@@ -362,13 +388,11 @@ function displayHotelsStream(data) {
     resultsCount = document.getElementById('resultsCount');
   }
 
-  // ✅ Premier lot : on affiche directement
   if (isFirstBatch) {
     hotelsContainer.innerHTML = '';
     isFirstBatch = false;
   }
 
-  // ✅ Ajouter les nouveaux hôtels
   var fragment = document.createDocumentFragment();
   data.hotels.forEach(function(hotel, index) {
     var el = createHotelElement(hotel, index);
@@ -376,7 +400,6 @@ function displayHotelsStream(data) {
   });
   hotelsContainer.appendChild(fragment);
 
-  // ✅ Mettre à jour le compteur
   var loaded = data.loaded || data.hotels.length;
   var total = data.total || loaded;
   resultsCount.textContent = loaded + ' / ' + total + ' propriétés trouvées';
@@ -391,6 +414,21 @@ function updateHotel(hotel) {
     var newElement = createHotelElement(hotel, 0);
     element.parentNode.replaceChild(newElement, element);
   }
+}
+
+// ============================================
+// DATE PAR DÉFAUT
+// ============================================
+function getDefaultCheckin() {
+    var d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+}
+
+function getDefaultCheckout() {
+    var d = new Date();
+    d.setDate(d.getDate() + 4);
+    return d.toISOString().slice(0, 10);
 }
 
 // ============================================
@@ -423,7 +461,6 @@ function searchHotelsStream(searchParams) {
     var url = API_BASE_URL + '/search-hotels-stream?' + queryParams.toString();
     console.log('📦 URL SSE:', url);
 
-    // ✅ Utiliser EventSource pour le streaming
     var eventSource = new EventSource(url);
     var finalResult = null;
     var hotelsMap = {};
@@ -431,7 +468,6 @@ function searchHotelsStream(searchParams) {
     eventSource.addEventListener('status', function(e) {
       var data = JSON.parse(e.data);
       console.log('📊 Status:', data);
-      // Afficher le statut dans l'interface
       var statusEl = document.getElementById('searchStatus');
       if (statusEl) {
         statusEl.textContent = data.message;
@@ -443,7 +479,6 @@ function searchHotelsStream(searchParams) {
       var data = JSON.parse(e.data);
       console.log('🏨 Hôtels de base reçus:', data.hotels.length);
       
-      // Stocker les hôtels de base
       data.hotels.forEach(function(hotel) {
         hotelsMap[hotel.id] = hotel;
       });
@@ -455,19 +490,15 @@ function searchHotelsStream(searchParams) {
       var data = JSON.parse(e.data);
       console.log('📦 Lot reçu:', data.batch + '/' + data.totalBatches, data.hotels.length + ' hôtels');
       
-      // Mettre à jour ou ajouter les hôtels
       data.hotels.forEach(function(hotel) {
         if (hotelsMap[hotel.id]) {
-          // Mettre à jour l'hôtel existant
           hotelsMap[hotel.id] = hotel;
           updateHotel(hotel);
         } else {
-          // Ajouter un nouvel hôtel
           hotelsMap[hotel.id] = hotel;
         }
       });
       
-      // Mettre à jour le compteur
       var countEl = document.getElementById('resultsCount');
       if (countEl) {
         var loaded = data.loaded || Object.keys(hotelsMap).length;
@@ -480,7 +511,6 @@ function searchHotelsStream(searchParams) {
       var data = JSON.parse(e.data);
       console.log('✅ Streaming terminé:', data);
       
-      // Trier les hôtels par prix
       var sortedHotels = Object.values(hotelsMap)
         .filter(h => h.minPrice > 0)
         .sort((a, b) => a.minPrice - b.minPrice);
@@ -492,7 +522,6 @@ function searchHotelsStream(searchParams) {
         rawTotal: data.rawTotal || sortedHotels.length
       };
       
-      // Cacher le statut
       var statusEl = document.getElementById('searchStatus');
       if (statusEl) {
         statusEl.style.display = 'none';
@@ -505,7 +534,6 @@ function searchHotelsStream(searchParams) {
     eventSource.addEventListener('error', function(e) {
       console.error('❌ Erreur SSE:', e);
       
-      // Si on a déjà des hôtels, on les retourne quand même
       if (Object.keys(hotelsMap).length > 0) {
         var sortedHotels = Object.values(hotelsMap)
           .filter(h => h.minPrice > 0)
@@ -527,7 +555,6 @@ function searchHotelsStream(searchParams) {
       }
     });
 
-    // Timeout de sécurité (60 secondes)
     setTimeout(function() {
       if (!finalResult) {
         console.warn('⏳ Timeout SSE');
@@ -589,13 +616,11 @@ function loadResults() {
 
   console.log('📋 Paramètres reçus:', { destination, checkin, checkout, adults, countryCode, placeId });
 
-  // Réinitialiser
   hotelsData = [];
   isFirstBatch = true;
   hotelsContainer = document.getElementById('resultsContainer');
   resultsCount = document.getElementById('resultsCount');
 
-  // Mettre à jour le résumé
   var sumDest = document.getElementById('sumDest');
   var sumDates = document.getElementById('sumDates');
   var sumGuests = document.getElementById('sumGuests');
@@ -604,7 +629,6 @@ function loadResults() {
   if (sumDates) sumDates.textContent = checkin && checkout ? formatDate(checkin) + ' - ' + formatDate(checkout) : 'Sélectionnez vos dates';
   if (sumGuests) sumGuests.textContent = adults + ' adulte' + (adults > 1 ? 's' : '');
 
-  // Ajouter un indicateur de statut
   var statusHtml = `<div id="searchStatus" style="text-align:center;padding:10px;color:var(--ink-soft);font-size:14px;">🔍 Recherche en cours...</div>`;
   if (hotelsContainer) {
     hotelsContainer.innerHTML = statusHtml;
@@ -624,7 +648,6 @@ function loadResults() {
     return;
   }
 
-  // Lancer la recherche streaming
   searchHotelsStream({ 
     destination: destination, 
     checkin: checkin, 
@@ -635,8 +658,6 @@ function loadResults() {
   })
     .then(function(results) {
       if (results && results.success) {
-        // Si on a des résultats, ils sont déjà affichés
-        // Mais on peut faire un affichage final si nécessaire
         if (results.hotels.length === 0) {
           if (hotelsContainer) {
             hotelsContainer.innerHTML = `
@@ -682,12 +703,8 @@ function loadResults() {
     });
 }
 
-// ============================================
-// INITIALISATION
-// ============================================
 document.addEventListener('DOMContentLoaded', loadResults);
 
-// Menu déroulant (si présent)
 var btn = document.getElementById('switcherBtn');
 var menu = document.getElementById('switcherMenu');
 if (btn && menu) {

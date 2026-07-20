@@ -15,62 +15,27 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
 <!-- Dans le <head> ou avant la fermeture de </body> -->
-<script>
-  (function() {
-    'use strict';
-    
-    async function loadChatbot() {
-      try {
-        // Récupérer la clé depuis votre backend
-        const response = await fetch('/api/chatbot-key');
-        const data = await response.json();
-        
-        if (!data.success || !data.key) {
-          console.error('Impossible de charger la clé du chatbot');
-          return;
-        }
-        
-        // Créer et charger le script du chatbot
+<!-- Dans votre page HTML -->
+<script src="/api/chatbot-script" async defer></script>
+  <script>
+  (async function() {
+    try {
+      const response = await fetch('/api/chatbot-key');
+      const data = await response.json();
+      
+      if (data.success && data.key) {
         const script = document.createElement('script');
         script.src = `https://components.liteapi.travel/chatbot/v1.js?liteApiKey=${data.key}`;
         script.async = true;
         script.defer = true;
-        
-        // Gérer les événements
-        script.onload = function() {
-          console.log('🤖 Chatbot chargé avec succès');
-          
-          // Optionnel : initialiser avec des configurations personnalisées
-          if (window.NuiteeChatbot) {
-            window.NuiteeChatbot.init({
-              // Personnalisations si disponibles
-              language: 'fr',
-              // Vous pouvez passer des paramètres supplémentaires ici
-            });
-          }
-        };
-        
-        script.onerror = function() {
-          console.error('❌ Erreur de chargement du chatbot');
-          // Afficher un message alternatif ou un fallback
-        };
-        
         document.body.appendChild(script);
-        
-      } catch (error) {
-        console.error('❌ Erreur:', error);
+        console.log('✅ Chatbot chargé');
       }
-    }
-    
-    // Charger le chatbot au chargement de la page
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      loadChatbot();
-    } else {
-      document.addEventListener('DOMContentLoaded', loadChatbot);
+    } catch (error) {
+      console.error('❌ Erreur chatbot:', error);
     }
   })();
 </script>
-<script src="/api/chatbot-script" async defer></script>
 <style>
   /* ============================================
      VARIABLES

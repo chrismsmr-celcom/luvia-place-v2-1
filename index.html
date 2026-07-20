@@ -2,394 +2,556 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#155EEF">
+<meta name="description" content="LuviaPlace — hébergement, vols, voiture, expériences et assurance voyage. La plateforme de voyage pensée pour l'Afrique centrale.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>LuviaPlace — Votre séjour commence ici</title>
+<link rel="icon" href="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
 <style>
-  /* ========== STYLES EXISTANTS (inchangés) ========== */
+  /* ============================================
+     VARIABLES
+     ============================================ */
   :root{
-    --blue:#155EEF; --blue-dark:#0E3FB0; --ink:#101828; --ink-soft:#475467;
-    --line:#E7EAF0; --bg:#FFFFFF; --bg-soft:#F7F9FC; --green:#12805C; --green-bg:#E7F6EF;
-    --amber:#F5A623; --river:#1B6E6A;
-    --font-head:'Manrope', sans-serif; --font-body:'Inter', sans-serif;
-    --radius-lg:20px; --radius-md:14px; --radius-sm:10px;
+    --blue:#155EEF;
+    --blue-dark:#0E3FB0;
+    --blue-light:#E8F0FE;
+    --ink:#101828;
+    --ink-soft:#475467;
+    --ink-light:#667085;
+    --line:#E7EAF0;
+    --bg:#FFFFFF;
+    --bg-soft:#F7F9FC;
+    --green:#12805C;
+    --green-bg:#E7F6EF;
+    --amber:#F5A623;
+    --red:#D92D20;
+    --river:#1B6E6A;
+    --shadow-sm:0 1px 3px rgba(16,24,40,0.06);
+    --shadow-md:0 4px 20px rgba(16,24,40,0.08);
+    --shadow-lg:0 20px 50px rgba(16,24,40,0.16);
+    --radius-sm:8px;
+    --radius-md:12px;
+    --radius-lg:16px;
+    --radius-xl:24px;
+    --font-head:'Manrope', sans-serif;
+    --font-body:'Inter', sans-serif;
+    --header-height:64px;
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --container-max:1240px;
   }
   *{ box-sizing:border-box; margin:0; padding:0; }
-  html{ scroll-behavior:smooth; }
-  body{ font-family:var(--font-body); color:var(--ink); background:var(--bg); line-height:1.5; }
+  html{ scroll-behavior:smooth; -webkit-tap-highlight-color:transparent; }
+  body{ font-family:var(--font-body); color:var(--ink); background:var(--bg); line-height:1.5; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
   a{ text-decoration:none; color:inherit; }
   img{ display:block; width:100%; height:100%; object-fit:cover; }
-  button{ font-family:inherit; cursor:pointer; }
-  .wrap{ max-width:1240px; margin:0 auto; padding:0 clamp(20px,4vw,48px); }
+  button{ font-family:inherit; cursor:pointer; border:none; background:none; color:inherit; }
+  input, select{ font-family:inherit; }
+  .wrap{ max-width:var(--container-max); margin:0 auto; padding:0 clamp(16px,4vw,48px); }
 
+  :focus-visible{ outline:2px solid var(--blue); outline-offset:2px; border-radius:4px; }
+
+  /* ============================================
+     HEADER
+     ============================================ */
   header.nav{
     display:flex; align-items:center; justify-content:space-between;
-    padding:18px clamp(20px,4vw,48px);
-    border-bottom:1px solid var(--line);
-    position:sticky; top:0; background:rgba(255,255,255,0.9); backdrop-filter:blur(8px); z-index:100;
+    padding:12px clamp(16px,4vw,48px);
+    position:sticky; top:0; background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(16px) saturate(180%);
+    -webkit-backdrop-filter:blur(16px) saturate(180%);
+    z-index:100; min-height:var(--header-height);
+    border-bottom:1px solid rgba(231,234,240,0.5);
   }
-  .logo-img{ height:38px; width:auto; }
-  .nav-icons{ display:flex; align-items:center; gap:10px; }
+  .logo-img{ height:32px; width:auto; }
+  .nav-icons{ display:flex; align-items:center; gap:6px; }
   .icon-btn{
-    width:40px; height:40px; border-radius:10px; background:var(--bg-soft); border:1px solid var(--line);
-    display:flex; align-items:center; justify-content:center; color:var(--ink-soft);
+    width:38px; height:38px; border-radius:var(--radius-sm);
+    background:transparent; border:1px solid transparent;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ink-soft); transition:var(--transition);
   }
+  .icon-btn:hover{ background:var(--bg-soft); border-color:var(--line); }
   .icon-btn svg{ width:18px; height:18px; }
   .btn-primary{
-    background:var(--blue); color:#fff; font-weight:700; font-size:14.5px;
-    padding:11px 20px; border-radius:10px; border:none; transition:background .18s ease;
+    background:var(--blue); color:#fff; font-weight:600; font-size:13px;
+    padding:8px 18px; border-radius:var(--radius-sm); border:none;
+    transition:var(--transition);
   }
-  .btn-primary:hover{ background:var(--blue-dark); }
+  .btn-primary:hover{ background:var(--blue-dark); transform:translateY(-1px); box-shadow:0 4px 12px rgba(21,94,239,0.3); }
+  @media (max-width:600px){
+    .btn-primary{ padding:6px 14px; font-size:12px; }
+    .logo-img{ height:26px; }
+    .icon-btn{ width:32px; height:32px; }
+    .icon-btn svg{ width:16px; height:16px; }
+    .nav-icons .icon-btn:first-child{ display:none; }
+  }
 
-  .hero{ position:relative; height:min(88vh,720px); min-height:520px; overflow:hidden; }
-  .hero img{ position:absolute; inset:0; }
+  /* ============================================
+     HERO
+     ============================================ */
+  .hero{
+    position:relative; height:min(65vh,560px); min-height:380px;
+    overflow:hidden; isolation:isolate;
+  }
+  .hero img{
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; filter:brightness(0.85) saturate(1.1);
+  }
   .hero::after{
     content:''; position:absolute; inset:0;
-    background:linear-gradient(180deg, rgba(16,24,40,0.15) 0%, rgba(16,24,40,0.05) 35%, rgba(16,24,40,0.75) 100%);
+    background:linear-gradient(180deg, rgba(16,24,40,0.15) 0%, rgba(16,24,40,0.05) 40%, rgba(16,24,40,0.75) 100%);
   }
   .hero-content{
-    position:relative; z-index:2; height:100%; display:flex; flex-direction:column;
-    align-items:center; justify-content:flex-start; text-align:center; padding:96px 24px 0;
+    position:relative; z-index:2; height:100%;
+    display:flex; flex-direction:column; align-items:center;
+    justify-content:center; text-align:center; padding:60px 24px 40px;
     color:#fff;
   }
+  .hero-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    background:rgba(255,255,255,0.15); backdrop-filter:blur(8px);
+    padding:6px 14px; border-radius:100px; font-size:11px;
+    font-weight:600; letter-spacing:0.02em; margin-bottom:16px;
+    border:1px solid rgba(255,255,255,0.1);
+  }
+  .hero-badge svg{ width:14px; height:14px; }
   h1.hero-title{
-    font-family:var(--font-head); font-weight:800; font-size:clamp(32px,5.2vw,58px);
-    letter-spacing:-0.01em; max-width:760px;
+    font-family:var(--font-head); font-weight:800;
+    font-size:clamp(28px,5vw,48px); letter-spacing:-0.02em;
+    max-width:700px; line-height:1.1;
   }
-  .hero-sub{ margin-top:16px; font-size:17px; max-width:560px; color:rgba(255,255,255,0.9); }
-
+  .hero-sub{
+    margin-top:12px; font-size:clamp(14px,1.4vw,17px);
+    max-width:500px; color:rgba(255,255,255,0.85);
+    font-weight:400;
+  }
+  .hero-stats{
+    display:flex; gap:32px; margin-top:24px;
+    font-size:13px; color:rgba(255,255,255,0.7);
+  }
+  .hero-stats strong{ color:#fff; font-weight:700; display:block; font-size:18px; }
   .river-divider{ position:absolute; left:0; right:0; bottom:-1px; z-index:2; line-height:0; }
-  .river-divider svg{ width:100%; height:70px; display:block; }
-  .river-current-line{ fill:none; stroke:var(--river); stroke-width:2.5; opacity:.55; }
-
-  .section-eyebrow{
-    display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:700;
-    color:var(--river); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;
+  .river-divider svg{ width:100%; height:40px; display:block; }
+  @media (max-width:600px){
+    .hero{ height:min(55vh,440px); min-height:320px; }
+    .hero-stats{ gap:16px; font-size:11px; }
+    .hero-stats strong{ font-size:15px; }
   }
-  .section-eyebrow svg{ width:14px; height:14px; }
+  @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
 
-  .search-wrap{ position:relative; z-index:3; margin-top:-156px; }
+  /* ============================================
+     BARRE DE RECHERCHE
+     ============================================ */
+  .search-wrap{ position:relative; z-index:3; margin-top:-70px; padding:0 16px; }
+  @media (max-width:600px){ .search-wrap{ margin-top:-50px; padding:0 12px; } }
+
   .search-card{
-    max-width:1040px; margin:0 auto; background:#fff; border-radius:var(--radius-lg);
-    box-shadow:0 20px 50px rgba(16,24,40,0.18); overflow:visible;
+    max-width:1040px; margin:0 auto; background:#fff;
+    border-radius:var(--radius-xl); box-shadow:var(--shadow-lg);
+    overflow:hidden; transition:var(--transition);
   }
-  .service-tabs{
-    display:flex; gap:4px; padding:10px; background:var(--bg-soft); overflow-x:auto;
-    border-radius:var(--radius-lg) var(--radius-lg) 0 0;
-  }
-  .service-tab{
-    display:flex; align-items:center; gap:7px; padding:9px 16px; border-radius:9px; border:none;
-    font-size:13.5px; font-weight:600; color:var(--ink-soft); white-space:nowrap; transition:all .16s ease;
-    background:transparent; font-family:inherit;
-  }
-  .service-tab svg{ width:16px; height:16px; }
-  .service-tab.active{ background:#fff; color:var(--blue); box-shadow:0 1px 3px rgba(16,24,40,0.12); }
-  .service-tab:hover:not(.active){ color:var(--ink); }
+  .search-card:hover{ box-shadow:0 24px 60px rgba(16,24,40,0.20); }
 
-  .search-panel{ padding:0; border-radius:0 0 var(--radius-lg) var(--radius-lg); }
+  .service-tabs{
+    display:flex; gap:2px; padding:8px 12px;
+    background:var(--bg-soft); overflow-x:auto;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch;
+  }
+  .service-tabs::-webkit-scrollbar{ display:none; }
+  .service-tab{
+    display:flex; align-items:center; gap:6px;
+    padding:8px 16px; border-radius:var(--radius-sm);
+    font-size:13px; font-weight:600; color:var(--ink-soft);
+    white-space:nowrap; flex-shrink:0;
+    transition:var(--transition); font-family:inherit;
+  }
+  .service-tab svg{ width:16px; height:16px; transition:var(--transition); }
+  .service-tab[aria-selected="true"]{ background:#fff; color:var(--blue); box-shadow:var(--shadow-sm); }
+  .service-tab[aria-selected="true"] svg{ color:var(--blue); }
+  .service-tab:hover:not([aria-selected="true"]){ color:var(--ink); background:rgba(255,255,255,0.5); }
+  @media (max-width:480px){
+    .service-tab{ padding:6px 10px; font-size:11px; }
+    .service-tab svg{ width:14px; height:14px; }
+    .service-tab span{ display:none; }
+    .service-tab[aria-selected="true"] span{ display:inline; }
+  }
+
+  .search-panel{ padding:12px 14px; }
   .search-panel[hidden]{ display:none; }
 
-  .trip-type-row, .date-mode-toggle, .package-sub-toggle{ display:flex; gap:18px; padding:14px 22px 0; flex-wrap:wrap; }
-  .trip-type-row label{ display:flex; align-items:center; gap:6px; color:var(--ink-soft); font-size:13.5px; cursor:pointer; }
-  .trip-type-row input[type=radio]{ accent-color:var(--blue); }
-  .pill-toggle{ padding:7px 14px; border-radius:100px; border:1px solid var(--line); font-size:13px; font-weight:600; color:var(--ink-soft); background:#fff; font-family:inherit; }
-  .pill-toggle.active{ background:var(--blue); color:#fff; border-color:var(--blue); }
+  .pill-toggle{ display:flex; gap:6px; padding:0 0 10px; flex-wrap:wrap; }
+  .pill-btn{
+    padding:6px 14px; border-radius:100px; font-size:12.5px; font-weight:700;
+    border:1.5px solid var(--line); color:var(--ink-soft); transition:var(--transition);
+  }
+  .pill-btn[aria-pressed="true"]{ background:var(--blue); border-color:var(--blue); color:#fff; }
+  .pill-btn:hover:not([aria-pressed="true"]){ border-color:var(--ink-light); }
 
-  .search-fields{ display:flex; flex-wrap:wrap; align-items:stretch; }
-  .field{ flex:1 1 170px; min-width:150px; padding:14px 20px; border-right:1px solid var(--line); border-top:1px solid transparent; position:relative; }
-  .field:last-of-type{ border-right:none; }
-  .field label{ display:block; font-size:11.5px; color:var(--ink-soft); font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
-  .field .value{ font-size:15px; font-weight:700; }
-  .field input[type=text], .field input[type=date], .field input[type=datetime-local], .field select, .guests-summary{
-    width:100%; border:none; background:transparent; font-size:14.5px; font-weight:700; color:var(--ink);
-    font-family:inherit; padding:0; text-align:left; cursor:pointer;
+  .search-fields-wrap{ display:flex; flex-direction:column; }
+  .search-fields{ display:flex; flex-direction:column; gap:6px; width:100%; }
+
+  .field{
+    display:flex; align-items:center; gap:10px;
+    background:var(--bg-soft); border-radius:var(--radius-sm);
+    padding:10px 14px; border:1.5px solid transparent;
+    transition:var(--transition); position:relative; width:100%;
+  }
+  .field.field-error{ border-color:var(--red); background:#FEF3F2; animation:shake 0.3s; }
+  @keyframes shake{ 0%,100%{ transform:translateX(0); } 25%{ transform:translateX(-4px); } 75%{ transform:translateX(4px); } }
+  .field:focus-within{ border-color:var(--blue); background:#fff; box-shadow:0 0 0 3px rgba(21,94,239,0.08); }
+  .field > svg{ flex-shrink:0; color:var(--ink-light); width:18px; height:18px; }
+  .field-body{ display:flex; flex-direction:column; min-width:0; flex:1; }
+  .field-body label{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin-bottom:1px; display:none; }
+  .field input, .field select, .field .guests-summary{
+    width:100%; border:none; background:transparent; font-size:14px; font-weight:500; color:var(--ink);
+    padding:0; text-align:left; cursor:pointer; font-family:inherit;
   }
   .field input[type=text]{ cursor:text; }
+  .field input::placeholder{ color:var(--ink-light); font-weight:400; }
   .field input:focus, .field select:focus{ outline:none; }
-  .field .hint{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
-  .date-pair{ display:flex; align-items:center; gap:6px; }
-  .date-pair input{ font-size:13.5px; }
+  .field .guests-summary{ font-weight:500; }
+  .field.checkbox-field{ background:transparent; padding:2px 0 8px; gap:8px; }
+  .field.checkbox-field input[type=checkbox]{ width:auto; accent-color:var(--blue); cursor:pointer; }
+  .field.checkbox-field label{ font-size:13px; font-weight:500; color:var(--ink); cursor:pointer; }
 
-  .flatpickr-input {
-    width: 100% !important;
-    border: none !important;
-    background: transparent !important;
-    font-size: 14.5px !important;
-    font-weight: 700 !important;
-    color: var(--ink) !important;
-    font-family: inherit !important;
-    padding: 0 !important;
-    cursor: pointer !important;
-  }
-  .flatpickr-input:focus { outline: none !important; }
-
-  .swap-btn{
-    flex:0 0 auto; align-self:center; margin:0 -4px; width:32px; height:32px; border-radius:100px;
-    border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center;
-    color:var(--ink-soft); z-index:2;
-  }
-  .swap-btn svg{ width:14px; height:14px; }
-
-  .check-row{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-soft); margin-top:6px; }
-  .check-row input{ accent-color:var(--blue); }
+  .fields-row{ display:flex; gap:6px; width:100%; }
+  .fields-row .field{ flex:1; }
 
   .search-cta{
-    flex:0 0 auto; display:flex; align-items:center; justify-content:center; padding:0 26px;
-    background:var(--blue); color:#fff; border:none; font-family:inherit; border-radius:0 0 var(--radius-sm) 0;
-    transition:background .2s ease;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; padding:12px; margin-top:6px;
+    background:var(--blue); color:#fff; border:none; border-radius:var(--radius-sm);
+    font-size:15px; font-weight:700; transition:var(--transition); flex-shrink:0;
   }
-  .search-cta:hover{ background:var(--blue-dark); }
-  .search-cta svg{ width:19px; height:19px; }
+  .search-cta:hover{ background:var(--blue-dark); transform:translateY(-1px); }
+  .search-cta svg{ width:18px; height:18px; }
 
+  @media (min-width:769px){
+    .search-panel{ padding:0; }
+    .pill-toggle{ padding:12px 20px 0; }
+    .search-fields-wrap{ flex-direction:row; align-items:stretch; }
+    .search-fields{ flex-direction:row; flex-wrap:wrap; }
+    .field{ flex:1 1 170px; min-width:140px; border-radius:0; border-right:1px solid var(--line); padding:12px 20px; background:transparent; }
+    .field.field-error{ background:#FEF3F2; }
+    .field:focus-within{ background:#fff; }
+    .field:last-of-type{ border-right:none; }
+    .field-body label{ display:block; }
+    .field input, .field select, .field .guests-summary{ font-size:14px; font-weight:600; }
+    .fields-row{ flex:1 1 260px; border-right:1px solid var(--line); }
+    .fields-row .field{ border-right:1px solid var(--line); }
+    .fields-row .field:last-child{ border-right:none; }
+    .field.checkbox-field{ flex:0 0 auto; border-right:1px solid var(--line); padding:12px 20px; }
+    .search-cta{ width:auto; margin-top:0; padding:0 26px; }
+  }
+
+  /* ============================================
+     SUGGEST DROPDOWN
+     ============================================ */
   .suggest-dropdown{
-    position:absolute; top:calc(100% + 6px); left:10px; right:10px; background:#fff; border:1px solid var(--line);
-    border-radius:12px; box-shadow:0 16px 40px rgba(16,24,40,0.16); z-index:60; display:none; overflow:hidden;
+    position:absolute; top:calc(100% + 4px); left:0; right:0;
+    background:#fff; border:1px solid var(--line);
+    border-radius:var(--radius-md); box-shadow:var(--shadow-lg);
+    z-index:60; display:none; overflow:hidden; max-height:260px; overflow-y:auto;
   }
   .suggest-dropdown.open{ display:block; }
-  .suggest-dropdown .sd-label{ font-size:10.5px; text-transform:uppercase; color:var(--ink-soft); padding:10px 14px 4px; font-weight:700; letter-spacing:.04em; }
-  .suggest-dropdown .sd-item{ display:flex; align-items:center; gap:10px; padding:9px 14px; font-size:13.5px; cursor:pointer; }
+  .suggest-dropdown .sd-label{
+    font-size:10px; text-transform:uppercase; color:var(--ink-soft);
+    padding:10px 14px 4px; font-weight:700; letter-spacing:0.04em;
+  }
+  .suggest-dropdown .sd-item{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 14px; font-size:13px; cursor:pointer;
+    transition:var(--transition);
+  }
   .suggest-dropdown .sd-item:hover{ background:var(--bg-soft); }
   .suggest-dropdown .sd-item svg{ width:14px; height:14px; color:var(--ink-soft); flex-shrink:0; }
   .sd-geoloc{ color:var(--blue); font-weight:600; border-bottom:1px solid var(--line); }
+  .sd-empty{ padding:12px 14px; font-size:12.5px; color:var(--ink-soft); }
 
+  /* ============================================
+     POPOVER
+     ============================================ */
   .popover{
-    position:absolute; top:calc(100% + 6px); left:10px; min-width:290px; background:#fff;
-    border:1px solid var(--line); border-radius:14px; box-shadow:0 16px 40px rgba(16,24,40,0.16);
+    position:absolute; top:calc(100% + 4px); left:0;
+    min-width:280px; background:#fff; border:1px solid var(--line);
+    border-radius:var(--radius-md); box-shadow:var(--shadow-lg);
     padding:16px; z-index:60; display:none;
   }
   .popover.open{ display:block; }
-  .stepper-row{ display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line); }
+  .stepper-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 0; border-bottom:1px solid var(--line); gap:12px;
+  }
   .stepper-row:last-of-type{ border-bottom:none; }
   .stepper-row .label{ font-size:14px; font-weight:700; }
-  .stepper-row .sub{ font-size:11.5px; color:var(--ink-soft); }
-  .stepper-controls{ display:flex; align-items:center; gap:10px; }
-  .step-btn{ width:28px; height:28px; border-radius:100px; border:1px solid var(--line); background:#fff; color:var(--blue); font-weight:700; font-size:16px; line-height:1; }
-  .step-btn:disabled{ opacity:.3; }
+  .stepper-row .sub{ font-size:11px; color:var(--ink-soft); }
+  .stepper-controls{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .step-btn{
+    width:26px; height:26px; border-radius:100px;
+    border:1px solid var(--line); background:#fff;
+    color:var(--blue); font-weight:700; font-size:15px; line-height:1;
+    transition:var(--transition);
+  }
+  .step-btn:hover{ background:var(--blue-light); }
+  .step-btn:disabled{ opacity:0.3; cursor:not-allowed; }
   .step-count{ min-width:16px; text-align:center; font-weight:700; font-size:14px; }
   .child-ages{ margin-top:2px; padding-bottom:10px; display:flex; flex-direction:column; gap:8px; border-bottom:1px solid var(--line); }
-  .child-ages select{ width:100%; padding:7px 9px; border:1px solid var(--line); border-radius:8px; font-size:12.5px; font-weight:600; }
-  .popover-done{ margin-top:12px; width:100%; padding:9px; border-radius:9px; border:none; background:var(--blue); color:#fff; font-weight:700; font-size:13px; }
-
-  @media (max-width:820px){
-    .search-cta{ flex:1 1 100%; padding:14px; border-radius:0 0 var(--radius-sm) var(--radius-sm); }
-    .swap-btn{ display:none; }
+  .child-ages select{ width:100%; padding:6px 9px; border:1px solid var(--line); border-radius:var(--radius-sm); font-size:12px; font-weight:600; }
+  .popover-done{
+    margin-top:12px; width:100%; padding:9px;
+    border-radius:var(--radius-sm); border:none;
+    background:var(--blue); color:#fff; font-weight:700; font-size:13px;
+    transition:var(--transition);
   }
+  .popover-done:hover{ background:var(--blue-dark); }
 
-  .section{ padding:64px 0; }
-  .section-head{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:28px; }
-  .section-head h2{ font-family:var(--font-head); font-weight:800; font-size:clamp(22px,2.6vw,30px); }
-  .section-head p.sub{ color:var(--ink-soft); font-size:14.5px; margin-top:6px; max-width:480px; }
-  .nav-arrows{ display:flex; gap:8px; }
+  /* ============================================
+     SECTIONS
+     ============================================ */
+  .section{ padding:48px 0; }
+  @media (max-width:600px){ .section{ padding:32px 0; } }
+
+  .section-head{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    margin-bottom:20px; flex-wrap:wrap; gap:12px;
+    padding-left:clamp(16px, 4vw, 48px);
+    padding-right:clamp(16px, 4vw, 48px);
+  }
+  .section-head h2{ font-family:var(--font-head); font-weight:800; font-size:clamp(20px,2.4vw,28px); }
+  .section-head p.sub{ color:var(--ink-soft); font-size:14px; margin-top:4px; max-width:400px; }
+
+  .nav-arrows{ display:flex; gap:6px; flex-shrink:0; }
   .nav-arrow{
-    width:38px; height:38px; border-radius:100px; border:1px solid var(--line); background:#fff;
-    display:flex; align-items:center; justify-content:center; color:var(--ink-soft);
+    width:34px; height:34px; border-radius:100px;
+    border:1px solid var(--line); background:#fff;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ink-soft); transition:var(--transition);
   }
-  .nav-arrow svg{ width:16px; height:16px; }
+  .nav-arrow:hover{ background:var(--bg-soft); border-color:var(--ink-soft); }
+  .nav-arrow:disabled{ opacity:0.35; cursor:not-allowed; }
+  .nav-arrow svg{ width:14px; height:14px; }
 
-  .card-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+  /* ============================================
+     SCROLL HORIZONTAL
+     ============================================ */
+  .scroll-horizontal{
+    display:flex; gap:16px; overflow-x:auto; overflow-y:visible;
+    padding:4px 4px 16px 4px;
+    scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch; scroll-behavior:smooth;
+  }
+  .scroll-horizontal > *{ flex:0 0 auto; width:270px; scroll-snap-align:start; }
+  .scroll-horizontal::-webkit-scrollbar{ height:4px; }
+  .scroll-horizontal::-webkit-scrollbar-track{ background:var(--bg-soft); border-radius:100px; }
+  .scroll-horizontal::-webkit-scrollbar-thumb{ background:var(--line); border-radius:100px; }
+  .scroll-horizontal{ scrollbar-width:thin; }
+
+  .card-row{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:20px;
+  }
+
   @media (max-width:900px){ .card-row{ grid-template-columns:1fr 1fr; } }
   @media (max-width:600px){ .card-row{ grid-template-columns:1fr; } }
 
-  .hotel-card{ border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--line); background:#fff; transition:transform .2s ease, box-shadow .2s ease; cursor:pointer; }
-  .hotel-card:hover{ transform:translateY(-4px); box-shadow:0 8px 30px rgba(0,0,0,0.08); }
-  .hotel-card .photo{ height:190px; background:var(--bg-soft); overflow:hidden; }
-  .hotel-card .photo img{ width:100%; height:100%; object-fit:cover; }
-  .hotel-card .body{ padding:16px; }
-  .stars{ color:var(--amber); font-size:13px; letter-spacing:1px; margin-bottom:8px; }
-  .hotel-card h3{ font-family:var(--font-head); font-weight:700; font-size:16.5px; margin-bottom:4px; }
-  .location{ display:flex; align-items:center; gap:5px; color:var(--ink-soft); font-size:13.5px; margin-bottom:14px; }
-  .location svg{ width:13px; height:13px; flex-shrink:0; }
-  .card-bottom{ display:flex; align-items:center; justify-content:space-between; }
-  .score-pill{
-    display:flex; align-items:center; gap:8px;
+  @media (max-width:768px){
+    .scroll-horizontal > *{ width:240px; }
+    .scroll-horizontal{ gap:14px; padding:4px 12px 12px 12px; margin:0; }
+    .scroll-horizontal { margin:0 -12px; padding:4px 12px 12px 12px; }
+    .card-row{ margin:0; }
   }
-  .score-num{ background:var(--green); color:#fff; font-weight:800; font-size:12.5px; padding:3px 7px; border-radius:6px; }
-  .score-text{ font-size:12px; color:var(--ink-soft); line-height:1.25; }
-  .score-text b{ display:block; color:var(--ink); font-size:12.5px; }
-  .price{ text-align:right; }
-  .price .amount{ font-family:var(--font-head); font-weight:800; font-size:18px; }
-  .price .note{ font-size:11px; color:var(--ink-soft); }
+  @media (max-width:480px){
+    .scroll-horizontal > *{ width:220px; }
+    .scroll-horizontal{ gap:12px; padding:4px 8px 12px 8px; margin:0 -8px; }
+    .card-row{ margin:0; }
+  }
 
-  .loyalty{
-    position:relative; border-radius:var(--radius-lg); overflow:hidden; height:220px;
-    display:flex; align-items:center; color:#fff; padding:0 44px;
+  /* ============================================
+     CARTES HÔTEL
+     ============================================ */
+  .hotel-card-scroll{
+    border-radius:var(--radius-md); overflow:hidden;
+    border:1px solid var(--line); background:#fff;
+    transition:var(--transition); cursor:pointer;
+    flex-shrink:0; width:270px;
   }
-  .loyalty img{ position:absolute; inset:0; }
-  .loyalty::after{ content:''; position:absolute; inset:0; background:linear-gradient(90deg, rgba(16,24,40,0.82) 20%, rgba(16,24,40,0.25) 90%); }
-  .loyalty-content{ position:relative; z-index:2; max-width:520px; }
-  .loyalty-content .star{ color:var(--amber); font-size:22px; margin-bottom:10px; }
-  .loyalty-content h3{ font-family:var(--font-head); font-weight:800; font-size:26px; margin-bottom:8px; }
-  .loyalty-content p{ font-size:14.5px; color:rgba(255,255,255,0.85); }
+  .hotel-card-scroll:hover{ transform:translateY(-4px); box-shadow:var(--shadow-md); }
+  .hotel-card-scroll .photo{ height:160px; background:var(--bg-soft); overflow:hidden; }
+  .hotel-card-scroll .photo img{ width:100%; height:100%; object-fit:cover; transition:transform 0.5s ease; }
+  .hotel-card-scroll:hover .photo img{ transform:scale(1.05); }
+  .hotel-card-scroll .body{ padding:14px; }
+  .hotel-card-scroll .stars{ color:var(--amber); font-size:12px; letter-spacing:1px; margin-bottom:4px; }
+  .hotel-card-scroll h3{ font-family:var(--font-head); font-weight:700; font-size:14.5px; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hotel-card-scroll .location{ display:flex; align-items:center; gap:5px; color:var(--ink-soft); font-size:12px; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hotel-card-scroll .location svg{ width:12px; height:12px; flex-shrink:0; }
+  .hotel-card-scroll .card-bottom{ display:flex; align-items:center; justify-content:space-between; }
+  .hotel-card-scroll .score-pill{ display:flex; align-items:center; gap:6px; }
+  .hotel-card-scroll .score-num{ background:var(--green); color:#fff; font-weight:800; font-size:11px; padding:2px 6px; border-radius:6px; }
+  .hotel-card-scroll .score-text{ font-size:10.5px; color:var(--ink-soft); line-height:1.2; }
+  .hotel-card-scroll .score-text b{ display:block; color:var(--ink); font-size:11px; }
+  .hotel-card-scroll .price{ text-align:right; }
+  .hotel-card-scroll .price .amount{ font-family:var(--font-head); font-weight:800; font-size:16px; }
+  .hotel-card-scroll .price .per{ font-size:10.5px; color:var(--ink-soft); font-weight:600; }
 
-  .feature-trio{ display:grid; grid-template-columns:repeat(3,1fr); gap:28px; padding:56px 0; border-bottom:1px solid var(--line); }
-  @media (max-width:760px){ .feature-trio{ grid-template-columns:1fr; } }
-  .feature-item{ display:flex; gap:14px; }
-  .feature-icon{
-    width:44px; height:44px; border-radius:12px; background:var(--bg-soft); border:1px solid var(--line);
-    display:flex; align-items:center; justify-content:center; color:var(--blue); flex-shrink:0;
+  /* ============================================
+     SQUELETTES / ÉTATS
+     ============================================ */
+  .skeleton{ animation:pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:0.4; } 50%{ opacity:0.8; } }
+  @media (prefers-reduced-motion:reduce){ .skeleton{ animation:none; opacity:0.6; } }
+  .skeleton-photo{ width:100%; height:160px; border-radius:var(--radius-md) var(--radius-md) 0 0; background:var(--bg-soft); }
+  .skeleton-line{ height:12px; border-radius:6px; background:var(--bg-soft); margin-bottom:6px; }
+  .skeleton-line.w70{ width:70%; } .skeleton-line.w50{ width:50%; } .skeleton-line.w40{ width:40%; } .skeleton-line.w30{ width:30%; } .skeleton-line.w90{ width:90%; }
+  .skeleton-scroll{ border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--line); background:#fff; flex-shrink:0; width:270px; }
+  .skeleton-scroll .skeleton-photo{ height:160px; border-radius:0; }
+  .skeleton-scroll .body{ padding:14px; }
+  .empty-state{
+    padding:32px 20px; color:var(--ink-soft); text-align:center; flex:0 0 100%;
+    border:1px dashed var(--line); border-radius:var(--radius-md); font-size:13.5px;
   }
-  .feature-icon svg{ width:20px; height:20px; }
-  .feature-item h4{ font-family:var(--font-head); font-weight:700; font-size:15.5px; margin-bottom:4px; }
-  .feature-item p{ font-size:13.5px; color:var(--ink-soft); }
+  .error-state{
+    padding:32px 20px; color:var(--red); text-align:center; flex:0 0 100%;
+    border:1px dashed #FDA29B; background:#FEF3F2; border-radius:var(--radius-md); font-size:13.5px;
+  }
 
-  .collection-card{
-    position:relative; border-radius:var(--radius-md); overflow:hidden; height:230px; flex:0 0 auto; width:280px;
-  }
+  /* ============================================
+     COLLECTIONS
+     ============================================ */
+  .collection-card{ position:relative; border-radius:var(--radius-md); overflow:hidden; height:410px; flex:0 0 auto; width:270px; cursor:pointer; transition:var(--transition); background:var(--bg-soft); }
+  .collection-card:hover{ transform:scale(1.02); }
   .collection-card::after{ content:''; position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(16,24,40,0.75) 100%); }
+  .collection-card img{ transition:transform 0.5s ease; }
+  .collection-card:hover img{ transform:scale(1.05); }
   .collection-card .info{ position:absolute; left:16px; right:16px; bottom:14px; z-index:2; color:#fff; }
-  .collection-card .info .top{ display:flex; justify-content:space-between; align-items:flex-end; }
-  .collection-card h4{ font-family:var(--font-head); font-weight:700; font-size:16px; line-height:1.2; max-width:170px; }
-  .collection-card .from{ font-size:10.5px; opacity:.85; }
-  .collection-card .from b{ display:block; font-size:14px; }
-  .collection-card .count{ font-size:11.5px; opacity:.8; margin-top:8px; }
-  .collection-arrow{
-    width:30px; height:30px; border-radius:100px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.4);
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
-  }
-  .collection-arrow svg{ width:13px; height:13px; }
-  .scroll-row{ display:flex; gap:18px; overflow-x:auto; padding-bottom:8px; scroll-snap-type:x mandatory; }
-  .scroll-row > *{ scroll-snap-align:start; }
-  .scroll-row::-webkit-scrollbar{ height:6px; }
-  .scroll-row::-webkit-scrollbar-thumb{ background:var(--line); border-radius:100px; }
+  .collection-card .info .top{ display:flex; justify-content:space-between; align-items:flex-end; gap:8px; }
+  .collection-card h4{ font-family:var(--font-head); font-weight:700; font-size:15px; line-height:1.2; max-width:180px; }
+  .collection-card .count{ font-size:11px; opacity:0.85; margin-top:6px; }
+  .collection-arrow{ width:28px; height:28px; border-radius:100px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.4); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .collection-arrow svg{ width:12px; height:12px; }
+  .skeleton-collection{ position:relative; border-radius:var(--radius-md); overflow:hidden; height:410px; flex:0 0 auto; width:270px; background:var(--bg-soft); animation:pulse 1.5s ease-in-out infinite; }
+  .skeleton-collection .skeleton-line{ position:absolute; left:16px; right:16px; bottom:14px; z-index:2; height:12px; border-radius:6px; background:rgba(0,0,0,0.08); }
+  .skeleton-collection .skeleton-line.w70{ width:70%; bottom:34px; }
+  .skeleton-collection .skeleton-line.w40{ width:40%; bottom:14px; }
+  @media (max-width:768px){ .collection-card, .skeleton-collection{ width:240px; height:390px; } .collection-card h4{ font-size:14px; } }
+  @media (max-width:480px){ .collection-card, .skeleton-collection{ width:220px; height:380px; } }
 
-  .recent-card{
-    display:flex; align-items:center; gap:14px; border:1px solid var(--line); border-radius:var(--radius-md);
-    padding:12px; background:#fff;
-  }
-  .recent-card .thumb{ width:64px; height:64px; border-radius:10px; overflow:hidden; flex-shrink:0; }
-  .recent-card h5{ font-family:var(--font-head); font-weight:700; font-size:14.5px; margin-bottom:3px; }
-  .recent-card .meta{ font-size:12.5px; color:var(--ink-soft); }
+  /* ============================================
+     LOYALTY
+     ============================================ */
+  .loyalty{ position:relative; border-radius:var(--radius-lg); overflow:hidden; height:200px; display:flex; align-items:center; color:#fff; padding:0 32px; }
+  .loyalty img{ position:absolute; inset:0; }
+  .loyalty::after{ content:''; position:absolute; inset:0; background:linear-gradient(90deg, rgba(16,24,40,0.80) 20%, rgba(16,24,40,0.25) 90%); }
+  .loyalty-content{ position:relative; z-index:2; max-width:480px; }
+  .loyalty-content .star{ color:var(--amber); font-size:20px; margin-bottom:8px; }
+  .loyalty-content h3{ font-family:var(--font-head); font-weight:800; font-size:24px; margin-bottom:6px; }
+  .loyalty-content p{ font-size:14px; color:rgba(255,255,255,0.85); }
+  @media (max-width:600px){ .loyalty{ height:160px; padding:0 20px; } .loyalty-content h3{ font-size:18px; } .loyalty-content p{ font-size:12px; } }
 
-  .payments-section{ background:var(--bg-soft); }
+  /* ============================================
+     FEATURES
+     ============================================ */
+  .feature-trio{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; padding:48px 0; border-bottom:1px solid var(--line); }
+  @media (max-width:900px){ .feature-trio{ grid-template-columns:1fr 1fr; } }
+  @media (max-width:600px){ .feature-trio{ grid-template-columns:1fr; gap:16px; padding:32px 0; } }
+  .feature-item{ display:flex; gap:14px; }
+  .feature-icon{ width:44px; height:44px; border-radius:12px; background:var(--blue-light); display:flex; align-items:center; justify-content:center; color:var(--blue); flex-shrink:0; }
+  .feature-icon svg{ width:20px; height:20px; }
+  .feature-item h4{ font-family:var(--font-head); font-weight:700; font-size:15px; margin-bottom:4px; }
+  .feature-item p{ font-size:13px; color:var(--ink-soft); }
+
+  /* ============================================
+     RECHERCHES RÉCENTES
+     ============================================ */
+  .recent-card{ display:flex; align-items:center; gap:14px; border:1px solid var(--line); border-radius:var(--radius-md); padding:12px; background:#fff; transition:var(--transition); cursor:pointer; }
+  .recent-card:hover{ box-shadow:var(--shadow-sm); }
+  .recent-card .thumb{ width:60px; height:60px; border-radius:10px; overflow:hidden; flex-shrink:0; background:var(--bg-soft); }
+  .recent-card h5{ font-family:var(--font-head); font-weight:700; font-size:14px; margin-bottom:2px; }
+  .recent-card .meta{ font-size:12px; color:var(--ink-soft); }
+
+  /* ============================================
+     PAYMENTS
+     ============================================ */
+  .payments-section{ background:var(--bg-soft); padding:48px 0; }
   .pay-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
   @media (max-width:760px){ .pay-grid{ grid-template-columns:1fr 1fr; } }
-  .pay-card{
-    background:#fff; border:1px solid var(--line); border-radius:var(--radius-md);
-    padding:20px; display:flex; flex-direction:column; gap:14px;
-  }
-  .pay-dot{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12.5px; color:#fff; }
-  .pay-card .name{ font-family:var(--font-head); font-weight:700; font-size:14.5px; }
-  .pay-card .tag{ font-size:11px; color:var(--ink-soft); letter-spacing:.03em; text-transform:uppercase; }
+  .pay-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius-md); padding:18px; display:flex; flex-direction:column; gap:12px; transition:var(--transition); }
+  .pay-card:hover{ box-shadow:var(--shadow-sm); }
+  .pay-dot{ width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; color:#fff; }
+  .pay-card .name{ font-family:var(--font-head); font-weight:700; font-size:14px; }
+  .pay-card .tag{ font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.03em; }
 
-  footer{ background:var(--ink); color:rgba(255,255,255,0.7); padding:56px 0 28px; }
-  .footer-grid{ display:grid; grid-template-columns:1.4fr repeat(4,1fr); gap:32px; margin-bottom:40px; }
+  /* ============================================
+     FOOTER
+     ============================================ */
+  footer{ background:var(--ink); color:rgba(255,255,255,0.7); padding:40px 0 24px; }
+  .footer-grid{ display:grid; grid-template-columns:1.4fr repeat(4,1fr); gap:24px; margin-bottom:32px; }
   @media (max-width:820px){ .footer-grid{ grid-template-columns:1fr 1fr; } }
-  .footer-grid .logo-img{ filter:brightness(0) invert(1); margin-bottom:14px; }
-  .footer-grid p{ font-size:13.5px; max-width:260px; }
-  .footer-col h5{ font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:14px; font-weight:700; }
-  .footer-col a{ display:block; font-size:13.5px; margin-bottom:10px; color:rgba(255,255,255,0.85); }
-  .footer-bottom{
-    display:flex; justify-content:space-between; padding-top:24px; border-top:1px solid rgba(255,255,255,0.12);
-    font-size:12.5px; flex-wrap:wrap; gap:10px; color:rgba(255,255,255,0.55);
-  }
+  @media (max-width:480px){ .footer-grid{ grid-template-columns:1fr; } }
+  .footer-grid .logo-img{ filter:brightness(0) invert(1); margin-bottom:12px; height:30px; }
+  .footer-grid p{ font-size:13px; max-width:240px; }
+  .footer-col h5{ font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:12px; font-weight:700; }
+  .footer-col a{ display:block; font-size:13px; margin-bottom:8px; color:rgba(255,255,255,0.85); transition:var(--transition); }
+  .footer-col a:hover{ color:#fff; }
+  .footer-bottom{ display:flex; justify-content:space-between; padding-top:20px; border-top:1px solid rgba(255,255,255,0.12); font-size:12px; flex-wrap:wrap; gap:10px; color:rgba(255,255,255,0.55); }
 
-  .reveal{ opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s ease; }
+  /* ============================================
+     UTILITAIRES / A11Y
+     ============================================ */
+  .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+  .reveal{ opacity:0; transform:translateY(16px); transition:opacity 0.6s ease, transform 0.6s ease; }
   .reveal.in{ opacity:1; transform:translateY(0); }
-  @media (prefers-reduced-motion:reduce){ .reveal{ opacity:1; transform:none; } html{scroll-behavior:auto;} }
+  @media (prefers-reduced-motion:reduce){ .reveal{ opacity:1; transform:none; } }
+  .section-eyebrow{ display:inline-flex; align-items:center; gap:8px; font-size:11px; font-weight:700; color:var(--river); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; }
+  .section-eyebrow svg{ width:14px; height:14px; }
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(8px);
+    background:var(--ink); color:#fff; padding:12px 20px; border-radius:var(--radius-sm);
+    font-size:13.5px; font-weight:600; box-shadow:var(--shadow-lg); z-index:999;
+    opacity:0; pointer-events:none; transition:var(--transition);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
-  .flatpickr-calendar {
-    border-radius: var(--radius-md) !important;
-    box-shadow: 0 16px 40px rgba(16,24,40,0.16) !important;
-    border: 1px solid var(--line) !important;
-    font-family: var(--font-body) !important;
-  }
-  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
-    background: var(--blue) !important;
-    border-color: var(--blue) !important;
-  }
-  .flatpickr-day.inRange {
-    background: var(--bg-soft) !important;
-    border-color: var(--bg-soft) !important;
-  }
-  .flatpickr-day.today {
-    border-color: var(--blue) !important;
-    color: var(--blue) !important;
-  }
-  .flatpickr-day.today:hover {
-    background: var(--blue) !important;
-    color: #fff !important;
-  }
-  .flatpickr-month {
-    color: var(--ink) !important;
-  }
-  .flatpickr-weekday {
-    color: var(--ink-soft) !important;
-    font-weight: 600 !important;
-  }
-  .flatpickr-current-month .flatpickr-monthDropdown-months {
-    color: var(--ink) !important;
-    font-weight: 700 !important;
-  }
-  .flatpickr-current-month input.cur-year {
-    color: var(--ink) !important;
-    font-weight: 700 !important;
-  }
+  /* ============================================
+     FLATPICKR
+     ============================================ */
+  .flatpickr-calendar{ border-radius:var(--radius-md) !important; box-shadow:var(--shadow-lg) !important; border:1px solid var(--line) !important; font-family:var(--font-body) !important; }
+  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange{ background:var(--blue) !important; border-color:var(--blue) !important; }
+  .flatpickr-day.inRange{ background:var(--bg-soft) !important; border-color:var(--bg-soft) !important; }
+  .flatpickr-day.today{ border-color:var(--blue) !important; color:var(--blue) !important; }
+  .flatpickr-day.today:hover{ background:var(--blue) !important; color:#fff !important; }
+  .flatpickr-month{ color:var(--ink) !important; }
+  .flatpickr-weekday{ color:var(--ink-soft) !important; font-weight:600 !important; }
+/* ============================================
+   MARGES POUR SECTIONS SPÉCIFIQUES
+   ============================================ */
 
-  .skeleton{ animation:pulse 1.5s ease-in-out infinite; }
-  @keyframes pulse{ 0%,100%{ opacity:.4; } 50%{ opacity:.8; } }
-  .skeleton-photo{ width:100%; height:190px; border-radius:12px 12px 0 0; background:var(--bg-soft); }
-  .skeleton-line{ height:14px; border-radius:8px; background:var(--bg-soft); margin-bottom:8px; }
-  .skeleton-line.w70{ width:70%; }
-  .skeleton-line.w50{ width:50%; }
-  .skeleton-line.w40{ width:40%; }
-  .skeleton-line.w30{ width:30%; }
-  .skeleton-line.w90{ width:90%; }
-  .skeleton-card{ border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--line); background:#fff; }
-  .skeleton-card .body{ padding:16px; }
+.section .scroll-horizontal,
+.section .card-row {
+    margin-left: 4px !important;
+    margin-right: 4px !important;
+}
 
-  /* ========== NOUVEAUX STYLES POUR COLLECTIONS ========== */
-  .collection-hotels-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 22px;
-    margin-top: 20px;
-  }
-  @media (max-width: 900px) {
-    .collection-hotels-grid {
-      grid-template-columns: 1fr 1fr;
+@media (max-width: 768px) {
+    .section .scroll-horizontal,
+    .section .card-row {
+        margin-left: 12px !important;
+        margin-right: 12px !important;
     }
-  }
-  @media (max-width: 600px) {
-    .collection-hotels-grid {
-      grid-template-columns: 1fr;
+}
+
+@media (max-width: 480px) {
+    .section .scroll-horizontal,
+    .section .card-row {
+        margin-left: 8px !important;
+        margin-right: 8px !important;
     }
-  }
-  .collection-hotels-grid .hotel-card {
-    cursor: pointer;
-  }
-  .collection-hotels-grid .hotel-card .photo {
-    height: 190px;
-  }
-  .badge-collection {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    backdrop-filter: blur(4px);
-  }
-  .collection-title-link {
-    color: var(--blue);
-    font-weight: 600;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .collection-title-link:hover {
-    text-decoration: underline;
-  }
-  .collection-title-link svg {
-    width: 16px;
-    height: 16px;
-  }
+}
 </style>
 </head>
 <body>
@@ -397,258 +559,322 @@
 <header class="nav">
   <img class="logo-img" src="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png" alt="LuviaPlace">
   <div class="nav-icons">
-    <button class="icon-btn" aria-label="Langue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg></button>
+    <button class="icon-btn" aria-label="Changer de langue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg></button>
     <button class="icon-btn" aria-label="Favoris"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/></svg></button>
     <button class="btn-primary">Se connecter</button>
   </div>
 </header>
 
-<!-- ========== SECTION HERO ========== -->
+<!-- ========== HERO ========== -->
 <section class="hero">
   <img src="https://images.unsplash.com/photo-1704684150861-8f7a89335e64?q=80&w=1461&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="">
   <div class="hero-content">
+    <div class="hero-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 2l3 6h6l-5 4 2 6-6-4-6 4 2-6-5-4h6z"/></svg>
+      Programme Rewards
+    </div>
     <h1 class="hero-title">Votre voyage commence ici</h1>
-    <p class="hero-sub">Hébergement, vols, expériences, assurance et voiture — réservez tout LuviaPlace en un seul endroit.</p>
+    <p class="hero-sub">Hébergement, vols, expériences, assurance et voiture — réservez tout en un seul endroit.</p>
+    <div class="hero-stats">
+      <div><strong>2.9M+</strong> Établissements</div>
+      <div><strong>120+</strong> Pays</div>
+      <div><strong>24/7</strong> Support</div>
+    </div>
   </div>
   <div class="river-divider">
-    <svg viewBox="0 0 1440 70" preserveAspectRatio="none">
-      <path fill="#ffffff" d="M0,40 C240,10 360,60 600,35 C840,10 960,55 1200,30 C1320,18 1380,25 1440,20 L1440,70 L0,70 Z"/>
-      <path class="river-current-line" d="M0,38 C240,8 360,58 600,33 C840,8 960,53 1200,28 C1320,16 1380,23 1440,18"/>
+    <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
+      <path fill="#ffffff" d="M0,30 C240,5 360,45 600,25 C840,5 960,40 1200,22 C1320,13 1380,18 1440,14 L1440,50 L0,50 Z"/>
+      <path fill="none" stroke="var(--river)" stroke-width="2" opacity="0.4" d="M0,28 C240,3 360,43 600,23 C840,3 960,38 1200,20 C1320,11 1380,16 1440,12"/>
     </svg>
   </div>
 </section>
 
-<!-- ========== BARRE DE RECHERCHE ========== -->
-<div class="search-wrap wrap">
+<!-- ========== BARRE DE RECHERCHE UNIFIÉE - VERSION ULTRA SEXY ========== -->
+<div class="search-wrap">
   <div class="search-card">
-    <div class="service-tabs" id="serviceTabs">
-      <button class="service-tab active" data-tab="hotel" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>Séjours</button>
-      <button class="service-tab" data-tab="flight" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16l20-8-8 20-3-8-9-4z"/></svg>Vols</button>
-      <button class="service-tab" data-tab="car" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13l2-6h14l2 6M5 13h14v5H5z"/><circle cx="7.5" cy="18" r="1.2"/><circle cx="16.5" cy="18" r="1.2"/></svg>Voiture</button>
-      <button class="service-tab" data-tab="experience" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Expériences</button>
-      <button class="service-tab" data-tab="insurance" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>Assurance</button>
-      <button class="service-tab" data-tab="package" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 11h18M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Packages</button>
+    <!-- Onglets avec icônes modernes -->
+    <div class="service-tabs" id="serviceTabs" role="tablist" aria-label="Type de service">
+      <button class="service-tab active" data-tab="hotel" type="button" role="tab" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>
+        <span>Hébergement</span>
+      </button>
+      <button class="service-tab" data-tab="flight" type="button" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16l20-8-8 20-3-8-9-4z"/></svg>
+        <span>Vols</span>
+      </button>
+      <button class="service-tab" data-tab="car" type="button" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13l2-6h14l2 6M5 13h14v5H5z"/><circle cx="7.5" cy="18" r="1.2"/><circle cx="16.5" cy="18" r="1.2"/></svg>
+        <span>Voiture</span>
+      </button>
+      <button class="service-tab" data-tab="experience" type="button" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span>Expériences</span>
+      </button>
+      <button class="service-tab" data-tab="insurance" type="button" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+        <span>Assurance</span>
+      </button>
+      <button class="service-tab" data-tab="package" type="button" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 11h18M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        <span>Packages</span>
+      </button>
     </div>
 
     <!-- HÉBERGEMENT -->
     <div class="search-panel" data-panel="hotel">
-      <div class="search-fields">
-        <div class="field" data-role="destination">
-          <label>Destination / hôtel</label>
-          <input type="text" id="hotelDestination" class="shared-dest" placeholder="Ville, quartier ou nom d'hôtel" autocomplete="off">
-          <div class="suggest-dropdown"></div>
-        </div>
-        <div class="field" data-role="dates">
-          <label>Arrivée → Départ</label>
-          <div class="date-pair">
-            <input type="text" id="hotelCheckin" class="flatpickr-input" placeholder="Arrivée" readonly>
-            <span class="date-sep">→</span>
-            <input type="text" id="hotelCheckout" class="flatpickr-input" placeholder="Départ" readonly>
+      <div class="search-fields-wrap">
+        <div class="search-fields">
+          <div class="field field-destination">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <div class="field-body"><label>Destination</label><input type="text" id="hotelDestination" class="shared-dest" placeholder="Où voulez-vous aller ?" autocomplete="off"></div>
+            <div class="suggest-dropdown"></div>
           </div>
-          <div class="hint nights-note"></div>
-        </div>
-        <div class="field" data-role="guests">
-          <label>Voyageurs</label>
-          <button class="guests-summary" type="button">1 chambre, 2 adultes</button>
-          <div class="popover" data-popover="hotel-guests">
-            <div class="stepper-row"><div><div class="label">Chambres</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="rooms" data-dir="-1">−</button><span class="step-count" data-count="rooms">1</span><button class="step-btn" data-step="rooms" data-dir="1">+</button></div></div>
-            <div class="stepper-row"><div><div class="label">Adultes</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="adults" data-dir="-1">−</button><span class="step-count" data-count="adults">2</span><button class="step-btn" data-step="adults" data-dir="1">+</button></div></div>
-            <div class="stepper-row"><div><div class="label">Enfants</div><div class="sub">Âge requis pour le calcul exact</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="children" data-dir="-1">−</button><span class="step-count" data-count="children">0</span><button class="step-btn" data-step="children" data-dir="1">+</button></div></div>
-            <div class="child-ages" data-ages="hotel" style="display:none;"></div>
-            <button class="popover-done" data-close-popover>Terminé</button>
+          <div class="fields-row">
+            <div class="field field-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+              <div class="field-body"><label>Arrivée</label><input type="text" id="hotelCheckin" class="flatpickr-input" placeholder="Arrivée" readonly></div>
+            </div>
+            <div class="field field-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+              <div class="field-body"><label>Départ</label><input type="text" id="hotelCheckout" class="flatpickr-input" placeholder="Départ" readonly></div>
+            </div>
+          </div>
+          <div class="field field-guests">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 12a4 4 0 100-8 4 4 0 000 8z"/><path d="M20 22v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/></svg>
+            <div class="field-body"><label>Voyageurs</label><button class="guests-summary" type="button">1 chambre, 2 adultes</button></div>
+            <div class="popover" data-popover="hotel-guests">
+              <div class="stepper-row"><div><div class="label">Chambres</div></div><div class="stepper-controls"><button class="step-btn" data-step="rooms" data-dir="-1">−</button><span class="step-count" data-count="rooms">1</span><button class="step-btn" data-step="rooms" data-dir="1">+</button></div></div>
+              <div class="stepper-row"><div><div class="label">Adultes</div></div><div class="stepper-controls"><button class="step-btn" data-step="adults" data-dir="-1">−</button><span class="step-count" data-count="adults">2</span><button class="step-btn" data-step="adults" data-dir="1">+</button></div></div>
+              <div class="stepper-row"><div><div class="label">Enfants</div><div class="sub">Âge requis</div></div><div class="stepper-controls"><button class="step-btn" data-step="children" data-dir="-1">−</button><span class="step-count" data-count="children">0</span><button class="step-btn" data-step="children" data-dir="1">+</button></div></div>
+              <div class="child-ages" data-ages="hotel" style="display:none;"></div>
+              <button class="popover-done" data-close-popover>Terminé</button>
+            </div>
           </div>
         </div>
-        <button class="search-cta" type="button" data-search="hotel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+        <button class="search-cta" type="button" data-search="hotel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <span>Rechercher</span>
+        </button>
       </div>
     </div>
 
     <!-- VOLS -->
     <div class="search-panel" data-panel="flight" hidden>
-      <div class="trip-type-row">
-        <label><input type="radio" name="tripType" value="roundtrip" checked> Aller-retour</label>
-        <label><input type="radio" name="tripType" value="oneway"> Aller simple</label>
+      <div class="pill-toggle">
+        <button class="pill-btn active" data-trip="round" type="button">Aller-retour</button>
+        <button class="pill-btn" data-trip="oneway" type="button">Aller simple</button>
       </div>
-      <div class="search-fields">
-        <div class="field" data-role="origin">
-          <label>Origine</label>
-          <input type="text" id="flightOrigin" placeholder="Ville ou code (ex: FIH)" autocomplete="off">
-        </div>
-        <button class="swap-btn" type="button" title="Inverser origine / destination"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h13l-4-4M17 17H4l4 4"/></svg></button>
-        <div class="field" data-role="destination">
-          <label>Destination</label>
-          <input type="text" id="flightDestination" class="shared-dest" placeholder="Ville ou code (ex: BRU)" autocomplete="off">
-          <div class="suggest-dropdown"></div>
-        </div>
-        <div class="field" data-role="departure">
-          <label>Départ</label>
-          <input type="text" id="flightDeparture" class="flatpickr-input" placeholder="Sélectionner" readonly>
-        </div>
-        <div class="field" data-role="return-date">
-          <label>Retour</label>
-          <input type="text" id="flightReturn" class="flatpickr-input" placeholder="Sélectionner" readonly>
-        </div>
-        <div class="field" data-role="passengers">
-          <label>Passagers & classe</label>
-          <button class="guests-summary" type="button">1 adulte, Économie</button>
-          <div class="popover" data-popover="flight-pax">
-            <div class="stepper-row"><div><div class="label">Adultes</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="fadults" data-dir="-1">−</button><span class="step-count" data-count="fadults">1</span><button class="step-btn" data-step="fadults" data-dir="1">+</button></div></div>
-            <div class="stepper-row"><div><div class="label">Enfants</div><div class="sub">2-11 ans</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="fchildren" data-dir="-1">−</button><span class="step-count" data-count="fchildren">0</span><button class="step-btn" data-step="fchildren" data-dir="1">+</button></div></div>
-            <div class="stepper-row"><div><div class="label">Bébés</div><div class="sub">Sur les genoux</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="finfants" data-dir="-1">−</button><span class="step-count" data-count="finfants">0</span><button class="step-btn" data-step="finfants" data-dir="1">+</button></div></div>
-            <div class="stepper-row" style="border-bottom:none;"><div><div class="label">Cabine</div></div>
-              <select class="cabin-select"><option>Économie</option><option>Premium Éco</option><option>Affaires</option><option>Première</option></select></div>
-            <button class="popover-done" data-close-popover>Terminé</button>
+      <div class="search-fields-wrap">
+        <div class="search-fields">
+          <div class="field field-destination">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <div class="field-body"><label>Origine</label><input type="text" id="flightOrigin" placeholder="Ville de départ" autocomplete="off"></div>
+          </div>
+          <div class="field field-destination">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <div class="field-body"><label>Destination</label><input type="text" id="flightDestination" class="shared-dest" placeholder="Destination" autocomplete="off"></div>
+            <div class="suggest-dropdown"></div>
+          </div>
+          <div class="fields-row">
+            <div class="field field-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+              <div class="field-body"><label>Départ</label><input type="text" id="flightDeparture" class="flatpickr-input" placeholder="Départ" readonly></div>
+            </div>
+            <div class="field field-date" data-role="return-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+              <div class="field-body"><label>Retour</label><input type="text" id="flightReturn" class="flatpickr-input" placeholder="Retour" readonly></div>
+            </div>
+          </div>
+          <div class="field field-guests">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 12a4 4 0 100-8 4 4 0 000 8z"/><path d="M20 22v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/></svg>
+            <div class="field-body"><label>Passagers</label><button class="guests-summary" type="button">1 adulte, Éco</button></div>
+            <div class="popover" data-popover="flight-pax">
+              <div class="stepper-row"><div><div class="label">Adultes</div></div><div class="stepper-controls"><button class="step-btn" data-step="fadults" data-dir="-1">−</button><span class="step-count" data-count="fadults">1</span><button class="step-btn" data-step="fadults" data-dir="1">+</button></div></div>
+              <div class="stepper-row"><div><div class="label">Enfants</div><div class="sub">2-11 ans</div></div><div class="stepper-controls"><button class="step-btn" data-step="fchildren" data-dir="-1">−</button><span class="step-count" data-count="fchildren">0</span><button class="step-btn" data-step="fchildren" data-dir="1">+</button></div></div>
+              <div class="stepper-row"><div><div class="label">Bébés</div><div class="sub">Sur les genoux</div></div><div class="stepper-controls"><button class="step-btn" data-step="finfants" data-dir="-1">−</button><span class="step-count" data-count="finfants">0</span><button class="step-btn" data-step="finfants" data-dir="1">+</button></div></div>
+              <div class="stepper-row" style="border-bottom:none;"><div><div class="label">Cabine</div></div><select class="cabin-select"><option>Économie</option><option>Premium Éco</option><option>Affaires</option><option>Première</option></select></div>
+              <button class="popover-done" data-close-popover>Terminé</button>
+            </div>
           </div>
         </div>
-        <button class="search-cta" type="button" data-search="flight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+        <button class="search-cta" type="button" data-search="flight">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <span>Rechercher</span>
+        </button>
       </div>
     </div>
 
     <!-- VOITURE -->
     <div class="search-panel" data-panel="car" hidden>
-      <div class="search-fields">
-        <div class="field" data-role="pickup">
-          <label>Lieu de prise en charge</label>
-          <input type="text" class="shared-dest" placeholder="Ville, gare ou aéroport" autocomplete="off">
-          <div class="check-row"><input type="checkbox" id="diffLocation"><label for="diffLocation">Restituer dans une autre agence</label></div>
+      <div class="search-fields-wrap">
+        <div class="search-fields">
+          <div class="field field-destination">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <div class="field-body"><label>Prise en charge</label><input type="text" id="carPickup" class="shared-dest" placeholder="Lieu de prise en charge" autocomplete="off"></div>
+            <div class="suggest-dropdown"></div>
+          </div>
+          <div class="field field-checkbox">
+            <input type="checkbox" id="diffLocation">
+            <label for="diffLocation">Restituer ailleurs</label>
+          </div>
+          <div class="field field-destination" data-role="dropoff" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <div class="field-body"><label>Restitution</label><input type="text" id="carDropoff" placeholder="Lieu de restitution" autocomplete="off"></div>
+          </div>
+          <div class="fields-row">
+            <div class="field field-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+              <div class="field-body"><label>Prise en charge</label><input type="datetime-local" id="carPickupDate"></div>
+            </div>
+            <div class="field field-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+              <div class="field-body"><label>Restitution</label><input type="datetime-local" id="carDropoffDate"></div>
+            </div>
+          </div>
         </div>
-        <div class="field" data-role="dropoff" style="display:none;">
-          <label>Lieu de restitution</label>
-          <input type="text" placeholder="Ville, gare ou aéroport">
-        </div>
-        <div class="field" data-role="pickup-time">
-          <label>Prise en charge</label>
-          <input type="datetime-local" class="shared-start">
-        </div>
-        <div class="field" data-role="dropoff-time">
-          <label>Restitution</label>
-          <input type="datetime-local" class="shared-end">
-          <div class="check-row"><input type="checkbox" id="driverAge" checked><label for="driverAge">Conducteur entre 25 et 70 ans</label></div>
-        </div>
-        <button class="search-cta" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+        <button class="search-cta" type="button" data-search="car">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <span>Rechercher</span>
+        </button>
       </div>
     </div>
 
     <!-- EXPÉRIENCES -->
     <div class="search-panel" data-panel="experience" hidden>
-      <div class="date-mode-toggle">
-        <button class="pill-toggle active" data-mode="exact" type="button">Date précise</button>
-        <button class="pill-toggle" data-mode="flexible" type="button">Période flexible</button>
+      <div class="pill-toggle">
+        <button class="pill-btn active" data-mode="exact" type="button">Date précise</button>
+        <button class="pill-btn" data-mode="flexible" type="button">Dates flexibles</button>
       </div>
-      <div class="search-fields">
-        <div class="field" data-role="destination">
-          <label>Destination ou activité</label>
-          <input type="text" class="shared-dest" placeholder="Ville, musée, plongée..." autocomplete="off">
-          <div class="suggest-dropdown"></div>
-        </div>
-        <div class="field" data-role="exact-date">
-          <label>Date</label>
-          <input type="text" class="flatpickr-input" placeholder="Sélectionner" readonly>
-        </div>
-        <div class="field" data-role="flexible-date" style="display:none;">
-          <label>Période</label>
-          <select><option>Cette semaine</option><option>Ce week-end</option><option>Ce mois-ci</option></select>
-        </div>
-        <div class="field" data-role="participants">
-          <label>Participants</label>
-          <button class="guests-summary" type="button">2 adultes</button>
-          <div class="popover" data-popover="exp-participants">
-            <div class="stepper-row"><div><div class="label">Adultes</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="padults" data-dir="-1">−</button><span class="step-count" data-count="padults">2</span><button class="step-btn" data-step="padults" data-dir="1">+</button></div></div>
-            <div class="stepper-row"><div><div class="label">Enfants</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="pchildren" data-dir="-1">−</button><span class="step-count" data-count="pchildren">0</span><button class="step-btn" data-step="pchildren" data-dir="1">+</button></div></div>
-            <div class="stepper-row"><div><div class="label">Seniors</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="pseniors" data-dir="-1">−</button><span class="step-count" data-count="pseniors">0</span><button class="step-btn" data-step="pseniors" data-dir="1">+</button></div></div>
-            <div class="stepper-row" style="border-bottom:none;"><div><div class="label">Étudiants</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="pstudents" data-dir="-1">−</button><span class="step-count" data-count="pstudents">0</span><button class="step-btn" data-step="pstudents" data-dir="1">+</button></div></div>
-            <button class="popover-done" data-close-popover>Terminé</button>
+      <div class="search-fields-wrap">
+        <div class="search-fields">
+          <div class="field field-destination">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <div class="field-body"><label>Activité</label><input type="text" id="expDestination" class="shared-dest" placeholder="Ville, musée, plongée..." autocomplete="off"></div>
+            <div class="suggest-dropdown"></div>
+          </div>
+          <div class="field field-date" data-role="exact-date">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+            <div class="field-body"><label>Date</label><input type="text" id="expDate" class="flatpickr-input" placeholder="Date" readonly></div>
+          </div>
+          <div class="field field-date" data-role="flexible-date" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+            <div class="field-body"><label>Période</label><select id="expMonth"><option>Cette semaine</option><option>Ce week-end</option><option>Ce mois-ci</option></select></div>
+          </div>
+          <div class="field field-guests">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 12a4 4 0 100-8 4 4 0 000 8z"/><path d="M20 22v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/></svg>
+            <div class="field-body"><label>Participants</label><button class="guests-summary" type="button">1 adulte</button></div>
+            <div class="popover" data-popover="experience-pax">
+              <div class="stepper-row"><div><div class="label">Adultes</div></div><div class="stepper-controls"><button class="step-btn" data-step="padults" data-dir="-1">−</button><span class="step-count" data-count="padults">1</span><button class="step-btn" data-step="padults" data-dir="1">+</button></div></div>
+              <div class="stepper-row"><div><div class="label">Enfants</div></div><div class="stepper-controls"><button class="step-btn" data-step="pchildren" data-dir="-1">−</button><span class="step-count" data-count="pchildren">0</span><button class="step-btn" data-step="pchildren" data-dir="1">+</button></div></div>
+              <div class="stepper-row"><div><div class="label">Seniors</div></div><div class="stepper-controls"><button class="step-btn" data-step="pseniors" data-dir="-1">−</button><span class="step-count" data-count="pseniors">0</span><button class="step-btn" data-step="pseniors" data-dir="1">+</button></div></div>
+              <div class="stepper-row"><div><div class="label">Étudiants</div></div><div class="stepper-controls"><button class="step-btn" data-step="pstudents" data-dir="-1">−</button><span class="step-count" data-count="pstudents">0</span><button class="step-btn" data-step="pstudents" data-dir="1">+</button></div></div>
+              <button class="popover-done" data-close-popover>Terminé</button>
+            </div>
           </div>
         </div>
-        <button class="search-cta" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+        <button class="search-cta" type="button" data-search="experience">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <span>Rechercher</span>
+        </button>
       </div>
     </div>
 
     <!-- ASSURANCE -->
     <div class="search-panel" data-panel="insurance" hidden>
-      <div class="date-mode-toggle">
-        <button class="pill-toggle active" data-cover="single" type="button">Voyage unique</button>
-        <button class="pill-toggle" data-cover="annual" type="button">Annuel multivoyages</button>
+      <div class="pill-toggle">
+        <button class="pill-btn active" data-cover="single" type="button">Voyage unique</button>
+        <button class="pill-btn" data-cover="annual" type="button">Annuelle</button>
       </div>
-      <div class="search-fields">
-        <div class="field" data-role="origin-country">
-          <label>Pays de résidence</label>
-          <select><option>RDC</option><option>France</option><option>Belgique</option><option>Canada</option><option>Autre</option></select>
-        </div>
-        <div class="field" data-role="dest-country">
-          <label>Destination</label>
-          <select><option>États-Unis / Canada</option><option>Europe (Schengen)</option><option>Afrique</option><option>Monde entier</option></select>
-        </div>
-        <div class="field" data-role="ins-start">
-          <label>Début</label>
-          <input type="text" class="flatpickr-input" placeholder="Sélectionner" readonly>
-        </div>
-        <div class="field" data-role="ins-end">
-          <label>Fin</label>
-          <input type="text" class="flatpickr-input" placeholder="Sélectionner" readonly>
-        </div>
-        <div class="field" data-role="travelers">
-          <label>Voyageurs & âge</label>
-          <button class="guests-summary" type="button">1 voyageur</button>
-          <div class="popover" data-popover="ins-travelers">
-            <div class="stepper-row"><div><div class="label">Voyageurs</div><div class="sub">L'âge détermine le tarif</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="itrav" data-dir="-1">−</button><span class="step-count" data-count="itrav">1</span><button class="step-btn" data-step="itrav" data-dir="1">+</button></div></div>
-            <div class="child-ages" data-ages="insurance" data-adult="1"></div>
-            <button class="popover-done" data-close-popover>Terminé</button>
+      <div class="search-fields-wrap">
+        <div class="search-fields">
+          <div class="field field-destination">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/></svg>
+            <div class="field-body"><label>Résidence</label><select id="insResidence"><option>RDC</option><option>France</option><option>Belgique</option><option>Autre</option></select></div>
+          </div>
+          <div class="field field-destination">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <div class="field-body"><label>Destination</label><select id="insZone"><option>États-Unis / Canada</option><option>Europe</option><option>Afrique</option><option>Monde entier</option></select></div>
+          </div>
+          <div class="fields-row">
+            <div class="field field-date" data-role="ins-start">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+              <div class="field-body"><label>Début</label><input type="text" id="insStart" class="flatpickr-input" placeholder="Début" readonly></div>
+            </div>
+            <div class="field field-date" data-role="ins-end">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+              <div class="field-body"><label>Fin</label><input type="text" id="insEnd" class="flatpickr-input" placeholder="Fin" readonly></div>
+            </div>
+          </div>
+          <div class="field field-guests">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 12a4 4 0 100-8 4 4 0 000 8z"/><path d="M20 22v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/></svg>
+            <div class="field-body"><label>Voyageurs</label><button class="guests-summary" type="button">1 voyageur</button></div>
+            <div class="popover" data-popover="insurance-pax">
+              <div class="stepper-row"><div><div class="label">Voyageurs</div></div><div class="stepper-controls"><button class="step-btn" data-step="itrav" data-dir="-1">−</button><span class="step-count" data-count="itrav">1</span><button class="step-btn" data-step="itrav" data-dir="1">+</button></div></div>
+              <div class="child-ages" data-ages="insurance" data-adult="1"></div>
+              <button class="popover-done" data-close-popover>Terminé</button>
+            </div>
           </div>
         </div>
-        <button class="search-cta" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+        <button class="search-cta" type="button" data-search="insurance">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <span>Rechercher</span>
+        </button>
       </div>
     </div>
 
     <!-- PACKAGES -->
     <div class="search-panel" data-panel="package" hidden>
-      <div class="package-sub-toggle">
-        <button class="pill-toggle active" data-package="flight-hotel" type="button">Vol + Hôtel</button>
-        <button class="pill-toggle" data-package="flight-car" type="button">Vol + Voiture</button>
+      <div class="pill-toggle">
+        <button class="pill-btn active" data-package="flight-hotel" type="button">Vol + Hôtel</button>
+        <button class="pill-btn" data-package="flight-car" type="button">Vol + Voiture</button>
+        <button class="pill-btn" data-package="all-in-one" type="button">Tout inclus</button>
       </div>
-      <div class="search-fields">
-        <div class="field" data-role="pkg-origin">
-          <label>Origine</label>
-          <input type="text" placeholder="Ville de départ" autocomplete="off">
-        </div>
-        <div class="field" data-role="pkg-destination">
-          <label>Destination</label>
-          <input type="text" class="shared-dest" placeholder="Ville de destination" autocomplete="off">
-          <div class="suggest-dropdown"></div>
-        </div>
-        <div class="field" data-role="pkg-dates">
-          <label>Départ → Retour</label>
-          <div class="date-pair">
-            <input type="text" class="flatpickr-input" placeholder="Départ" readonly>
-            <span class="date-sep">→</span>
-            <input type="text" class="flatpickr-input" placeholder="Retour" readonly>
+      <div class="search-fields-wrap">
+        <div class="search-fields">
+          <div class="field field-destination" data-role="pkg-origin">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <div class="field-body"><label>Ville de départ</label><input type="text" id="pkgOrigin" placeholder="Ville de départ" autocomplete="off"></div>
+          </div>
+          <div class="field field-destination">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <div class="field-body"><label>Destination</label><input type="text" id="pkgDestination" class="shared-dest" placeholder="Destination" autocomplete="off"></div>
+            <div class="suggest-dropdown"></div>
+          </div>
+          <div class="fields-row">
+            <div class="field field-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+              <div class="field-body"><label>Départ</label><input type="text" id="pkgDeparture" class="flatpickr-input" placeholder="Départ" readonly></div>
+            </div>
+            <div class="field field-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+              <div class="field-body"><label>Retour</label><input type="text" id="pkgReturn" class="flatpickr-input" placeholder="Retour" readonly></div>
+            </div>
+          </div>
+          <div class="field field-guests">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 12a4 4 0 100-8 4 4 0 000 8z"/><path d="M20 22v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/></svg>
+            <div class="field-body"><label>Voyageurs</label><button class="guests-summary" type="button">2 adultes</button></div>
+            <div class="popover" data-popover="package-pax">
+              <div class="stepper-row"><div><div class="label">Adultes</div></div><div class="stepper-controls"><button class="step-btn" data-step="kadults" data-dir="-1">−</button><span class="step-count" data-count="kadults">2</span><button class="step-btn" data-step="kadults" data-dir="1">+</button></div></div>
+              <div class="stepper-row"><div><div class="label">Enfants</div></div><div class="stepper-controls"><button class="step-btn" data-step="kchildren" data-dir="-1">−</button><span class="step-count" data-count="kchildren">0</span><button class="step-btn" data-step="kchildren" data-dir="1">+</button></div></div>
+              <button class="popover-done" data-close-popover>Terminé</button>
+            </div>
           </div>
         </div>
-        <div class="field" data-role="pkg-travelers">
-          <label>Voyageurs</label>
-          <button class="guests-summary" type="button">2 adultes</button>
-          <div class="popover" data-popover="pkg-travelers">
-            <div class="stepper-row"><div><div class="label">Adultes</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="kadults" data-dir="-1">−</button><span class="step-count" data-count="kadults">2</span><button class="step-btn" data-step="kadults" data-dir="1">+</button></div></div>
-            <div class="stepper-row" style="border-bottom:none;"><div><div class="label">Enfants</div></div>
-              <div class="stepper-controls"><button class="step-btn" data-step="kchildren" data-dir="-1">−</button><span class="step-count" data-count="kchildren">0</span><button class="step-btn" data-step="kchildren" data-dir="1">+</button></div></div>
-            <button class="popover-done" data-close-popover>Terminé</button>
-          </div>
-        </div>
-        <button class="search-cta" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+        <button class="search-cta" type="button" data-search="package">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <span>Rechercher</span>
+        </button>
       </div>
     </div>
+  </div>
+</div>
 
+<!-- ========== FEATURES ========== -->
+<div class="wrap">
+  <div class="feature-trio reveal">
+    <div class="feature-item"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg></div><div><h4>Meilleures offres</h4><p>Des tarifs compétitifs sur l'hébergement, les vols et bien plus.</p></div></div>
+    <div class="feature-item"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg></div><div><h4>Fait pour l'Afrique centrale</h4><p>Une sélection pensée depuis Kinshasa, Lubumbashi et Goma.</p></div></div>
+    <div class="feature-item"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3-8.7A2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .3 2 .6 3a2 2 0 01-.5 2.1L8 10a16 16 0 006 6l1.2-1.2a2 2 0 012.1-.5c1 .3 2 .5 3 .6a2 2 0 011.7 2z"/></svg></div><div><h4>Toujours là pour aider</h4><p>Notre équipe de support répond en français, avant et pendant le voyage.</p></div></div>
   </div>
 </div>
 
@@ -657,62 +883,47 @@
   <div class="section-head">
     <h2>Hôtels recommandés</h2>
     <div class="nav-arrows">
-      <button class="nav-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></button>
-      <button class="nav-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="nav-arrow" onclick="scrollHorizontal('recommendedHotels', -280)" aria-label="Précédent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="nav-arrow" onclick="scrollHorizontal('recommendedHotels', 280)" aria-label="Suivant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg></button>
     </div>
   </div>
-  <div class="card-row" id="recommendedHotels">
-    <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-    <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-    <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+  <div class="scroll-horizontal" id="recommendedHotels">
+    <div class="skeleton-scroll"><div class="skeleton-photo skeleton"></div><div class="body"><div class="skeleton-line skeleton w90"></div><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w50"></div><div class="skeleton-line skeleton w40"></div></div></div>
+    <div class="skeleton-scroll"><div class="skeleton-photo skeleton"></div><div class="body"><div class="skeleton-line skeleton w90"></div><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w50"></div><div class="skeleton-line skeleton w40"></div></div></div>
+    <div class="skeleton-scroll"><div class="skeleton-photo skeleton"></div><div class="body"><div class="skeleton-line skeleton w90"></div><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w50"></div><div class="skeleton-line skeleton w40"></div></div></div>
   </div>
 </section>
 
 <!-- ========== LOYALTY ========== -->
-<section class="wrap reveal" style="padding-bottom:64px;">
+<section class="wrap reveal" style="padding-bottom:48px;">
   <div class="loyalty">
     <img src="https://picsum.photos/seed/luvia-loyalty/1400/500" alt="">
     <div class="loyalty-content">
       <div class="star">★</div>
       <h3>Plus qu'un voyage, votre fidélité récompensée</h3>
-      <p>Découvrez le programme LuviaPlace Rewards. Gagnez des points à chaque réservation et échangez-les contre des séjours, vols et expériences.</p>
+      <p>Découvrez le programme LuviaPlace Rewards. Gagnez des points à chaque réservation.</p>
     </div>
   </div>
 </section>
 
-<!-- ========== FEATURES ========== -->
-<div class="wrap">
-  <div class="feature-trio reveal">
-    <div class="feature-item">
-      <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg></div>
-      <div><h4>Meilleures offres</h4><p>Des tarifs compétitifs sur l'hébergement, les vols et bien plus.</p></div>
-    </div>
-    <div class="feature-item">
-      <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg></div>
-      <div><h4>Fait pour l'Afrique centrale</h4><p>Une sélection pensée depuis Kinshasa, Lubumbashi et Goma.</p></div>
-    </div>
-    <div class="feature-item">
-      <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3-8.7A2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .3 2 .6 3a2 2 0 01-.5 2.1L8 10a16 16 0 006 6l1.2-1.2a2 2 0 012.1-.5c1 .3 2 .5 3 .6a2 2 0 011.7 2z"/></svg></div>
-      <div><h4>Toujours là pour aider</h4><p>Notre équipe de support répond en français, avant et pendant le voyage.</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- ========== COLLECTIONS DYNAMIQUES ========== -->
+<!-- ========== COLLECTIONS ========== -->
 <section class="section wrap reveal">
   <div class="section-head">
     <div>
       <div class="section-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M2 12c4 0 4-6 8-6s4 12 8 12c2 0 3-2 4-4"/></svg>Le courant LuviaPlace</div>
       <h2>Collections</h2>
-      <p class="sub">Des sélections pensées par destination et par envie, de Kinshasa au lac Kivu.</p>
+      <p class="sub">Des sélections pensées par destination et par envie.</p>
     </div>
     <div class="nav-arrows">
-      <button class="nav-arrow" onclick="scrollCollections('left')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></button>
-      <button class="nav-arrow" onclick="scrollCollections('right')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="nav-arrow" onclick="scrollHorizontal('collectionsContainer', -280)" aria-label="Précédent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="nav-arrow" onclick="scrollHorizontal('collectionsContainer', 280)" aria-label="Suivant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg></button>
     </div>
   </div>
-  <div class="scroll-row" id="collectionsContainer">
-    <!-- Généré par JavaScript -->
+  <div class="scroll-horizontal" id="collectionsContainer">
+    <div class="skeleton-collection"><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w40"></div></div>
+    <div class="skeleton-collection"><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w40"></div></div>
+    <div class="skeleton-collection"><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w40"></div></div>
+    <div class="skeleton-collection"><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w40"></div></div>
   </div>
 </section>
 
@@ -720,26 +931,32 @@
 <section class="section wrap reveal">
   <div class="section-head"><h2>Vos recherches récentes</h2></div>
   <div class="card-row">
-    <div class="recent-card"><div class="thumb"><img src="https://picsum.photos/seed/luvia-recent1/120/120" alt=""></div><div><h5>Kinshasa, Gombe</h5><div class="meta">Juil. 25 - Juil. 30 · 2 clients, 1 chambre</div></div></div>
-    <div class="recent-card"><div class="thumb"><img src="https://picsum.photos/seed/luvia-recent2/120/120" alt=""></div><div><h5>Vol KIN → BRU</h5><div class="meta">Août 12 · 1 passager, aller-retour</div></div></div>
-    <div class="recent-card"><div class="thumb"><img src="https://picsum.photos/seed/luvia-recent3/120/120" alt=""></div><div><h5>Location voiture, Goma</h5><div class="meta">Juil. 20 - Juil. 25 · avec chauffeur</div></div></div>
+    <div class="recent-card"><div class="thumb"><img src="https://picsum.photos/seed/luvia-recent1/120/120" alt=""></div><div><h5>Kinshasa, Gombe</h5><div class="meta">Juil. 25 - Juil. 30 · 2 clients</div></div></div>
+    <div class="recent-card"><div class="thumb"><img src="https://picsum.photos/seed/luvia-recent2/120/120" alt=""></div><div><h5>Vol KIN → BRU</h5><div class="meta">Août 12 · 1 passager</div></div></div>
+    <div class="recent-card"><div class="thumb"><img src="https://picsum.photos/seed/luvia-recent3/120/120" alt=""></div><div><h5>Location voiture, Goma</h5><div class="meta">Juil. 20 - Juil. 25</div></div></div>
   </div>
 </section>
 
 <!-- ========== HÔTELS À PROXIMITÉ ========== -->
 <section class="section wrap reveal">
-  <div class="section-head"><h2>Hôtels à proximité</h2></div>
-  <div class="card-row" id="nearbyHotels">
-    <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-    <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-    <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+  <div class="section-head">
+    <h2>Hôtels à proximité</h2>
+    <div class="nav-arrows">
+      <button class="nav-arrow" onclick="scrollHorizontal('nearbyHotels', -280)" aria-label="Précédent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="nav-arrow" onclick="scrollHorizontal('nearbyHotels', 280)" aria-label="Suivant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
+  </div>
+  <div class="scroll-horizontal" id="nearbyHotels">
+    <div class="skeleton-scroll"><div class="skeleton-photo skeleton"></div><div class="body"><div class="skeleton-line skeleton w90"></div><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w50"></div><div class="skeleton-line skeleton w40"></div></div></div>
+    <div class="skeleton-scroll"><div class="skeleton-photo skeleton"></div><div class="body"><div class="skeleton-line skeleton w90"></div><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w50"></div><div class="skeleton-line skeleton w40"></div></div></div>
+    <div class="skeleton-scroll"><div class="skeleton-photo skeleton"></div><div class="body"><div class="skeleton-line skeleton w90"></div><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w50"></div><div class="skeleton-line skeleton w40"></div></div></div>
   </div>
 </section>
 
 <!-- ========== PAYMENTS ========== -->
 <section class="section payments-section reveal">
   <div class="wrap">
-    <div class="section-head"><div><h2>Payez comme vous le faites déjà</h2><p class="sub">En plus des cartes internationales, LuviaPlace accepte les moyens de paiement mobiles les plus utilisés en RDC.</p></div></div>
+    <div class="section-head"><div><h2>Payez comme vous le faites déjà</h2><p class="sub">LuviaPlace accepte les moyens de paiement mobiles les plus utilisés en RDC.</p></div></div>
     <div class="pay-grid">
       <div class="pay-card"><div class="pay-dot" style="background:#FF7900;">OM</div><div class="name">Orange Money</div><div class="tag">Mobile Money</div></div>
       <div class="pay-card"><div class="pay-dot" style="background:#E4032E;">AM</div><div class="name">Airtel Money</div><div class="tag">Mobile Money</div></div>
@@ -753,10 +970,7 @@
 <footer>
   <div class="wrap">
     <div class="footer-grid">
-      <div>
-        <img class="logo-img" src="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png" alt="LuviaPlace">
-        <p>La plateforme de voyage pensée depuis et pour l'Afrique centrale — hébergement, vols, expériences, assurance et voiture.</p>
-      </div>
+      <div><img class="logo-img" src="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png" alt="LuviaPlace"><p>La plateforme de voyage pensée depuis et pour l'Afrique centrale — hébergement, vols, expériences, assurance et voiture.</p></div>
       <div class="footer-col"><h5>Explorer</h5><a href="resultats-hebergement.html">Hébergement</a><a href="resultats-vols.html">Vols</a><a href="resultats-experiences.html">Expériences</a></div>
       <div class="footer-col"><h5>Services</h5><a href="resultats-assurance.html">Assurance</a><a href="resultats-voiture.html">Voiture</a><a href="#">Rewards</a></div>
       <div class="footer-col"><h5>Entreprise</h5><a href="#">À propos</a><a href="#">Carrières</a><a href="#">Contact</a></div>
@@ -769,19 +983,33 @@
   </div>
 </footer>
 
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Chatbot LiteAPI : remplacez YOUR_LITEAPI_KEY par votre vraie clé avant mise en production -->
+<!-- <script src="https://components.liteapi.travel/chatbot/v1.js?liteApiKey=YOUR_LITEAPI_KEY" async></script> -->
+
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 
 <script>
-// ============================================
-// CONNEXION BACKEND - LuviaPlace v2
-// ============================================
+(function(){
+"use strict";
 
+// ============================================
+// CONFIG
+// ============================================
 var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
 
 // ============================================
-// CALCUL DU NOMBRE DE NUITS
+// UTILITAIRES GÉNÉRAUX
 // ============================================
+function scrollHorizontal(containerId, amount) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.scrollBy({ left: amount, behavior: 'smooth' });
+}
+window.scrollHorizontal = scrollHorizontal;
+
 function getNights(checkin, checkout) {
     if (!checkin || !checkout) return 1;
     var start = new Date(checkin);
@@ -791,79 +1019,77 @@ function getNights(checkin, checkout) {
     return diffDays > 0 ? diffDays : 1;
 }
 
+function formatDate(d) { return d.toISOString().slice(0, 10); }
+function addDays(base, days) { var d = new Date(base); d.setDate(d.getDate() + days); return d; }
+function getDefaultCheckin() { return formatDate(addDays(new Date(), 1)); }
+function getDefaultCheckout() { return formatDate(addDays(new Date(), 4)); }
+
+var toastEl = document.getElementById('toast');
+var toastTimer;
+function showToast(message) {
+    if (!toastEl) return;
+    toastEl.textContent = message;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 3200);
+}
+
+function flagFieldError(fieldEl) {
+    if (!fieldEl) return;
+    fieldEl.classList.add('field-error');
+    setTimeout(function () { fieldEl.classList.remove('field-error'); }, 1600);
+}
+
+// Limite le nombre de requêtes concurrentes pour rester raisonnable avec l'API
+function mapWithConcurrency(items, limit, worker) {
+    return new Promise(function (resolve) {
+        var results = new Array(items.length);
+        var next = 0, done = 0;
+        if (items.length === 0) { resolve(results); return; }
+        function runNext() {
+            if (next >= items.length) return;
+            var i = next++;
+            worker(items[i], i).then(function (r) {
+                results[i] = r; done++;
+                if (done === items.length) resolve(results); else runNext();
+            }).catch(function () {
+                results[i] = null; done++;
+                if (done === items.length) resolve(results); else runNext();
+            });
+        }
+        for (var k = 0; k < Math.min(limit, items.length); k++) runNext();
+    });
+}
+
 // ============================================
-// 1. RECHERCHE DE LIEUX (AUTOCOMPLÉTION)
+// API — LIEUX
 // ============================================
 async function searchPlaces(query) {
-  if (!query || query.length < 2) return [];
-  try {
-    var response = await fetch(API_BASE_URL + '/search-places?query=' + encodeURIComponent(query) + '&environment=production');
-    var data = await response.json();
-    
-    console.log('📍 Réponse searchPlaces:', data);
-    
-    if (data.success && data.data) {
-      return data.data.map(function(place) {
-        return {
-          placeId: place.placeId || place.id,
-          name: place.name || place.displayName || place.label || 'Lieu sans nom',
-          address: place.address || place.formattedAddress || '',
-          country: place.country || ''
-        };
-      });
-    }
-    return [];
-  } catch (error) {
-    console.error('❌ Error searching places:', error);
-    return [];
-  }
-}
-
-// ============================================
-// 2. RECHERCHE DE TARIFS HÔTELIERS (GET)
-// ============================================
-async function searchRates(params) {
-    console.log('🔍 searchRates appelé avec:', params);
-    
+    if (!query || query.length < 2) return [];
     try {
-        var queryParams = new URLSearchParams({
-            checkin: params.checkin,
-            checkout: params.checkout,
-            adults: params.adults || 2,
-            hotelId: params.hotelId,
-            environment: params.environment || 'production',
-            maxRates: params.maxRatesPerHotel || 20
-        });
-
-        var url = API_BASE_URL + '/search-rates?' + queryParams.toString();
-        console.log('📦 URL GET rates:', url);
-
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+        var response = await fetch(API_BASE_URL + '/search-places?query=' + encodeURIComponent(query) + '&environment=production');
+        var data = await response.json();
+        if (data.success && data.data) {
+            return data.data.map(function (place) {
+                return {
+                    placeId: place.placeId || place.id,
+                    name: place.name || place.displayName || place.label || 'Lieu sans nom',
+                    address: place.address || place.formattedAddress || '',
+                    country: place.country || ''
+                };
+            });
         }
-
-        const data = await response.json();
-        console.log('✅ searchRates réponse:', data);
-        return data;
+        return [];
     } catch (error) {
-        console.error('❌ Error searching rates:', error);
-        throw error;
+        console.error('Erreur searchPlaces:', error);
+        return [];
     }
 }
 
 // ============================================
-// 3. RECHERCHE HÔTELS (GET)
+// API — HÔTELS
 // ============================================
 async function searchHotels(params) {
-    console.log('🔍 searchHotels appelé avec:', params);
-    
     try {
         var queryParams = new URLSearchParams({
             checkin: params.checkin || getDefaultCheckin(),
@@ -872,130 +1098,52 @@ async function searchHotels(params) {
             environment: params.environment || 'production',
             limit: params.limit || 200
         });
-
-        if (params.placeId) {
-            queryParams.append('placeId', params.placeId);
-        }
-        if (params.aiSearch) {
-            queryParams.append('city', params.aiSearch);
-        }
-        if (params.hotelId) {
-            queryParams.append('hotelId', params.hotelId);
-        }
-
-        var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
-        console.log('📦 URL GET:', url);
-
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('✅ searchHotels réponse:', data);
-        return data;
+        if (params.placeId) queryParams.append('placeId', params.placeId);
+        if (params.aiSearch) queryParams.append('city', params.aiSearch);
+        if (params.hotelId) queryParams.append('hotelId', params.hotelId);
+        var response = await fetch(API_BASE_URL + '/search-hotels?' + queryParams.toString(), { headers: { Accept: 'application/json' } });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return await response.json();
     } catch (error) {
-        console.error('❌ Error searching hotels:', error);
-        throw error;
+        console.error('Erreur searchHotels:', error);
+        return { success: false, hotels: [], error: error.message };
     }
 }
 
 // ============================================
-// 4. GÉOLOCALISATION PAR IP
+// GÉOLOCALISATION PAR IP (services HTTPS uniquement)
 // ============================================
 async function getUserLocation() {
-    const services = [
-        {
-            url: 'https://ipapi.co/json/',
-            parse: function(data) {
-                return {
-                    city: data.city,
-                    country: data.country_name || data.country,
-                    countryCode: data.country_code || data.country
-                };
-            }
-        },
-        {
-            url: 'https://ip-api.com/json/',
-            parse: function(data) {
-                return {
-                    city: data.city,
-                    country: data.country,
-                    countryCode: data.countryCode
-                };
-            }
-        },
-        {
-            url: 'https://geolocation-db.com/json/',
-            parse: function(data) {
-                return {
-                    city: data.city,
-                    country: data.country_name,
-                    countryCode: data.country_code
-                };
-            }
-        }
+    var services = [
+        { url: 'https://ipapi.co/json/', parse: function (d) { return { city: d.city, country: d.country_name || d.country, countryCode: d.country_code || d.country }; } },
+        { url: 'https://geolocation-db.com/json/', parse: function (d) { return { city: d.city, country: d.country_name, countryCode: d.country_code }; } }
     ];
-
     for (var i = 0; i < services.length; i++) {
         try {
-            console.log(`📍 Tentative ${i + 1}: ${services[i].url}`);
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
-            const response = await fetch(services[i].url, {
-                signal: controller.signal
-            });
+            var controller = new AbortController();
+            var timeoutId = setTimeout(function () { controller.abort(); }, 5000);
+            var response = await fetch(services[i].url, { signal: controller.signal });
             clearTimeout(timeoutId);
-            
             if (!response.ok) continue;
-            
-            const data = await response.json();
-            const location = services[i].parse(data);
-            
-            if (location.city && 
-                location.city !== '' && 
-                location.city !== 'unknown' && 
-                location.city !== 'undefined') {
-                console.log('✅ Géolocalisation réussie:', location);
-                return location;
-            }
-        } catch (error) {
-            console.warn(`⚠️ Erreur service ${i + 1}:`, error.message);
-        }
+            var data = await response.json();
+            var location = services[i].parse(data);
+            if (location.city && location.city !== 'unknown' && location.city !== 'undefined') return location;
+        } catch (error) { /* essaye le service suivant */ }
     }
-
     try {
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        console.log('📍 Fuseau horaire détecté:', timezone);
-        
-        const timezoneMap = {
+        var timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        var timezoneMap = {
             'Africa/Kinshasa': { city: 'Kinshasa', country: 'République démocratique du Congo', countryCode: 'CD' },
             'Africa/Lubumbashi': { city: 'Lubumbashi', country: 'République démocratique du Congo', countryCode: 'CD' },
             'Africa/Lagos': { city: 'Lagos', country: 'Nigeria', countryCode: 'NG' },
             'Africa/Nairobi': { city: 'Nairobi', country: 'Kenya', countryCode: 'KE' },
             'Africa/Johannesburg': { city: 'Johannesburg', country: 'Afrique du Sud', countryCode: 'ZA' },
-            'Africa/Cairo': { city: 'Le Caire', country: 'Égypte', countryCode: 'EG' },
-            'Africa/Casablanca': { city: 'Casablanca', country: 'Maroc', countryCode: 'MA' },
             'Europe/Paris': { city: 'Paris', country: 'France', countryCode: 'FR' },
             'Europe/London': { city: 'Londres', country: 'Royaume-Uni', countryCode: 'GB' },
-            'Europe/Rome': { city: 'Rome', country: 'Italie', countryCode: 'IT' },
             'America/New_York': { city: 'New York', country: 'États-Unis', countryCode: 'US' },
             'Asia/Dubai': { city: 'Dubaï', country: 'Émirats arabes unis', countryCode: 'AE' }
         };
-
-        if (timezone && timezoneMap[timezone]) {
-            console.log('📍 Ville estimée depuis le fuseau horaire:', timezoneMap[timezone]);
-            return timezoneMap[timezone];
-        }
-        
+        if (timezone && timezoneMap[timezone]) return timezoneMap[timezone];
         if (timezone) {
             var region = timezone.split('/')[0];
             if (region === 'Africa') return { city: 'Kinshasa', country: 'République démocratique du Congo', countryCode: 'CD' };
@@ -1003,20 +1151,12 @@ async function getUserLocation() {
             if (region === 'America') return { city: 'New York', country: 'États-Unis', countryCode: 'US' };
             if (region === 'Asia') return { city: 'Dubaï', country: 'Émirats arabes unis', countryCode: 'AE' };
         }
-    } catch (error) {
-        console.warn('⚠️ Erreur estimation fuseau horaire:', error.message);
-    }
-
-    console.log('📍 Fallback final: Kinshasa (RDC)');
-    return {
-        city: 'Kinshasa',
-        country: 'République démocratique du Congo',
-        countryCode: 'CD'
-    };
+    } catch (error) { /* fallback final ci-dessous */ }
+    return { city: 'Kinshasa', country: 'République démocratique du Congo', countryCode: 'CD' };
 }
 
 // ============================================
-// 5. VILLES POUR RECOMMANDATIONS
+// DONNÉES — VILLES & COLLECTIONS
 // ============================================
 var RECOMMENDED_CITIES = [
     { name: 'Paris', country: 'France', countryCode: 'FR', placeId: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ' },
@@ -1026,896 +1166,491 @@ var RECOMMENDED_CITIES = [
     { name: 'Marrakech', country: 'Maroc', countryCode: 'MA', placeId: 'ChIJsbqj5zvepQ0R8X5Fg87gFJQ' }
 ];
 
-// ============================================
-// 6. COLLECTIONS DYNAMIQUES
-// ============================================
 var COLLECTIONS = [
-    {
-        id: 'nairobi-top-20',
-        title: 'Our Top 20 Hotels in Nairobi',
-        description: 'Une sélection des meilleurs hôtels de Nairobi.',
-        image: 'https://images.unsplash.com/photo-1574321018380-59c7be9c6b6f?w=500&h=300&fit=crop',
-        hotelNames: [
-            'Glee Nairobi, a Preferred LVX Hotel',
-            'Hyatt House Nairobi Westlands',
-            'Pan Pacific Serviced Suites Nairobi',
-            'Radisson Blu Hotel Nairobi Upper Hill',
-            'Fairview Hotel Nairobi, Vignette Collection by IHG',
-            'Mooreland Hotel Nairobi',
-            'Hyatt Place Nairobi Westlands',
-            'Nairobi Glory Palace Hotel',
-            'Marina Bay Apartments Nairobi, Westlands',
-            'Luxe 1BR, Ngong Road, Nairobi',
-            'Cozy One Bedroom Apartment with Fantastic Skyline View in Kileleshwa, Nairobi',
-            'AppleTree 2-Bedroom - Scenic View of Nairobi National Park-Syokimau',
-            'Sunway Hotel Nairobi - YOHOH',
-            'Hotel Boulevard Nairobi, City Centre CBD',
-            'Holiday Inn Nairobi Two Rivers Mall by IHG',
-            'Hilton Garden Inn Nairobi Airport',
-            'Executive Residency by Best Western Nairobi',
-            'Dusit Princess Hotel Residences Nairobi',
-            'Hemingways Nairobi'
-        ]
-    },
-    {
-        id: 'kinshasa-exception',
-        title: 'Séjours d\'exception à Kinshasa',
-        description: 'Découvrez le meilleur de l\'hébergement à Kinshasa.',
-        image: 'https://images.unsplash.com/photo-1585148785744-0e58d35e0a98?w=500&h=300&fit=crop',
-        hotelNames: [
-            'Protea Hotel by Marriott Kinshasa',
-            'Kinshasa Oasis Apartment',
-            'Hotel Finesse',
-            'Ixoras Hotel',
-            'Robyson Residency Kinshasa',
-            'Kertel Suites',
-            'Hotel Stella',
-            'Charming Kinshasa Apartment in Gombe - Entire House for Rent',
-            'Four Points By Sheraton Kinshasa',
-            'Hotel Belle Vie',
-            'Hilton Kinshasa',
-            'Leon Hôtel',
-            'Léon Hôtel Kinshasa',
-            'Hotel Royal',
-            'Elais Kinshasa',
-            'Golden Tulip Kin-Oasis Kinshasa'
-        ]
-    },
-    {
-        id: 'international-ideal',
-        title: 'Votre hébergement idéal pour l\'international',
-        description: 'Des hôtels sélectionnés aux quatre coins du monde.',
-        image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500&h=300&fit=crop',
-        hotelNames: [
-            'Hyatt Place Dubai Al Rigga',
-            'Novotel Dubai Gold District',
-            'Novotel Paris Centre Bercy',
-            'Hilton Grand Vacations Club La Pacifica Los Cabos',
-            'Royal Beach Tel Aviv by Isrotel exclusive',
-            'Fairmont Century Plaza Los Angeles at Beverly Hills',
-            'Only YOU Hotel Málaga',
-            'The Leela Ambience Convention Hotel Delhi',
-            'Daily-Condo Tokyo Azabu',
-            'Cap du Mont',
-            'Golden Tulip Kin-Oasis Kinshasa'
-        ]
-    }
+    { id: 'nairobi-top-20', title: "Our Top 20 Hotels in Nairobi", description: 'Une sélection des meilleurs hôtels de Nairobi.', image: 'https://images.unsplash.com/photo-1574321018380-59c7be9c6b6f?w=500&h=300&fit=crop',
+      hotelNames: ['Glee Nairobi, a Preferred LVX Hotel', 'Hyatt House Nairobi Westlands', 'Pan Pacific Serviced Suites Nairobi', 'Radisson Blu Hotel Nairobi Upper Hill', 'Fairview Hotel Nairobi, Vignette Collection by IHG', 'Mooreland Hotel Nairobi', 'Hyatt Place Nairobi Westlands', 'Nairobi Glory Palace Hotel', 'Marina Bay Apartments Nairobi, Westlands', 'Sunway Hotel Nairobi - YOHOH', 'Hotel Boulevard Nairobi, City Centre CBD', 'Holiday Inn Nairobi Two Rivers Mall by IHG', 'Hilton Garden Inn Nairobi Airport', 'Executive Residency by Best Western Nairobi', 'Dusit Princess Hotel Residences Nairobi', 'Hemingways Nairobi'] },
+    { id: 'kinshasa-exception', title: "Séjours d'exception à Kinshasa", description: "Découvrez le meilleur de l'hébergement à Kinshasa.", image: 'https://images.unsplash.com/photo-1585148785744-0e58d35e0a98?w=500&h=300&fit=crop',
+      hotelNames: ['Protea Hotel by Marriott Kinshasa', 'Kinshasa Oasis Apartment', 'Hotel Finesse', 'Ixoras Hotel', 'Robyson Residency Kinshasa', 'Kertel Suites', 'Hotel Stella', 'Four Points By Sheraton Kinshasa', 'Hotel Belle Vie', 'Hilton Kinshasa', 'Léon Hôtel Kinshasa', 'Hotel Royal', 'Elais Kinshasa', 'Golden Tulip Kin-Oasis Kinshasa'] },
+    { id: 'international-ideal', title: "Votre hébergement idéal pour l'international", description: 'Des hôtels sélectionnés aux quatre coins du monde.', image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500&h=300&fit=crop',
+      hotelNames: ['Hyatt Place Dubai Al Rigga', 'Novotel Dubai Gold District', 'Novotel Paris Centre Bercy', 'Royal Beach Tel Aviv by Isrotel exclusive', 'Fairmont Century Plaza Los Angeles at Beverly Hills', 'Only YOU Hotel Málaga', 'The Leela Ambience Convention Hotel Delhi', 'Golden Tulip Kin-Oasis Kinshasa'] },
+    { id: 'kivu-escape', title: "Escapades au bord du lac Kivu", description: 'Découvrez les plus beaux hébergements au bord du lac Kivu, entre nature et sérénité.', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&h=300&fit=crop',
+      hotelNames: ['Lake Kivu Serena Hotel', 'Kivu Lodge', 'Bella Vista Hotel', 'Lac Kivu Lodge', 'Hotel Des Mille Collines', 'Ubumwe Hotel', 'Kivu Paradise Resort'] }
 ];
 
-// ✅ Déclaration de collectionData AVANT son utilisation
-var collectionData = {};
-
 // ============================================
-// 7. FONCTIONS UTILITAIRES
+// AFFICHAGE — HÔTELS EN SCROLL
 // ============================================
-function getDefaultCheckin() {
-    var d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
-}
-
-function getDefaultCheckout() {
-    var d = new Date();
-    d.setDate(d.getDate() + 4);
-    return d.toISOString().slice(0, 10);
-}
-
-// ============================================
-// 8. AFFICHAGE DES HÔTELS - CORRIGÉ
-// ============================================
-function displayHotels(containerId, hotelsData, isClickable, title) {
-  var container = document.getElementById(containerId);
-  if (!container) return;
-
-  if (!hotelsData || !hotelsData.hotels || hotelsData.hotels.length === 0) {
-    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-soft);"><p>Aucun hôtel trouvé' + (title ? ' pour ' + title : '') + '.</p></div>';
-    return;
-  }
-
-  var hotels = hotelsData.hotels.slice(0, 3);
-  var checkin = getDefaultCheckin();
-  var checkout = getDefaultCheckout();
-  var nights = getNights(checkin, checkout);
-  var html = '';
-
-  for (var j = 0; j < hotels.length; j++) {
-    var hotel = hotels[j];
-    
-    if (!hotel.minPrice || hotel.minPrice === 0) continue;
-
-    // ✅ ÉTOILES - Défaut à 3 si 0
-    var starRating = hotel.starRating || 3;
-    var starHtml = '';
-    var fullStars = Math.min(Math.round(starRating), 5);
-    for (var s = 0; s < fullStars; s++) {
-        starHtml += '★';
-    }
-    for (var s = fullStars; s < 5; s++) {
-        starHtml += '☆';
-    }
-
-    var pricePerNight = Math.round(hotel.minPrice / nights);
-    var totalPrice = Math.round(hotel.minPrice);
-    
-    var rating = hotel.rating || 0;
-    var ratingText = rating >= 8 ? 'Excellent' : rating >= 7 ? 'Très bien' : 'Bien';
-    var reviewCount = hotel.reviewCount || 0;
-    var hotelId = hotel.id || '';
-
-    var onclick = isClickable && hotelId ? 'onclick="window.location.href=\'hotel-detail.html?hotelId=' + hotelId + '&checkin=' + checkin + '&checkout=' + checkout + '&adults=2\'"' : '';
-
-    html += '<div class="hotel-card" ' + onclick + ' style="' + (isClickable && hotelId ? 'cursor:pointer;' : '') + '">';
-    html += '<div class="photo"><img src="' + (hotel.main_photo || 'https://picsum.photos/seed/' + hotelId + '/500/380') + '" alt="' + (hotel.name || 'Hôtel') + '" loading="lazy"></div>';
-    html += '<div class="body"><div class="stars">' + starHtml + '</div>';
-    html += '<h3>' + (hotel.name || 'Hôtel sans nom') + '</h3>';
-    html += '<div class="location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg> ' + (hotel.address || hotel.city || 'Adresse non disponible') + '</div>';
-    html += '<div class="card-bottom"><div class="score-pill"><div class="score-num">' + (rating > 0 ? rating.toFixed(1) : 'N/A') + '</div><div class="score-text">' + ratingText + '<b>' + reviewCount + ' avis</b></div></div>';
-    html += '<div class="price"><div class="amount">$' + pricePerNight + ' <span class="per">/ nuit</span></div>';
-    html += '<div class="note">Total $' + totalPrice + ' pour ' + nights + ' nuit' + (nights > 1 ? 's' : '') + '</div></div></div></div></div>';
-  }
-
-  container.innerHTML = html || '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-soft);"><p>Aucun hôtel disponible.</p></div>';
-}
-
-// ============================================
-// 9. CHARGEMENT D'UNE COLLECTION
-// ============================================
-async function loadCollectionByName(collection) {
-    console.log(`📦 Chargement de la collection: ${collection.title}`);
-    var checkin = getDefaultCheckin();
-    var checkout = getDefaultCheckout();
-    var adults = 2;
-    var allHotels = [];
-
-    for (var i = 0; i < collection.hotelNames.length; i++) {
-        var hotelName = collection.hotelNames[i];
-        console.log(`🔍 Recherche de l'hôtel: "${hotelName}"`);
-        
-        try {
-            var result = await searchHotels({
-                checkin: checkin,
-                checkout: checkout,
-                adults: adults,
-                aiSearch: hotelName,
-                environment: 'production',
-                limit: 3
-            });
-
-            if (result.success && result.hotels && result.hotels.length > 0) {
-                var matchedHotel = null;
-                var bestMatchScore = 0;
-                
-                for (var h = 0; h < result.hotels.length; h++) {
-                    var hotel = result.hotels[h];
-                    var score = 0;
-                    var nameLower = hotel.name.toLowerCase();
-                    var searchLower = hotelName.toLowerCase();
-                    
-                    if (nameLower === searchLower) {
-                        score = 100;
-                    } else if (nameLower.includes(searchLower) || searchLower.includes(nameLower)) {
-                        score = 50;
-                    } else {
-                        var words1 = nameLower.split(' ');
-                        var words2 = searchLower.split(' ');
-                        var commonWords = words1.filter(function(w) { 
-                            return w.length > 2 && words2.indexOf(w) !== -1; 
-                        });
-                        score = commonWords.length * 10;
-                    }
-                    
-                    if (score > bestMatchScore) {
-                        bestMatchScore = score;
-                        matchedHotel = hotel;
-                    }
-                }
-                
-                if (matchedHotel && matchedHotel.id) {
-                    console.log(`✅ Hôtel trouvé: "${matchedHotel.name}" (ID: ${matchedHotel.id})`);
-                    allHotels.push(matchedHotel);
-                } else {
-                    console.warn(`⚠️ Aucun ID trouvé pour: "${hotelName}"`);
-                }
-            } else {
-                console.warn(`⚠️ Aucun résultat pour: "${hotelName}"`);
-            }
-        } catch (error) {
-            console.warn(`⚠️ Erreur pour "${hotelName}":`, error.message);
-        }
-        
-        if (i < collection.hotelNames.length - 1) {
-            await new Promise(r => setTimeout(r, 200));
-        }
-    }
-
-    console.log(`📊 Collection "${collection.title}": ${allHotels.length} hôtels trouvés sur ${collection.hotelNames.length}`);
-    
-    return {
-        collection: collection,
-        hotels: allHotels,
-        total: allHotels.length,
-        expected: collection.hotelNames.length
-    };
-}
-
-// ============================================
-// 10. AFFICHAGE DES COLLECTIONS
-// ============================================
-function displayCollections(collectionResults) {
-    var container = document.getElementById('collectionsContainer');
+function displayHotelsScroll(containerId, hotelsData, title) {
+    var container = document.getElementById(containerId);
     if (!container) return;
-
-    var html = '';
-    
-    for (var i = 0; i < collectionResults.length; i++) {
-        var result = collectionResults[i];
-        var collection = result.collection;
-        var hotels = result.hotels;
-        var found = result.total;
-        var expected = result.expected;
-        
-        html += `
-            <div class="collection-card" onclick="toggleCollection('${collection.id}')">
-                <img src="${collection.image}" alt="${collection.title}">
-                <div class="info">
-                    <div class="top">
-                        <h4>${collection.title}</h4>
-                        <div class="collection-arrow">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                <path d="M7 17L17 7M9 7h8v8"/>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="count">${found}/${expected} propriétés</div>
-                    <div style="font-size:11px;opacity:0.7;margin-top:4px;">
-                        ${hotels.slice(0, 2).map(function(h) { return h.name; }).join(' • ')}
-                        ${found > 2 ? ` • +${found - 2} autres` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    container.innerHTML = html;
-}
-
-// ============================================
-// 11. AFFICHAGE DES HÔTELS D'UNE COLLECTION - CORRIGÉ
-// ============================================
-function displayCollectionHotels(collectionId, hotels) {
-    var container = document.getElementById('collectionHotelsContainer');
-    if (!container) return;
-
-    if (!hotels || hotels.length === 0) {
-        container.innerHTML = `
-            <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-soft);">
-                <h3>Aucun hôtel trouvé</h3>
-                <p>Les hôtels de cette collection n'ont pas pu être chargés.</p>
-            </div>
-        `;
+    container.innerHTML = '';
+    if (!hotelsData || hotelsData.success === false) {
+        container.innerHTML = '<div class="error-state">Impossible de charger les hôtels' + (title ? ' pour ' + title : '') + ' pour le moment.</div>';
         return;
     }
-
+    if (!hotelsData.hotels || hotelsData.hotels.length === 0) {
+        container.innerHTML = '<div class="empty-state">Aucun hôtel trouvé' + (title ? ' pour ' + title : '') + '.</div>';
+        return;
+    }
+    var hotels = hotelsData.hotels.filter(function (h) { return h.minPrice && h.minPrice > 0; }).slice(0, 6);
+    if (hotels.length === 0) {
+        container.innerHTML = '<div class="empty-state">Aucune offre disponible' + (title ? ' pour ' + title : '') + ' actuellement.</div>';
+        return;
+    }
     var checkin = getDefaultCheckin();
     var checkout = getDefaultCheckout();
     var nights = getNights(checkin, checkout);
-    var html = '<div class="collection-hotels-grid">';
-    
-    for (var i = 0; i < hotels.length; i++) {
-        var hotel = hotels[i];
-        
-        // ✅ ÉTOILES - Défaut à 3 si 0
+    hotels.forEach(function (hotel) {
         var starRating = hotel.starRating || 3;
-        var starHtml = '';
         var fullStars = Math.min(Math.round(starRating), 5);
-        for (var s = 0; s < fullStars; s++) {
-            starHtml += '★';
-        }
-        for (var s = fullStars; s < 5; s++) {
-            starHtml += '☆';
-        }
-
+        var starHtml = '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
         var pricePerNight = Math.round(hotel.minPrice / nights);
-        var totalPrice = Math.round(hotel.minPrice);
-        
         var rating = hotel.rating || 0;
         var ratingText = rating >= 8 ? 'Excellent' : rating >= 7 ? 'Très bien' : 'Bien';
         var reviewCount = hotel.reviewCount || 0;
         var hotelId = hotel.id || '';
-
-        html += `
-            <div class="hotel-card" onclick="window.location.href='hotel-detail.html?hotelId=${hotelId}&checkin=${checkin}&checkout=${checkout}&adults=2'">
-                <div class="photo">
-                    <img src="${hotel.main_photo || 'https://picsum.photos/seed/' + hotelId + '/500/380'}" alt="${hotel.name || 'Hôtel'}">
-                    <span class="badge-collection">Collection</span>
-                </div>
-                <div class="body">
-                    <div class="stars">${starHtml}</div>
-                    <h3>${hotel.name || 'Hôtel sans nom'}</h3>
-                    <div class="location">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/>
-                            <circle cx="12" cy="9" r="2.4"/>
-                        </svg>
-                        ${hotel.address || hotel.city || 'Adresse non disponible'}
-                    </div>
-                    <div class="card-bottom">
-                        <div class="score-pill">
-                            <div class="score-num">${rating > 0 ? rating.toFixed(1) : 'N/A'}</div>
-                            <div class="score-text">${ratingText}<b>${reviewCount} avis</b></div>
-                        </div>
-                        <div class="price">
-                            <div class="amount">$${pricePerNight} <span class="per">/ nuit</span></div>
-                            <div class="note">Total $${totalPrice} pour ${nights} nuit${nights > 1 ? 's' : ''}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    html += '</div>';
-
-    container.innerHTML = html;
-}
-
-// ============================================
-// 12. TOGGLE COLLECTION - CORRIGÉ
-// ============================================
-function toggleCollection(collectionId) {
-    var container = document.getElementById('collectionHotelsContainer');
-    if (!container) return;
-
-    if (container.style.display !== 'none' && container.dataset.collection === collectionId) {
-        container.style.display = 'none';
-        container.dataset.collection = '';
-        return;
-    }
-
-    container.style.display = 'block';
-    container.dataset.collection = collectionId;
-    
-    var data = collectionData[collectionId];
-    if (data && data.hotels && data.hotels.length > 0) {
-        displayCollectionHotels(collectionId, data.hotels);
-    } else {
-        container.innerHTML = `
-            <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-soft);">
-                <h3>⏳ Chargement des hôtels...</h3>
-                <p>Cette opération peut prendre quelques secondes</p>
-            </div>
-        `;
-        var collection = COLLECTIONS.find(function(c) { return c.id === collectionId; });
-        if (collection) {
-            loadCollectionByName(collection).then(function(result) {
-                collectionData[collectionId] = result;
-                displayCollectionHotels(collectionId, result.hotels);
-            });
-        }
-    }
-}
-
-// ============================================
-// 13. CHARGEMENT DE TOUTES LES COLLECTIONS
-// ============================================
-async function loadAllCollections() {
-    console.log('📦 Chargement de toutes les collections...');
-    var collectionResults = [];
-    
-    for (var i = 0; i < COLLECTIONS.length; i++) {
-        var collection = COLLECTIONS[i];
-        var result = await loadCollectionByName(collection);
-        collectionResults.push(result);
-        collectionData[collection.id] = result;
-    }
-    
-    displayCollections(collectionResults);
-    console.log('✅ Toutes les collections chargées');
-}
-
-// ============================================
-// 14. DÉFILEMENT DES COLLECTIONS
-// ============================================
-function scrollCollections(direction) {
-    var container = document.getElementById('collectionsContainer');
-    if (!container) return;
-    
-    var scrollAmount = 300;
-    var targetScroll = container.scrollLeft + (direction === 'right' ? scrollAmount : -scrollAmount);
-    
-    container.scrollTo({
-        left: targetScroll,
-        behavior: 'smooth'
+        var div = document.createElement('div');
+        div.className = 'hotel-card-scroll';
+        div.tabIndex = 0;
+        div.setAttribute('role', 'link');
+        div.setAttribute('aria-label', (hotel.name || 'Hôtel') + ', à partir de ' + pricePerNight + ' dollars par nuit');
+        var goTo = function () {
+            if (hotelId) window.location.href = 'hotel-detail.html?hotelId=' + encodeURIComponent(hotelId) + '&checkin=' + checkin + '&checkout=' + checkout + '&adults=2';
+        };
+        div.addEventListener('click', goTo);
+        div.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goTo(); } });
+        var img = document.createElement('img');
+        img.loading = 'lazy';
+        img.alt = hotel.name || 'Hôtel';
+        img.src = hotel.main_photo || ('https://picsum.photos/seed/' + encodeURIComponent(hotelId || Math.random()) + '/500/380');
+        var photo = document.createElement('div'); photo.className = 'photo'; photo.appendChild(img);
+        var body = document.createElement('div'); body.className = 'body';
+        body.innerHTML =
+            '<div class="stars">' + starHtml + '</div>' +
+            '<h3></h3>' +
+            '<div class="location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg><span></span></div>' +
+            '<div class="card-bottom"><div class="score-pill"><div class="score-num">' + (rating > 0 ? rating.toFixed(1) : 'N/A') + '</div><div class="score-text">' + ratingText + '<b>' + reviewCount + ' avis</b></div></div><div class="price"><div class="amount">' + (hotel.minPrice > 0 ? '$' + pricePerNight : '—') + '</div><div class="per">/ nuit</div></div></div>';
+        body.querySelector('h3').textContent = hotel.name || 'Hôtel sans nom';
+        body.querySelector('.location span').textContent = hotel.address || hotel.city || 'Adresse non disponible';
+        div.appendChild(photo);
+        div.appendChild(body);
+        container.appendChild(div);
     });
 }
 
 // ============================================
-// 15. CHARGEMENT DES RECOMMANDATIONS - CORRIGÉ AVEC SQUELETTES
+// AFFICHAGE — COLLECTIONS
 // ============================================
-async function loadRecommendations() {
-    console.log('🌟 Chargement des recommandations...');
-    var checkin = getDefaultCheckin();
-    var checkout = getDefaultCheckout();
-    var adults = 2;
+function displayCollections(collectionResults) {
+    var container = document.getElementById('collectionsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    collectionResults.forEach(function (result) {
+        var collection = result.collection, hotels = result.hotels, found = result.total, expected = result.expected;
+        var div = document.createElement('div');
+        div.className = 'collection-card';
+        div.tabIndex = 0;
+        div.setAttribute('role', 'link');
+        div.setAttribute('aria-label', collection.title);
+        var goTo = function () { window.location.href = 'collection.html?id=' + encodeURIComponent(collection.id); };
+        div.addEventListener('click', goTo);
+        div.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goTo(); } });
+        var preview = hotels.slice(0, 2).map(function (h) { return h.name; }).join(' • ') + (found > 2 ? ' • +' + (found - 2) + ' autres' : '');
+        div.innerHTML =
+            '<img src="' + collection.image + '" alt="" loading="lazy">' +
+            '<div class="info"><div class="top"><h4></h4><div class="collection-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17L17 7M9 7h8v8"/></svg></div></div>' +
+            '<div class="count">' + found + '/' + expected + ' propriétés</div>' +
+            '<div style="font-size:11px;opacity:.75;margin-top:4px;"></div></div>';
+        div.querySelector('h4').textContent = collection.title;
+        div.querySelector('.info > div:last-child').textContent = preview;
+        container.appendChild(div);
+    });
+}
 
-    var container = document.getElementById('recommendedHotels');
-    if (container) {
-        // ✅ Afficher les squelettes au lieu d'un simple message
-        container.innerHTML = `
-            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-        `;
-    }
-
-    for (var i = 0; i < RECOMMENDED_CITIES.length; i++) {
-        var city = RECOMMENDED_CITIES[i];
-        console.log(`📍 Chargement pour ${city.name}...`);
-        
-        try {
-            var result = await searchHotels({
-                checkin: checkin,
-                checkout: checkout,
-                adults: adults,
-                placeId: city.placeId,
-                environment: 'production',
-                limit: 5
-            });
-
-            if (result.success && result.hotels && result.hotels.length > 0) {
-                console.log(`✅ ${city.name}: ${result.hotels.length} hôtels`);
-                if (i === 0) {
-                    displayHotels('recommendedHotels', result, true, city.name);
-                }
+// ============================================
+// CHARGEMENT — COLLECTIONS (requêtes limitées en parallèle)
+// ============================================
+async function loadCollectionByName(collection) {
+    var checkin = getDefaultCheckin(), checkout = getDefaultCheckout(), adults = 2;
+    var matches = await mapWithConcurrency(collection.hotelNames, 4, async function (hotelName) {
+        var result = await searchHotels({ checkin: checkin, checkout: checkout, adults: adults, aiSearch: hotelName, environment: 'production', limit: 3 });
+        if (!result.success || !result.hotels || result.hotels.length === 0) return null;
+        var matchedHotel = null, bestMatchScore = 0;
+        result.hotels.forEach(function (hotel) {
+            var nameLower = (hotel.name || '').toLowerCase();
+            var searchLower = hotelName.toLowerCase();
+            var score = 0;
+            if (nameLower === searchLower) score = 100;
+            else if (nameLower.includes(searchLower) || searchLower.includes(nameLower)) score = 50;
+            else {
+                var words2 = searchLower.split(' ');
+                var commonWords = nameLower.split(' ').filter(function (w) { return w.length > 2 && words2.indexOf(w) !== -1; });
+                score = commonWords.length * 10;
             }
-        } catch (error) {
-            console.warn(`⚠️ Erreur pour ${city.name}:`, error.message);
-        }
+            if (score > bestMatchScore) { bestMatchScore = score; matchedHotel = hotel; }
+        });
+        return matchedHotel && matchedHotel.id ? matchedHotel : null;
+    });
+    var allHotels = matches.filter(Boolean);
+    return { collection: collection, hotels: allHotels, total: allHotels.length, expected: collection.hotelNames.length };
+}
+
+async function loadAllCollections() {
+    var container = document.getElementById('collectionsContainer');
+    if (container) {
+        container.innerHTML = COLLECTIONS.map(function () { return '<div class="skeleton-collection"><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w40"></div></div>'; }).join('');
+    }
+    try {
+        var collectionResults = await mapWithConcurrency(COLLECTIONS, 2, loadCollectionByName);
+        displayCollections(collectionResults.filter(Boolean));
+    } catch (error) {
+        console.error('Erreur chargement collections:', error);
+        if (container) container.innerHTML = '<div class="error-state">Impossible de charger les collections pour le moment.</div>';
     }
 }
 
 // ============================================
-// 16. CHARGEMENT DES HÔTELS À PROXIMITÉ - CORRIGÉ AVEC SQUELETTES
+// CHARGEMENT — RECOMMANDATIONS (une seule ville affichée, avec repli)
+// ============================================
+async function loadRecommendations() {
+    var checkin = getDefaultCheckin(), checkout = getDefaultCheckout(), adults = 2;
+    var container = document.getElementById('recommendedHotels');
+    if (container) {
+        container.innerHTML = Array.from({ length: 3 }).map(function () {
+            return '<div class="skeleton-scroll"><div class="skeleton-photo skeleton"></div><div class="body"><div class="skeleton-line skeleton w90"></div><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w50"></div><div class="skeleton-line skeleton w40"></div></div></div>';
+        }).join('');
+    }
+    for (var i = 0; i < RECOMMENDED_CITIES.length; i++) {
+        var city = RECOMMENDED_CITIES[i];
+        try {
+            var result = await searchHotels({ checkin: checkin, checkout: checkout, adults: adults, placeId: city.placeId, environment: 'production', limit: 6 });
+            if (result.success && result.hotels && result.hotels.length > 0) {
+                displayHotelsScroll('recommendedHotels', result, city.name);
+                return;
+            }
+        } catch (error) { /* essaye la ville suivante */ }
+    }
+    displayHotelsScroll('recommendedHotels', { success: false }, null);
+}
+
+// ============================================
+// CHARGEMENT — HÔTELS À PROXIMITÉ
 // ============================================
 async function loadNearbyHotels() {
-    console.log('📍 Chargement des hôtels à proximité...');
-    var checkin = getDefaultCheckin();
-    var checkout = getDefaultCheckout();
-    var adults = 2;
-    
-    // ✅ Afficher les squelettes
+    var checkin = getDefaultCheckin(), checkout = getDefaultCheckout(), adults = 2;
     var container = document.getElementById('nearbyHotels');
     if (container) {
-        container.innerHTML = `
-            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-        `;
+        container.innerHTML = Array.from({ length: 3 }).map(function () {
+            return '<div class="skeleton-scroll"><div class="skeleton-photo skeleton"></div><div class="body"><div class="skeleton-line skeleton w90"></div><div class="skeleton-line skeleton w70"></div><div class="skeleton-line skeleton w50"></div><div class="skeleton-line skeleton w40"></div></div></div>';
+        }).join('');
     }
-    
     var userLocation = await getUserLocation();
     var city = userLocation ? userLocation.city : 'Kinshasa';
     var countryCode = userLocation ? userLocation.countryCode : 'CD';
-    
-    console.log(`📍 Localisation détectée: ${city}, ${countryCode}`);
-    
-    try {
-        var result = await searchHotels({
-            checkin: checkin,
-            checkout: checkout,
-            adults: adults,
-            aiSearch: city + ', ' + countryCode,
-            environment: 'production',
-            limit: 6
-        });
-
-        if (result.success && result.hotels && result.hotels.length > 0) {
-            console.log(`✅ ${result.hotels.length} hôtels à proximité trouvés`);
-            displayHotels('nearbyHotels', result, true, city);
-        } else {
-            console.log('🔄 Fallback: recherche par pays');
-            var fallbackResult = await searchHotels({
-                checkin: checkin,
-                checkout: checkout,
-                adults: adults,
-                aiSearch: countryCode,
-                environment: 'production',
-                limit: 6
-            });
-            
-            if (fallbackResult.success && fallbackResult.hotels && fallbackResult.hotels.length > 0) {
-                displayHotels('nearbyHotels', fallbackResult, true, countryCode);
-            } else {
-                console.log('🔄 Dernier fallback: Kinshasa');
-                var finalResult = await searchHotels({
-                    checkin: checkin,
-                    checkout: checkout,
-                    adults: adults,
-                    aiSearch: 'Kinshasa, CD',
-                    environment: 'production',
-                    limit: 6
-                });
-                if (finalResult.success && finalResult.hotels) {
-                    displayHotels('nearbyHotels', finalResult, true, 'Kinshasa');
-                }
-            }
-        }
-    } catch (error) {
-        console.error('❌ Erreur chargement hôtels à proximité:', error);
+    var attempts = [city + ', ' + countryCode, countryCode, 'Kinshasa, CD'];
+    for (var i = 0; i < attempts.length; i++) {
         try {
-            var fallbackResult = await searchHotels({
-                checkin: checkin,
-                checkout: checkout,
-                adults: adults,
-                aiSearch: 'Kinshasa, CD',
-                environment: 'production',
-                limit: 6
-            });
-            if (fallbackResult.success && fallbackResult.hotels) {
-                displayHotels('nearbyHotels', fallbackResult, true, 'Kinshasa');
+            var result = await searchHotels({ checkin: checkin, checkout: checkout, adults: adults, aiSearch: attempts[i], environment: 'production', limit: 6 });
+            if (result.success && result.hotels && result.hotels.length > 0) {
+                displayHotelsScroll('nearbyHotels', result, i === 0 ? city : null);
+                return;
             }
-        } catch (e) {
-            console.error('❌ Fallback échoué:', e);
-        }
+        } catch (error) { /* essaye le repli suivant */ }
     }
+    displayHotelsScroll('nearbyHotels', { success: false }, null);
 }
 
 // ============================================
-// 17. INITIALISATION
+// INITIALISATION UI
 // ============================================
-document.addEventListener('DOMContentLoaded', function() {
-  var today = new Date();
-  var tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  var plus3 = new Date(tomorrow);
-  plus3.setDate(tomorrow.getDate() + 3);
-  var plus7 = new Date(tomorrow);
-  plus7.setDate(tomorrow.getDate() + 7);
+document.addEventListener('DOMContentLoaded', function () {
+    var tomorrow = addDays(new Date(), 1);
 
-  var formatDate = function(d) { return d.toISOString().slice(0, 10); };
+    var commonConfig = {
+        dateFormat: 'Y-m-d', locale: 'fr', altInput: true, altFormat: 'd M Y',
+        minDate: formatDate(tomorrow), animate: true, monthSelectorType: 'dropdown'
+    };
 
-  var commonConfig = {
-    dateFormat: 'Y-m-d',
-    locale: 'fr',
-    altInput: true,
-    altFormat: 'd M Y',
-    minDate: formatDate(tomorrow),
-    animate: true,
-    monthSelectorType: 'dropdown',
-  };
-
-  var hotelCheckin = document.getElementById('hotelCheckin');
-  var hotelCheckout = document.getElementById('hotelCheckout');
-
-  if (hotelCheckin && hotelCheckout) {
-    hotelCheckin.value = formatDate(tomorrow);
-    hotelCheckout.value = formatDate(plus3);
-
-    var checkinPicker = flatpickr(hotelCheckin, Object.assign({}, commonConfig, {
-      defaultDate: formatDate(tomorrow),
-      onChange: function(selectedDates, dateStr) {
-        checkoutPicker.set('minDate', dateStr);
-        updateNightsNoteFlatpickr(dateStr, hotelCheckout.value);
-      }
-    }));
-
-    var checkoutPicker = flatpickr(hotelCheckout, Object.assign({}, commonConfig, {
-      defaultDate: formatDate(plus3),
-      minDate: formatDate(tomorrow),
-      onChange: function(selectedDates, dateStr) {
-        updateNightsNoteFlatpickr(hotelCheckin.value, dateStr);
-      }
-    }));
-
-    function updateNightsNoteFlatpickr(start, end) {
-      if (start && end) {
-        var nights = Math.round((new Date(end) - new Date(start)) / 86400000);
-        var note = document.querySelector('[data-panel="hotel"] .nights-note');
-        if (note) {
-          note.textContent = nights > 0 ? nights + ' nuit' + (nights > 1 ? 's' : '') : '';
-        }
-      }
+    // --- Date-range picker générique (relie deux champs, empêche fin < début) ---
+    function setupDateRange(startId, endId, startOffset, endOffset) {
+        var startEl = document.getElementById(startId), endEl = document.getElementById(endId);
+        if (!startEl || !endEl) return;
+        var startDefault = formatDate(addDays(new Date(), startOffset));
+        var endDefault = formatDate(addDays(new Date(), endOffset));
+        startEl.value = startDefault; endEl.value = endDefault;
+        var endPicker = flatpickr(endEl, Object.assign({}, commonConfig, { defaultDate: endDefault, minDate: startDefault }));
+        var startPicker = flatpickr(startEl, Object.assign({}, commonConfig, {
+            defaultDate: startDefault,
+            onChange: function (dates, dateStr) { endPicker.set('minDate', dateStr); }
+        }));
+        return { startPicker: startPicker, endPicker: endPicker };
     }
-  }
 
-  var flightDeparture = document.getElementById('flightDeparture');
-  var flightReturn = document.getElementById('flightReturn');
+    setupDateRange('hotelCheckin', 'hotelCheckout', 1, 4);
+    setupDateRange('flightDeparture', 'flightReturn', 1, 8);
+    setupDateRange('insStart', 'insEnd', 1, 15);
+    setupDateRange('pkgDeparture', 'pkgReturn', 1, 8);
 
-  if (flightDeparture) {
-    flatpickr(flightDeparture, Object.assign({}, commonConfig, {
-      defaultDate: formatDate(tomorrow),
-      onChange: function(selectedDates, dateStr) {
-        if (flightReturn) {
-          var retPicker = document.getElementById('flightReturn')._flatpickr;
-          if (retPicker) {
-            retPicker.set('minDate', dateStr);
-          }
-        }
-      }
-    }));
-  }
+    var expDate = document.getElementById('expDate');
+    if (expDate) flatpickr(expDate, Object.assign({}, commonConfig, { defaultDate: formatDate(addDays(new Date(), 7)) }));
 
-  if (flightReturn) {
-    flatpickr(flightReturn, Object.assign({}, commonConfig, {
-      defaultDate: formatDate(plus7),
-      minDate: formatDate(tomorrow),
-    }));
-  }
-
-  document.querySelectorAll('.flatpickr-input:not(#hotelCheckin):not(#hotelCheckout):not(#flightDeparture):not(#flightReturn)').forEach(function(el) {
-    flatpickr(el, Object.assign({}, commonConfig, {
-      defaultDate: formatDate(tomorrow),
-    }));
-  });
-
-  // ============================================
-  // 18. AUTOCOMPLÉTION
-  // ============================================
-  document.querySelectorAll('.shared-dest').forEach(function(input) {
-    var debounceTimer;
-    input.addEventListener('input', function(e) {
-      clearTimeout(debounceTimer);
-      var query = e.target.value.trim();
-      
-      if (query.length < 2) return;
-      
-      debounceTimer = setTimeout(function() {
-        searchPlaces(query).then(function(places) {
-          var dropdown = input.closest('.field')?.querySelector('.suggest-dropdown');
-          if (dropdown && places.length > 0) {
-            dropdown.innerHTML = '<div class="sd-label">Suggestions</div>' +
-              places.slice(0, 5).map(function(p) {
-                var displayText = p.name + (p.address ? ', ' + p.address : '');
-                return '<div class="sd-item" data-place-id="' + p.placeId + '" data-value="' + displayText + '">' +
-                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>' +
-                  displayText +
-                '</div>';
-              }).join('');
-            dropdown.classList.add('open');
-            
-            dropdown.querySelectorAll('.sd-item').forEach(function(item) {
-              item.addEventListener('click', function() {
-                input.value = item.dataset.value;
-                input.dataset.placeId = item.dataset.placeId;
-                dropdown.classList.remove('open');
-              });
-            });
-          }
+    var now = new Date(); now.setMinutes(0);
+    var carPickupDate = document.getElementById('carPickupDate'), carDropoffDate = document.getElementById('carDropoffDate');
+    if (carPickupDate && carDropoffDate) {
+        function toLocalInput(d) { var off = d.getTimezoneOffset(); var local = new Date(d.getTime() - off * 60000); return local.toISOString().slice(0, 16); }
+        carPickupDate.min = toLocalInput(tomorrow);
+        carPickupDate.value = toLocalInput(tomorrow);
+        carDropoffDate.min = toLocalInput(addDays(tomorrow, 1));
+        carDropoffDate.value = toLocalInput(addDays(tomorrow, 4));
+        carPickupDate.addEventListener('change', function () {
+            var d = new Date(carPickupDate.value);
+            carDropoffDate.min = toLocalInput(addDays(d, 1));
         });
-      }, 300);
-    });
-  });
+    }
 
-  // ============================================
-  // 19. BOUTON DE RECHERCHE HÔTEL
-  // ============================================
-  var hotelSearchBtn = document.querySelector('[data-search="hotel"]');
-  if (hotelSearchBtn) {
-    hotelSearchBtn.addEventListener('click', function() {
-      var destination = document.getElementById('hotelDestination')?.value || '';
-      var checkin = document.getElementById('hotelCheckin')?.value || '';
-      var checkout = document.getElementById('hotelCheckout')?.value || '';
-      
-      if (!destination) {
-        alert('Veuillez entrer une destination.');
-        return;
-      }
-      
-      if (!checkin || !checkout) {
-        alert('Veuillez sélectionner des dates.');
-        return;
-      }
-      
-      var params = new URLSearchParams({
-        destination: destination,
-        checkin: checkin,
-        checkout: checkout,
-        adults: 2
-      });
-      
-      window.location.href = 'resultats-hebergement.html?' + params.toString();
+    // --- Onglets de service ---
+    document.querySelectorAll('#serviceTabs .service-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            document.querySelectorAll('#serviceTabs .service-tab').forEach(function (t) { t.setAttribute('aria-selected', 'false'); });
+            tab.setAttribute('aria-selected', 'true');
+            document.querySelectorAll('.search-panel').forEach(function (p) { p.hidden = true; });
+            var panel = document.querySelector('.search-panel[data-panel="' + tab.dataset.tab + '"]');
+            if (panel) {
+                panel.hidden = false;
+                panel.querySelectorAll('.shared-dest').forEach(function (el) { if (sharedState.dest) el.value = sharedState.dest; });
+            }
+        });
     });
-  }
 
-  // ============================================
-  // 20. CHARGER LES RECOMMANDATIONS, COLLECTIONS ET HÔTELS À PROXIMITÉ
-  // ============================================
-  setTimeout(function() {
+    // --- Autocomplétion destination (partagée entre panneaux) ---
+    var sharedState = { dest: '' };
+    var recentSearches = ['Kinshasa, Gombe', 'Lubumbashi, Karavia', 'Goma, bord du lac'];
+
+    function buildSuggestDropdown(container) {
+        container.innerHTML = '<div class="sd-label">Récents</div>' +
+            recentSearches.map(function (s) { return '<div class="sd-item" data-value="' + s + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>' + s + '</div>'; }).join('') +
+            '<div class="sd-item sd-geoloc" data-geoloc="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>Autour de moi</div>';
+    }
+    function closeAllDropdowns() { document.querySelectorAll('.suggest-dropdown.open').forEach(function (d) { d.classList.remove('open'); }); }
+    function closeAllPopovers() { document.querySelectorAll('.popover.open').forEach(function (p) { p.classList.remove('open'); }); }
+
+    document.querySelectorAll('.suggest-dropdown').forEach(function (dd) {
+        buildSuggestDropdown(dd);
+        var input = dd.closest('.field') ? dd.closest('.field').querySelector('input[type=text]') : null;
+        if (!input) return;
+        input.addEventListener('focus', function () { closeAllDropdowns(); closeAllPopovers(); buildSuggestDropdown(dd); dd.classList.add('open'); });
+        dd.addEventListener('click', function (e) {
+            var item = e.target.closest('.sd-item');
+            if (!item) return;
+            if (item.dataset.geoloc) {
+                input.value = 'Position actuelle';
+                getUserLocation().then(function (loc) { if (loc && loc.city) { input.value = loc.city + ', ' + (loc.countryCode || loc.country || ''); input.dispatchEvent(new Event('input')); } });
+            } else { input.value = item.dataset.value; }
+            input.dispatchEvent(new Event('input'));
+            dd.classList.remove('open');
+        });
+
+        var debounceTimer;
+        input.addEventListener('input', function (e) {
+            sharedState.dest = e.target.value;
+            clearTimeout(debounceTimer);
+            var query = e.target.value.trim();
+            if (query.length < 2) { buildSuggestDropdown(dd); return; }
+            debounceTimer = setTimeout(function () {
+                searchPlaces(query).then(function (places) {
+                    if (places.length === 0) { dd.innerHTML = '<div class="sd-empty">Aucun résultat</div>'; return; }
+                    dd.innerHTML = '<div class="sd-label">Suggestions</div>' + places.slice(0, 6).map(function (p) {
+                        var displayText = p.name + (p.address ? ', ' + p.address : '');
+                        return '<div class="sd-item" data-place-id="' + p.placeId + '" data-value="' + displayText.replace(/"/g, '&quot;') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>' + displayText + '</div>';
+                    }).join('');
+                    dd.classList.add('open');
+                });
+            }, 300);
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.field')) { closeAllDropdowns(); closeAllPopovers(); }
+    });
+
+    // --- Compteurs de voyageurs (chambres, passagers, participants...) ---
+    var counts = { rooms: 1, adults: 2, children: 0, fadults: 1, fchildren: 0, finfants: 0, padults: 1, pchildren: 0, pseniors: 0, pstudents: 0, itrav: 1, kadults: 2, kchildren: 0 };
+    var mins = { rooms: 1, adults: 1, fadults: 1, padults: 1, itrav: 1, kadults: 1 };
+
+    function renderChildAges(key, ageContainerSelector) {
+        var container = document.querySelector(ageContainerSelector);
+        if (!container) return;
+        var n = counts[key];
+        container.style.display = n > 0 ? 'flex' : 'none';
+        container.innerHTML = '';
+        for (var i = 0; i < n; i++) {
+            var sel = document.createElement('select');
+            sel.setAttribute('aria-label', "Âge de l'enfant " + (i + 1));
+            sel.innerHTML = '<option value="">Âge de l\'enfant ' + (i + 1) + '</option>' +
+                Array.from({ length: 18 }, function (_, a) { return '<option value="' + a + '">' + a + ' an' + (a > 1 ? 's' : '') + '</option>'; }).join('');
+            container.appendChild(sel);
+        }
+    }
+
+    function updateSummaries() {
+        var hotelBtn = document.querySelector('[data-panel=hotel] .guests-summary');
+        if (hotelBtn) hotelBtn.textContent = counts.rooms + ' chambre' + (counts.rooms > 1 ? 's' : '') + ', ' + counts.adults + ' adulte' + (counts.adults > 1 ? 's' : '') + (counts.children ? ', ' + counts.children + ' enfant' + (counts.children > 1 ? 's' : '') : '');
+        var flightBtn = document.querySelector('[data-panel=flight] .guests-summary');
+        var cabin = (document.querySelector('.cabin-select') || {}).value || 'Économie';
+        if (flightBtn) flightBtn.textContent = counts.fadults + ' adulte' + (counts.fadults > 1 ? 's' : '') + (counts.fchildren ? ', ' + counts.fchildren + ' enf.' : '') + (counts.finfants ? ', ' + counts.finfants + ' bébé' + (counts.finfants > 1 ? 's' : '') : '') + ', ' + cabin;
+        var expBtn = document.querySelector('[data-panel=experience] .guests-summary');
+        if (expBtn) {
+            var parts = [];
+            if (counts.padults) parts.push(counts.padults + ' adulte' + (counts.padults > 1 ? 's' : ''));
+            if (counts.pchildren) parts.push(counts.pchildren + ' enfant' + (counts.pchildren > 1 ? 's' : ''));
+            if (counts.pseniors) parts.push(counts.pseniors + ' senior' + (counts.pseniors > 1 ? 's' : ''));
+            if (counts.pstudents) parts.push(counts.pstudents + ' étudiant' + (counts.pstudents > 1 ? 's' : ''));
+            expBtn.textContent = parts.join(', ') || '0 participant';
+        }
+        var insBtn = document.querySelector('[data-panel=insurance] .guests-summary');
+        if (insBtn) insBtn.textContent = counts.itrav + ' voyageur' + (counts.itrav > 1 ? 's' : '');
+        var pkgBtn = document.querySelector('[data-panel=package] .guests-summary');
+        if (pkgBtn) pkgBtn.textContent = counts.kadults + ' adulte' + (counts.kadults > 1 ? 's' : '') + (counts.kchildren ? ', ' + counts.kchildren + ' enfant' + (counts.kchildren > 1 ? 's' : '') : '');
+    }
+
+    document.querySelectorAll('.step-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var key = btn.dataset.step, dir = parseInt(btn.dataset.dir, 10), min = mins[key] || 0;
+            counts[key] = Math.max(min, counts[key] + dir);
+            document.querySelectorAll('.step-count[data-count="' + key + '"]').forEach(function (s) { s.textContent = counts[key]; });
+            if (key === 'children') renderChildAges('children', '[data-ages="hotel"]');
+            updateSummaries();
+        });
+    });
+    var cabinSelect = document.querySelector('.cabin-select');
+    if (cabinSelect) cabinSelect.addEventListener('change', updateSummaries);
+    updateSummaries();
+
+    // --- Popovers voyageurs ---
+    document.querySelectorAll('.guests-summary').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var pop = btn.closest('.field').querySelector('.popover');
+            if (!pop) return;
+            var wasOpen = pop.classList.contains('open');
+            closeAllPopovers(); closeAllDropdowns();
+            if (!wasOpen) pop.classList.add('open');
+        });
+    });
+    document.querySelectorAll('[data-close-popover]').forEach(function (btn) {
+        btn.addEventListener('click', function () { closeAllPopovers(); });
+    });
+
+    // --- Interrupteurs (pills) : trajet, dates, couverture, package ---
+    document.querySelectorAll('.pill-toggle').forEach(function (group) {
+        group.querySelectorAll('.pill-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                group.querySelectorAll('.pill-btn').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+                btn.setAttribute('aria-pressed', 'true');
+                var toggle = group.dataset.toggle;
+                if (toggle === 'tripType') {
+                    var returnField = document.querySelector('[data-panel=flight] [data-role="return-date"]');
+                    if (returnField) returnField.style.display = btn.dataset.trip === 'oneway' ? 'none' : '';
+                } else if (toggle === 'dateMode') {
+                    var exactField = document.querySelector('[data-panel=experience] [data-role="exact-date"]');
+                    var flexField = document.querySelector('[data-panel=experience] [data-role="flexible-date"]');
+                    var exact = btn.dataset.mode === 'exact';
+                    if (exactField) exactField.style.display = exact ? '' : 'none';
+                    if (flexField) flexField.style.display = exact ? 'none' : '';
+                } else if (toggle === 'coverage') {
+                    var endField = document.querySelector('[data-panel=insurance] [data-role="ins-end"]');
+                    var startLabel = document.querySelector('[data-panel=insurance] [data-role="ins-start"] label');
+                    var annual = btn.dataset.cover === 'annual';
+                    if (endField) endField.style.display = annual ? 'none' : '';
+                    if (startLabel) startLabel.textContent = annual ? "Date d'effet" : 'Début';
+                } else if (toggle === 'packageType') {
+                    var originLabel = document.querySelector('[data-panel=package] [data-role="pkg-origin"] label');
+                    if (originLabel) originLabel.textContent = btn.dataset.package === 'flight-car' ? 'Ville de départ' : 'Origine';
+                }
+            });
+        });
+    });
+
+    // --- Case "restituer ailleurs" pour la voiture ---
+    var diffLocation = document.getElementById('diffLocation');
+    if (diffLocation) {
+        diffLocation.addEventListener('change', function () {
+            var dropoff = document.querySelector('[data-panel=car] [data-role="dropoff"]');
+            if (dropoff) dropoff.style.display = diffLocation.checked ? '' : 'none';
+        });
+    }
+
+    // --- Bouton de recherche unique par panneau ---
+    function requireValue(id, message) {
+        var el = document.getElementById(id);
+        var value = el ? el.value.trim() : '';
+        if (!value) { flagFieldError(el); showToast(message); }
+        return value;
+    }
+
+    document.querySelectorAll('[data-search]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var type = btn.dataset.search;
+            var params;
+            if (type === 'hotel') {
+                var destination = requireValue('hotelDestination', 'Veuillez indiquer une destination.');
+                if (!destination) return;
+                params = new URLSearchParams({ destination: destination, checkin: document.getElementById('hotelCheckin').value, checkout: document.getElementById('hotelCheckout').value, rooms: counts.rooms, adults: counts.adults, children: counts.children });
+                window.location.href = 'resultats-hebergement.html?' + params.toString();
+            } else if (type === 'flight') {
+                var origin = requireValue('flightOrigin', "Veuillez indiquer une ville d'origine.");
+                var dest = requireValue('flightDestination', 'Veuillez indiquer une destination.');
+                if (!origin || !dest) return;
+                var oneway = document.querySelector('[data-toggle=tripType] .pill-btn[aria-pressed=true]').dataset.trip === 'oneway';
+                params = new URLSearchParams({ origin: origin, destination: dest, departure: document.getElementById('flightDeparture').value, adults: counts.fadults, children: counts.fchildren, infants: counts.finfants });
+                if (!oneway) params.append('return', document.getElementById('flightReturn').value);
+                window.location.href = 'resultats-vols.html?' + params.toString();
+            } else if (type === 'car') {
+                var pickup = requireValue('carPickup', 'Veuillez indiquer un lieu de prise en charge.');
+                if (!pickup) return;
+                params = new URLSearchParams({ pickup: pickup, pickupDate: document.getElementById('carPickupDate').value, dropoffDate: document.getElementById('carDropoffDate').value });
+                if (diffLocation && diffLocation.checked) params.append('dropoff', document.getElementById('carDropoff').value || pickup);
+                window.location.href = 'resultats-voiture.html?' + params.toString();
+            } else if (type === 'experience') {
+                var expDest = requireValue('expDestination', 'Veuillez indiquer une destination.');
+                if (!expDest) return;
+                var flexible = document.querySelector('[data-toggle=dateMode] .pill-btn[aria-pressed=true]').dataset.mode === 'flexible';
+                params = new URLSearchParams({ destination: expDest, adults: counts.padults, children: counts.pchildren, seniors: counts.pseniors, students: counts.pstudents });
+                if (flexible) params.append('month', document.getElementById('expMonth').value); else params.append('date', document.getElementById('expDate').value);
+                window.location.href = 'resultats-experiences.html?' + params.toString();
+            } else if (type === 'insurance') {
+                var annual = document.querySelector('[data-toggle=coverage] .pill-btn[aria-pressed=true]').dataset.cover === 'annual';
+                params = new URLSearchParams({ residence: document.getElementById('insResidence').value, zone: document.getElementById('insZone').value, start: document.getElementById('insStart').value, travelers: counts.itrav, coverage: annual ? 'annual' : 'single' });
+                if (!annual) params.append('end', document.getElementById('insEnd').value);
+                window.location.href = 'resultats-assurance.html?' + params.toString();
+            } else if (type === 'package') {
+                var pkgDest = requireValue('pkgDestination', 'Veuillez indiquer une destination.');
+                if (!pkgDest) return;
+                var packageType = document.querySelector('[data-toggle=packageType] .pill-btn[aria-pressed=true]').dataset.package;
+                params = new URLSearchParams({ origin: document.getElementById('pkgOrigin').value, destination: pkgDest, departure: document.getElementById('pkgDeparture').value, return: document.getElementById('pkgReturn').value, adults: counts.kadults, children: counts.kchildren, type: packageType });
+                window.location.href = 'resultats-package.html?' + params.toString();
+            }
+        });
+    });
+
+    // --- Chargement des données (parallélisé, non bloquant) ---
     loadRecommendations();
-    setTimeout(function() {
-        loadAllCollections();
-    }, 2000);
     loadNearbyHotels();
-  }, 500);
-
-  // ============================================
-  // 21. UI - ONGLETS, POPOVERS, ETC.
-  // ============================================
-  var recentSearches = ['Kinshasa, Gombe', 'Lubumbashi, Karavia', 'Goma, bord du lac'];
-
-  function buildSuggestDropdown(container){
-    container.innerHTML = '<div class="sd-label">Récents</div>' +
-      recentSearches.map(function(s){ return '<div class="sd-item" data-value="' + s + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>' + s + '</div>'; }).join('') +
-      '<div class="sd-item sd-geoloc" data-geoloc="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>Autour de moi</div>';
-  }
-
-  document.querySelectorAll('.suggest-dropdown').forEach(function(dd){
-    buildSuggestDropdown(dd);
-    var input = dd.parentElement.querySelector('input[type=text]');
-    if(!input) return;
-    input.addEventListener('focus', function(){ closeAllDropdowns(); dd.classList.add('open'); });
-    dd.addEventListener('click', function(e){
-      var item = e.target.closest('.sd-item');
-      if(!item) return;
-      if(item.dataset.geoloc){ input.value = 'Position actuelle'; }
-      else { input.value = item.dataset.value; }
-      input.dispatchEvent(new Event('input'));
-      dd.classList.remove('open');
-    });
-  });
-
-  function closeAllDropdowns(){ document.querySelectorAll('.suggest-dropdown.open').forEach(function(d){ d.classList.remove('open'); }); }
-  document.addEventListener('click', function(e){
-    if(!e.target.closest('.field')){ closeAllDropdowns(); closeAllPopovers(); }
-  });
-
-  var sharedState = { dest:'', start:'', end:'' };
-  function syncSharedInputs(scope){
-    scope.querySelectorAll('.shared-dest').forEach(function(el){ if(sharedState.dest) el.value = sharedState.dest; });
-  }
-  document.addEventListener('input', function(e){
-    if(e.target.classList.contains('shared-dest')) sharedState.dest = e.target.value;
-  });
-
-  document.querySelectorAll('#serviceTabs .service-tab').forEach(function(tab){
-    tab.addEventListener('click', function(){
-      document.querySelectorAll('#serviceTabs .service-tab').forEach(function(t){ t.classList.remove('active'); });
-      tab.classList.add('active');
-      document.querySelectorAll('.search-panel').forEach(function(p){ p.hidden = true; });
-      var panel = document.querySelector('.search-panel[data-panel="' + tab.dataset.tab + '"]');
-      panel.hidden = false;
-      syncSharedInputs(panel);
-    });
-  });
-
-  function closeAllPopovers(){ document.querySelectorAll('.popover.open').forEach(function(p){ p.classList.remove('open'); }); }
-  document.querySelectorAll('.guests-summary').forEach(function(btn){
-    btn.addEventListener('click', function(e){
-      e.stopPropagation();
-      var pop = btn.parentElement.querySelector('.popover');
-      var wasOpen = pop.classList.contains('open');
-      closeAllPopovers(); closeAllDropdowns();
-      if(!wasOpen) pop.classList.add('open');
-    });
-  });
-  document.querySelectorAll('[data-close-popover]').forEach(function(btn){
-    btn.addEventListener('click', function(){ closeAllPopovers(); });
-  });
-
-  var counts = { rooms:1, adults:2, children:0, fadults:1, fchildren:0, finfants:0,
-                    padults:2, pchildren:0, pseniors:0, pstudents:0, itrav:1, kadults:2, kchildren:0 };
-  var mins = { rooms:1, adults:1, fadults:1, padults:1, itrav:1, kadults:1 };
-
-  function renderChildAges(key, ageContainerSelector){
-    var container = document.querySelector(ageContainerSelector);
-    if(!container) return;
-    var n = counts[key];
-    container.style.display = n > 0 ? 'flex' : 'none';
-    container.innerHTML = '';
-    for(var i=0;i<n;i++){
-      var sel = document.createElement('select');
-      sel.innerHTML = '<option value="">Âge de l\'enfant ' + (i+1) + '</option>' +
-        Array.from({length:18},function(_,a){ return '<option value="' + a + '">' + a + ' an' + (a>1?'s':'') + '</option>'; }).join('');
-      container.appendChild(sel);
-    }
-  }
-
-  document.querySelectorAll('.step-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var key = btn.dataset.step;
-      var dir = parseInt(btn.dataset.dir,10);
-      var min = mins[key] || 0;
-      counts[key] = Math.max(min, counts[key] + dir);
-      document.querySelectorAll('.step-count[data-count="' + key + '"]').forEach(function(s){ s.textContent = counts[key]; });
-      if(key === 'children') renderChildAges('children', '[data-ages="hotel"]');
-      if(key === 'itrav') renderChildAges('itrav', '[data-ages="insurance"]');
-      updateSummaries();
-    });
-  });
-
-  function updateSummaries(){
-    var hotelBtn = document.querySelector('[data-panel=hotel] .guests-summary');
-    if(hotelBtn) hotelBtn.textContent = counts.rooms + ' chambre' + (counts.rooms>1?'s':'') + ', ' + counts.adults + ' adulte' + (counts.adults>1?'s':'') + (counts.children? ', '+counts.children+' enfant'+(counts.children>1?'s':''):'');
-    var flightBtn = document.querySelector('[data-panel=flight] .guests-summary');
-    var cabin = document.querySelector('.cabin-select')?.value || 'Économie';
-    if(flightBtn) flightBtn.textContent = counts.fadults + ' adulte' + (counts.fadults>1?'s':'') + (counts.fchildren? ', '+counts.fchildren+' enf.':'') + (counts.finfants? ', '+counts.finfants+' bébé'+(counts.finfants>1?'s':''):'') + ', ' + cabin;
-    var expBtn = document.querySelector('[data-panel=experience] .guests-summary');
-    if(expBtn){
-      var parts = [];
-      if(counts.padults) parts.push(counts.padults+' adulte'+(counts.padults>1?'s':''));
-      if(counts.pchildren) parts.push(counts.pchildren+' enfant'+(counts.pchildren>1?'s':''));
-      if(counts.pseniors) parts.push(counts.pseniors+' senior'+(counts.pseniors>1?'s':''));
-      if(counts.pstudents) parts.push(counts.pstudents+' étudiant'+(counts.pstudents>1?'s':''));
-      expBtn.textContent = parts.join(', ') || '0 participant';
-    }
-    var insBtn = document.querySelector('[data-panel=insurance] .guests-summary');
-    if(insBtn) insBtn.textContent = counts.itrav + ' voyageur' + (counts.itrav>1?'s':'');
-    var pkgBtn = document.querySelector('[data-panel=package] .guests-summary');
-    if(pkgBtn) pkgBtn.textContent = counts.kadults + ' adulte' + (counts.kadults>1?'s':'') + (counts.kchildren? ', '+counts.kchildren+' enfant'+(counts.kchildren>1?'s':''):'');
-  }
-  document.querySelector('.cabin-select')?.addEventListener('change', updateSummaries);
-  updateSummaries();
-
-  document.querySelectorAll('input[name=tripType]').forEach(function(radio){
-    radio.addEventListener('change', function(){
-      var returnField = document.querySelector('[data-panel=flight] [data-role="return-date"]');
-      returnField.style.display = radio.value === 'oneway' ? 'none' : '';
-    });
-  });
-
-  var diffLocation = document.getElementById('diffLocation');
-  diffLocation?.addEventListener('change', function(){
-    document.querySelector('[data-panel=car] [data-role="dropoff"]').style.display = diffLocation.checked ? '' : 'none';
-  });
-
-  document.querySelectorAll('[data-panel=experience] [data-mode]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      document.querySelectorAll('[data-panel=experience] [data-mode]').forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      var exact = btn.dataset.mode === 'exact';
-      document.querySelector('[data-panel=experience] [data-role="exact-date"]').style.display = exact ? '' : 'none';
-      document.querySelector('[data-panel=experience] [data-role="flexible-date"]').style.display = exact ? 'none' : '';
-    });
-  });
-
-  document.querySelectorAll('[data-panel=insurance] [data-cover]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      document.querySelectorAll('[data-panel=insurance] [data-cover]').forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      var isAnnual = btn.dataset.cover === 'annual';
-      document.querySelector('[data-panel=insurance] [data-role="ins-end"]').style.display = isAnnual ? 'none' : '';
-      document.querySelector('[data-panel=insurance] [data-role="ins-start"] label').textContent = isAnnual ? "Date d'effet" : 'Début';
-    });
-  });
-
-  document.querySelectorAll('[data-panel=package] [data-package]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      document.querySelectorAll('[data-panel=package] [data-package]').forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      var label = document.querySelector('[data-panel=package] [data-role="pkg-origin"] label');
-      label.textContent = btn.dataset.package === 'flight-car' ? 'Ville de départ' : 'Origine';
-    });
-  });
+    loadAllCollections();
 });
 
 // ============================================
-// 22. OBSERVER POUR LES ANIMATIONS
+// ANIMATIONS AU SCROLL
 // ============================================
-var observer = new IntersectionObserver(function(entries){
-  entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('in'); });
-}, { threshold:0.12 });
-document.querySelectorAll('.reveal').forEach(function(el){ observer.observe(el); });
+var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { if (e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.12 });
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.reveal').forEach(function (el) { observer.observe(el); });
+});
 
-console.log('🚀 LuviaPlace v2 connecté au backend:', API_BASE_URL);
+console.log('LuviaPlace connecté au backend :', API_BASE_URL);
+})();
 </script>
 
 </body>

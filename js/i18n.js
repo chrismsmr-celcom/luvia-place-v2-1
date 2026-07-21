@@ -19,13 +19,27 @@ var translations = {
     'nav.favorites': 'Favoris',
     'nav.rewards': 'Programme Rewards',
     
-    // Langues (pour la modale)
-    'language.select': 'Choisissez votre langue',
+    // Langues
+    'language.select': 'Choisissez votre langue et devise',
+    'language.tab': 'Langue',
+    'currency.tab': 'Devise',
     'language.fr': 'Français',
     'language.en': 'English',
     'language.es': 'Español',
     'language.sw': 'Kiswahili',
     'language.pt': 'Português',
+    'language.it': 'Italiano',
+    'language.de': 'Deutsch',
+    'language.ar': 'العربية',
+    'language.zh': '中文',
+    'language.ja': '日本語',
+    'language.ru': 'Русский',
+    'language.nl': 'Nederlands',
+    
+    // Devises
+    'currency.africa': '🌍 Afrique',
+    'currency.international': '🌐 International',
+    'currency.apply': 'Appliquer',
     
     // Hero
     'hero.title': 'Votre voyage commence ici',
@@ -70,7 +84,7 @@ var translations = {
     'search.round_trip': 'Aller-retour',
     'search.one_way': 'Aller simple',
     
-    // Hôtels (labels et descriptions)
+    // Hôtels
     'hotel.rating': 'Note',
     'hotel.reviews': 'avis',
     'hotel.no_results': 'Aucun hôtel trouvé',
@@ -80,8 +94,6 @@ var translations = {
     'hotel.unavailable': 'Indisponible',
     'hotels.recommended': 'Hôtels recommandés',
     'hotels.nearby': 'Hôtels à proximité',
-    
-    // Scores et évaluations (traduits)
     'hotel.excellent': 'Excellent',
     'hotel.very_good': 'Très bien',
     'hotel.good': 'Bien',
@@ -109,6 +121,11 @@ var translations = {
     'payments.visa': 'Visa / Mastercard',
     'payments.mobile_money': 'Mobile Money',
     'payments.card': 'Carte bancaire',
+    
+    // Features
+    'best_offers.desc': 'Des tarifs compétitifs sur l\'hébergement, les vols et bien plus.',
+    'central_africa.desc': 'Une sélection pensée depuis Kinshasa, Lubumbashi et Goma.',
+    'support.desc': 'Notre équipe de support répond en français, avant et pendant le voyage.',
     
     // Détail hôtel
     'detail.overview': 'Vue d\'ensemble',
@@ -165,6 +182,7 @@ var translations = {
     'common.per_night': '/ nuit',
     'common.from': 'À partir de',
     'common.rewards': 'Programme Rewards',
+    'common.apply': 'Appliquer',
     'best_offers': 'Meilleures offres',
     'central_africa': 'Fait pour l\'Afrique centrale',
     'support': 'Toujours là pour aider'
@@ -187,12 +205,26 @@ var translations = {
     'nav.rewards': 'Rewards Program',
     
     // Langues
-    'language.select': 'Choose your language',
+    'language.select': 'Choose your language and currency',
+    'language.tab': 'Language',
+    'currency.tab': 'Currency',
     'language.fr': 'Français',
     'language.en': 'English',
     'language.es': 'Español',
     'language.sw': 'Kiswahili',
     'language.pt': 'Português',
+    'language.it': 'Italiano',
+    'language.de': 'Deutsch',
+    'language.ar': 'العربية',
+    'language.zh': '中文',
+    'language.ja': '日本語',
+    'language.ru': 'Русский',
+    'language.nl': 'Nederlands',
+    
+    // Devises
+    'currency.africa': '🌍 Africa',
+    'currency.international': '🌐 International',
+    'currency.apply': 'Apply',
     
     // Hero
     'hero.title': 'Your journey starts here',
@@ -247,8 +279,6 @@ var translations = {
     'hotel.unavailable': 'Unavailable',
     'hotels.recommended': 'Recommended Hotels',
     'hotels.nearby': 'Nearby Hotels',
-    
-    // Scores et évaluations (traduits)
     'hotel.excellent': 'Excellent',
     'hotel.very_good': 'Very good',
     'hotel.good': 'Good',
@@ -276,6 +306,11 @@ var translations = {
     'payments.visa': 'Visa / Mastercard',
     'payments.mobile_money': 'Mobile Money',
     'payments.card': 'Bank Card',
+    
+    // Features
+    'best_offers.desc': 'Competitive rates on accommodation, flights and more.',
+    'central_africa.desc': 'A selection curated from Kinshasa, Lubumbashi and Goma.',
+    'support.desc': 'Our support team responds in English, before and during your trip.',
     
     // Détail hôtel
     'detail.overview': 'Overview',
@@ -332,6 +367,7 @@ var translations = {
     'common.per_night': '/ night',
     'common.from': 'From',
     'common.rewards': 'Rewards Program',
+    'common.apply': 'Apply',
     'best_offers': 'Best offers',
     'central_africa': 'Made for Central Africa',
     'support': 'Always here to help'
@@ -354,12 +390,26 @@ var translations = {
     'nav.rewards': 'Programa de Recompensas',
     
     // Langues
-    'language.select': 'Elige tu idioma',
+    'language.select': 'Elige tu idioma y moneda',
+    'language.tab': 'Idioma',
+    'currency.tab': 'Moneda',
     'language.fr': 'Français',
     'language.en': 'English',
     'language.es': 'Español',
     'language.sw': 'Kiswahili',
     'language.pt': 'Português',
+    'language.it': 'Italiano',
+    'language.de': 'Deutsch',
+    'language.ar': 'العربية',
+    'language.zh': '中文',
+    'language.ja': '日本語',
+    'language.ru': 'Русский',
+    'language.nl': 'Nederlands',
+    
+    // Devises
+    'currency.africa': '🌍 África',
+    'currency.international': '🌐 Internacional',
+    'currency.apply': 'Aplicar',
     
     // Hero
     'hero.title': 'Tu viaje comienza aquí',
@@ -414,8 +464,6 @@ var translations = {
     'hotel.unavailable': 'No disponible',
     'hotels.recommended': 'Hoteles recomendados',
     'hotels.nearby': 'Hoteles cercanos',
-    
-    // Scores et évaluations (traduits)
     'hotel.excellent': 'Excelente',
     'hotel.very_good': 'Muy bueno',
     'hotel.good': 'Bueno',
@@ -443,6 +491,11 @@ var translations = {
     'payments.visa': 'Visa / Mastercard',
     'payments.mobile_money': 'Mobile Money',
     'payments.card': 'Tarjeta bancaria',
+    
+    // Features
+    'best_offers.desc': 'Tarifas competitivas en alojamiento, vuelos y más.',
+    'central_africa.desc': 'Una selección pensada desde Kinshasa, Lubumbashi y Goma.',
+    'support.desc': 'Nuestro equipo de soporte responde en español, antes y durante el viaje.',
     
     // Détail hôtel
     'detail.overview': 'Descripción general',
@@ -499,6 +552,7 @@ var translations = {
     'common.per_night': '/ noche',
     'common.from': 'Desde',
     'common.rewards': 'Programa de Recompensas',
+    'common.apply': 'Aplicar',
     'best_offers': 'Mejores ofertas',
     'central_africa': 'Hecho para África Central',
     'support': 'Siempre aquí para ayudar'
@@ -521,12 +575,26 @@ var translations = {
     'nav.rewards': 'Mpango wa Zawadi',
     
     // Langues
-    'language.select': 'Chagua lugha yako',
+    'language.select': 'Chagua lugha na sarafu yako',
+    'language.tab': 'Lugha',
+    'currency.tab': 'Sarafu',
     'language.fr': 'Français',
     'language.en': 'English',
     'language.es': 'Español',
     'language.sw': 'Kiswahili',
     'language.pt': 'Português',
+    'language.it': 'Italiano',
+    'language.de': 'Deutsch',
+    'language.ar': 'العربية',
+    'language.zh': '中文',
+    'language.ja': '日本語',
+    'language.ru': 'Русский',
+    'language.nl': 'Nederlands',
+    
+    // Devises
+    'currency.africa': '🌍 Afrika',
+    'currency.international': '🌐 Kimataifa',
+    'currency.apply': 'Weka',
     
     // Hero
     'hero.title': 'Safari yako inaanza hapa',
@@ -581,8 +649,6 @@ var translations = {
     'hotel.unavailable': 'Haipatikani',
     'hotels.recommended': 'Hoteli zilizopendekezwa',
     'hotels.nearby': 'Hoteli zilizo karibu',
-    
-    // Scores et évaluations (traduits)
     'hotel.excellent': 'Bora',
     'hotel.very_good': 'Nzuri sana',
     'hotel.good': 'Nzuri',
@@ -610,6 +676,11 @@ var translations = {
     'payments.visa': 'Visa / Mastercard',
     'payments.mobile_money': 'Mobile Money',
     'payments.card': 'Kadi ya benki',
+    
+    // Features
+    'best_offers.desc': 'Bei shindani kwa makazi, ndege na zaidi.',
+    'central_africa.desc': 'Uchaguzi uliofanywa kutoka Kinshasa, Lubumbashi na Goma.',
+    'support.desc': 'Timu yetu ya msaada inajibu kwa Kiswahili, kabla na wakati wa safari.',
     
     // Détail hôtel
     'detail.overview': 'Muhtasari',
@@ -666,6 +737,7 @@ var translations = {
     'common.per_night': '/ usiku',
     'common.from': 'Kuanzia',
     'common.rewards': 'Mpango wa Zawadi',
+    'common.apply': 'Weka',
     'best_offers': 'Ofa bora',
     'central_africa': 'Imetengenezwa kwa Afrika ya Kati',
     'support': 'Tuko hapa kusaidia'

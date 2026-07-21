@@ -318,123 +318,330 @@
   .flatpickr-month{ color:var(--ink) !important; }
   .flatpickr-weekday{ color:var(--ink-soft) !important; font-weight:600 !important; }
 /* Styles du header et de la modale */
-.lang-modal-overlay{
-  position:fixed;
-  top:0; left:0; right:0; bottom:0;
-  background:rgba(0,0,0,0.5);
-  backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
-  z-index:1000;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  animation:fadeIn 0.3s ease;
+/* ============================================
+   STYLES MODALE LANGUE + DEVISES
+   ============================================ */
+
+.lang-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
 }
 
-.lang-modal-overlay.open{ display:flex; }
+.lang-modal-overlay.open { display: flex; }
 
-.lang-modal{
-  background:#fff;
-  border-radius:16px;
-  padding:32px;
-  max-width:400px;
-  width:90%;
-  box-shadow:0 20px 50px rgba(16,24,40,0.16);
-  animation:slideUp 0.3s ease;
+.lang-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 560px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(16,24,40,0.16);
+  animation: slideUp 0.3s ease;
 }
 
-.lang-modal-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom:20px;
+.lang-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
 
-.lang-modal-header h3{
-  font-family:'Manrope', sans-serif;
-  font-weight:700;
-  font-size:18px;
-  color:#101828;
-  margin:0;
+.lang-modal-header h3 {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #101828;
+  margin: 0;
 }
 
-.lang-modal-close{
-  width:32px;
-  height:32px;
-  border-radius:50%;
-  background:#F7F9FC;
-  border:none;
-  font-size:20px;
-  color:#475467;
-  cursor:pointer;
-  transition:all 0.2s ease;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+.lang-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #F7F9FC;
+  border: none;
+  font-size: 20px;
+  color: #475467;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.lang-modal-close:hover{
-  background:#FEE4E2;
-  color:#D92D20;
+.lang-modal-close:hover {
+  background: #FEE4E2;
+  color: #D92D20;
 }
 
-.lang-modal-body{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
+/* Tabs */
+.lang-currency-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: #F7F9FC;
+  padding: 4px;
+  border-radius: 10px;
 }
 
-.lang-modal-btn{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding:12px 16px;
-  border-radius:8px;
-  border:1.5px solid #E7EAF0;
-  background:#fff;
-  cursor:pointer;
-  transition:all 0.2s ease;
-  font-size:15px;
-  font-weight:500;
-  color:#101828;
-  width:100%;
-  text-align:left;
+.lang-currency-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475467;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
 }
 
-.lang-modal-btn:hover{
-  border-color:#155EEF;
-  background:#E8F0FE;
+.lang-currency-tab.active {
+  background: #fff;
+  color: #155EEF;
+  box-shadow: 0 1px 3px rgba(16,24,40,0.06);
 }
 
-.lang-modal-btn.active{
-  border-color:#155EEF;
-  background:#E8F0FE;
+.lang-currency-tab:hover:not(.active) {
+  color: #101828;
+  background: rgba(255,255,255,0.5);
 }
 
-.lang-modal-btn .flag{ font-size:22px; }
-.lang-modal-btn .lang-name{ flex:1; }
-.lang-modal-btn .lang-check{
-  color:#155EEF;
-  font-weight:700;
-  font-size:16px;
-  display:none;
-}
-.lang-modal-btn.active .lang-check{ display:inline; }
-
-@keyframes fadeIn{
-  from{ opacity:0; }
-  to{ opacity:1; }
+.lang-currency-tab svg {
+  flex-shrink: 0;
 }
 
-@keyframes slideUp{
-  from{ opacity:0; transform:translateY(20px) scale(0.95); }
-  to{ opacity:1; transform:translateY(0) scale(1); }
+/* Panels */
+.lang-panel {
+  display: none;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
-@media (max-width:600px){
-  .lang-modal{ padding:24px; max-width:340px; }
-  .lang-modal-header h3{ font-size:16px; }
-  .lang-modal-btn{ padding:10px 14px; font-size:14px; }
+.lang-panel.active {
+  display: block;
+}
+
+/* Langues - Grid */
+.lang-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.lang-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #E7EAF0;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  color: #101828;
+  width: 100%;
+  text-align: left;
+}
+
+.lang-option:hover {
+  border-color: #155EEF;
+  background: #E8F0FE;
+}
+
+.lang-option.active {
+  border-color: #155EEF;
+  background: #E8F0FE;
+}
+
+.lang-option .flag { font-size: 20px; }
+.lang-option .lang-name { flex: 1; }
+.lang-option .lang-check {
+  color: #155EEF;
+  font-weight: 700;
+  font-size: 16px;
+  display: none;
+}
+.lang-option.active .lang-check { display: inline; }
+
+/* Devises - Grid */
+.currency-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.currency-group-label {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-weight: 700;
+  color: #667085;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 4px 6px 4px;
+  border-bottom: 1px solid #E7EAF0;
+}
+
+.currency-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #E7EAF0;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  color: #101828;
+  width: 100%;
+  text-align: left;
+}
+
+.currency-option:hover {
+  border-color: #155EEF;
+  background: #E8F0FE;
+}
+
+.currency-option.active {
+  border-color: #155EEF;
+  background: #E8F0FE;
+}
+
+.currency-option .currency-symbol {
+  font-weight: 700;
+  font-size: 16px;
+  color: #155EEF;
+  min-width: 30px;
+}
+
+.currency-option .currency-name {
+  flex: 1;
+  font-size: 13px;
+}
+
+.currency-option .currency-code {
+  font-size: 11px;
+  font-weight: 700;
+  color: #667085;
+  background: #F7F9FC;
+  padding: 1px 8px;
+  border-radius: 4px;
+}
+
+.currency-option.active .currency-code {
+  background: #E8F0FE;
+  color: #155EEF;
+}
+
+.currency-option .lang-check {
+  color: #155EEF;
+  font-weight: 700;
+  font-size: 16px;
+  display: none;
+}
+.currency-option.active .lang-check { display: inline; }
+
+/* Bouton Appliquer */
+.lang-modal-apply {
+  width: 100%;
+  padding: 12px;
+  margin-top: 16px;
+  border-radius: 8px;
+  border: none;
+  background: #155EEF;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lang-modal-apply:hover {
+  background: #0E3FB0;
+  transform: translateY(-1px);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Scrollbar */
+.lang-panel::-webkit-scrollbar,
+.lang-modal::-webkit-scrollbar {
+  width: 4px;
+}
+
+.lang-panel::-webkit-scrollbar-track,
+.lang-modal::-webkit-scrollbar-track {
+  background: #F7F9FC;
+  border-radius: 100px;
+}
+
+.lang-panel::-webkit-scrollbar-thumb,
+.lang-modal::-webkit-scrollbar-thumb {
+  background: #E7EAF0;
+  border-radius: 100px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .lang-modal {
+    padding: 20px;
+    max-width: 100%;
+    border-radius: 12px;
+    margin: 10px;
+    max-height: 95vh;
+  }
+  
+  .lang-grid,
+  .currency-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .lang-modal-header h3 {
+    font-size: 16px;
+  }
+  
+  .lang-option,
+  .currency-option {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .lang-currency-tab {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+  
+  .currency-option .currency-name {
+    font-size: 12px;
+  }
 }
 /* ============================================
    MARGES POUR SECTIONS SPÉCIFIQUES
@@ -780,39 +987,244 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<!-- ============================================
+     MODALE DE SÉLECTION LANGUE + DEVISES
+     ============================================ -->
 <div class="lang-modal-overlay" id="langModalOverlay">
   <div class="lang-modal">
     <div class="lang-modal-header">
-      <h3 data-i18n="language.select">Choisissez votre langue</h3>
+      <h3 data-i18n="language.select">Choisissez votre langue et devise</h3>
       <button class="lang-modal-close" id="langModalClose">&times;</button>
     </div>
-    <div class="lang-modal-body">
-      <button class="lang-modal-btn active" data-lang="fr">
-        <span class="flag">🇫🇷</span>
-        <span class="lang-name" data-i18n="language.fr">Français</span>
-        <span class="lang-check">✓</span>
+    
+    <!-- Tabs Langue / Devise -->
+    <div class="lang-currency-tabs">
+      <button class="lang-currency-tab active" data-tab="language">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/>
+        </svg>
+        <span data-i18n="language.tab">Langue</span>
       </button>
-      <button class="lang-modal-btn" data-lang="en">
-        <span class="flag">🇬🇧</span>
-        <span class="lang-name" data-i18n="language.en">English</span>
-        <span class="lang-check">✓</span>
-      </button>
-      <button class="lang-modal-btn" data-lang="es">
-        <span class="flag">🇪🇸</span>
-        <span class="lang-name" data-i18n="language.es">Español</span>
-        <span class="lang-check">✓</span>
-      </button>
-      <button class="lang-modal-btn" data-lang="sw">
-        <span class="flag">🇹🇿</span>
-        <span class="lang-name" data-i18n="language.sw">Kiswahili</span>
-        <span class="lang-check">✓</span>
-      </button>
-      <button class="lang-modal-btn" data-lang="pt">
-        <span class="flag">🇵🇹</span>
-        <span class="lang-name" data-i18n="language.pt">Português</span>
-        <span class="lang-check">✓</span>
+      <button class="lang-currency-tab" data-tab="currency">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M4 8h16M4 16h16M8 4v16M16 4v16"/>
+        </svg>
+        <span data-i18n="currency.tab">Devise</span>
       </button>
     </div>
+
+    <!-- Panel Langues -->
+    <div class="lang-panel active" id="langPanel">
+      <div class="lang-grid">
+        <button class="lang-option active" data-lang="fr">
+          <span class="flag">🇫🇷</span>
+          <span class="lang-name" data-i18n="language.fr">Français</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="lang-option" data-lang="en">
+          <span class="flag">🇬🇧</span>
+          <span class="lang-name" data-i18n="language.en">English</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="lang-option" data-lang="es">
+          <span class="flag">🇪🇸</span>
+          <span class="lang-name" data-i18n="language.es">Español</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="lang-option" data-lang="sw">
+          <span class="flag">🇹🇿</span>
+          <span class="lang-name" data-i18n="language.sw">Kiswahili</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="lang-option" data-lang="pt">
+          <span class="flag">🇵🇹</span>
+          <span class="lang-name" data-i18n="language.pt">Português</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="lang-option" data-lang="it">
+          <span class="flag">🇮🇹</span>
+          <span class="lang-name" data-i18n="language.it">Italiano</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="lang-option" data-lang="de">
+          <span class="flag">🇩🇪</span>
+          <span class="lang-name" data-i18n="language.de">Deutsch</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="lang-option" data-lang="ar">
+          <span class="flag">🇦🇪</span>
+          <span class="lang-name" data-i18n="language.ar">العربية</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="lang-option" data-lang="zh">
+          <span class="flag">🇨🇳</span>
+          <span class="lang-name" data-i18n="language.zh">中文</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="lang-option" data-lang="ja">
+          <span class="flag">🇯🇵</span>
+          <span class="lang-name" data-i18n="language.ja">日本語</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="lang-option" data-lang="ru">
+          <span class="flag">🇷🇺</span>
+          <span class="lang-name" data-i18n="language.ru">Русский</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="lang-option" data-lang="nl">
+          <span class="flag">🇳🇱</span>
+          <span class="lang-name" data-i18n="language.nl">Nederlands</span>
+          <span class="lang-check">✓</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Panel Devises -->
+    <div class="lang-panel" id="currencyPanel">
+      <div class="currency-grid">
+        <!-- Devises Africaines (prioritaires) -->
+        <div class="currency-group-label" data-i18n="currency.africa">🌍 Afrique</div>
+        <button class="currency-option" data-currency="CDF">
+          <span class="currency-symbol">FC</span>
+          <span class="currency-name">Franc Congolais</span>
+          <span class="currency-code">CDF</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="XAF">
+          <span class="currency-symbol">FCFA</span>
+          <span class="currency-name">Franc CFA (CEMAC)</span>
+          <span class="currency-code">XAF</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="XOF">
+          <span class="currency-symbol">FCFA</span>
+          <span class="currency-name">Franc CFA (UEMOA)</span>
+          <span class="currency-code">XOF</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="NGN">
+          <span class="currency-symbol">₦</span>
+          <span class="currency-name">Naira Nigérian</span>
+          <span class="currency-code">NGN</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="GHS">
+          <span class="currency-symbol">GH₵</span>
+          <span class="currency-name">Cedi Ghanéen</span>
+          <span class="currency-code">GHS</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="ZAR">
+          <span class="currency-symbol">R</span>
+          <span class="currency-name">Rand Sud-Africain</span>
+          <span class="currency-code">ZAR</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="KES">
+          <span class="currency-symbol">KSh</span>
+          <span class="currency-name">Shilling Kenyan</span>
+          <span class="currency-code">KES</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="TZS">
+          <span class="currency-symbol">TSh</span>
+          <span class="currency-name">Shilling Tanzanien</span>
+          <span class="currency-code">TZS</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="UGX">
+          <span class="currency-symbol">USh</span>
+          <span class="currency-name">Shilling Ougandais</span>
+          <span class="currency-code">UGX</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="MAD">
+          <span class="currency-symbol">DH</span>
+          <span class="currency-name">Dirham Marocain</span>
+          <span class="currency-code">MAD</span>
+          <span class="lang-check">✓</span>
+        </button>
+        
+        <!-- Devises Internationales -->
+        <div class="currency-group-label" data-i18n="currency.international">🌐 International</div>
+        <button class="currency-option" data-currency="USD">
+          <span class="currency-symbol">$</span>
+          <span class="currency-name">US Dollar</span>
+          <span class="currency-code">USD</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="EUR">
+          <span class="currency-symbol">€</span>
+          <span class="currency-name">Euro</span>
+          <span class="currency-code">EUR</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="GBP">
+          <span class="currency-symbol">£</span>
+          <span class="currency-name">British Pound</span>
+          <span class="currency-code">GBP</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="JPY">
+          <span class="currency-symbol">¥</span>
+          <span class="currency-name">Japanese Yen</span>
+          <span class="currency-code">JPY</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="CNY">
+          <span class="currency-symbol">¥</span>
+          <span class="currency-name">Chinese Yuan</span>
+          <span class="currency-code">CNY</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="CHF">
+          <span class="currency-symbol">Fr</span>
+          <span class="currency-name">Swiss Franc</span>
+          <span class="currency-code">CHF</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="CAD">
+          <span class="currency-symbol">C$</span>
+          <span class="currency-name">Canadian Dollar</span>
+          <span class="currency-code">CAD</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="AUD">
+          <span class="currency-symbol">A$</span>
+          <span class="currency-name">Australian Dollar</span>
+          <span class="currency-code">AUD</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="BRL">
+          <span class="currency-symbol">R$</span>
+          <span class="currency-name">Real Brésilien</span>
+          <span class="currency-code">BRL</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="RUB">
+          <span class="currency-symbol">₽</span>
+          <span class="currency-name">Rouble Russe</span>
+          <span class="currency-code">RUB</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="INR">
+          <span class="currency-symbol">₹</span>
+          <span class="currency-name">Roupie Indienne</span>
+          <span class="currency-code">INR</span>
+          <span class="lang-check">✓</span>
+        </button>
+        <button class="currency-option" data-currency="KRW">
+          <span class="currency-symbol">₩</span>
+          <span class="currency-name">Won Coréen</span>
+          <span class="currency-code">KRW</span>
+          <span class="lang-check">✓</span>
+        </button>
+      </div>
+    </div>
+
+    <button class="lang-modal-apply" data-close-popover data-i18n="common.apply">Appliquer</button>
   </div>
 </div>
 <!-- Chatbot LiteAPI : à ne charger que via un endpoint serveur qui ne révèle jamais la clé au client -->
@@ -823,6 +1235,7 @@
 <script src="js/i18n.js"></script>
 <script src="js/language.js"></script>
 <script src="js/translation.js"></script>
+<script src="js/currency.js"></script>
 <script>
 (function(){
 "use strict";
@@ -951,11 +1364,12 @@ function displayHotelsScroll(containerId, hotelsData, title) {
   
   var checkin = getDefaultCheckin(), checkout = getDefaultCheckout(), nights = getNights(checkin, checkout);
   var currentLang = localStorage.getItem('luviaplace_language') || 'fr';
+  var currentCurrency = localStorage.getItem('luviaplace_currency') || 'USD';
   
   hotels.forEach(async function(hotel) {
     var starRating = hotel.starRating || 3, fullStars = Math.min(Math.round(starRating), 5);
     var starHtml = '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
-    var pricePerNight = Math.round(hotel.minPrice / nights);
+    var pricePerNightUSD = Math.round(hotel.minPrice / nights);
     var rating = hotel.rating || 0;
     
     // ✅ TRADUIRE SEULEMENT "Excellent" / "Très bien" / "Bien"
@@ -966,6 +1380,18 @@ function displayHotelsScroll(containerId, hotelsData, title) {
     
     var reviewCount = hotel.reviewCount || 0;
     var hotelId = hotel.id || '';
+    
+    // ✅ CONVERTIR LE PRIX
+    var convertedPrice = pricePerNightUSD;
+    if (typeof window.convertPrice === 'function') {
+      convertedPrice = window.convertPrice(pricePerNightUSD, 'USD', currentCurrency);
+    }
+    var formattedPrice = '';
+    if (typeof window.formatPrice === 'function') {
+      formattedPrice = window.formatPrice(convertedPrice, currentCurrency);
+    } else {
+      formattedPrice = '$' + convertedPrice.toFixed(2);
+    }
     
     var div = document.createElement('div');
     div.className = 'hotel-card-scroll';
@@ -1013,7 +1439,7 @@ function displayHotelsScroll(containerId, hotelsData, title) {
           '<div class="score-text">' + ratingText + '<b>' + translatedReviews + '</b></div>' +
         '</div>' +
         '<div class="price">' +
-          '<div class="amount">' + (hotel.minPrice > 0 ? '$' + pricePerNight : '—') + '</div>' +
+          '<div class="amount">' + formattedPrice + '</div>' +
           '<div class="per">' + translatedPerNight + '</div>' +
         '</div>' +
       '</div>';
@@ -1351,21 +1777,36 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 // ============================================
-// GESTIONNAIRE DE LA MODALE DE LANGUE
+// GESTIONNAIRE MODALE LANGUE + DEVISES
 // ============================================
+
 (function() {
   'use strict';
 
   var overlay = document.getElementById('langModalOverlay');
   var toggleBtn = document.getElementById('langToggleBtn');
   var closeBtn = document.getElementById('langModalClose');
-  var langBtns = document.querySelectorAll('.lang-modal-btn');
+  var applyBtn = document.querySelector('.lang-modal-apply');
+  
+  var langOptions = document.querySelectorAll('.lang-option');
+  var currencyOptions = document.querySelectorAll('.currency-option');
+  var tabs = document.querySelectorAll('.lang-currency-tab');
+  var panels = {
+    language: document.getElementById('langPanel'),
+    currency: document.getElementById('currencyPanel')
+  };
 
+  var selectedLang = localStorage.getItem('luviaplace_language') || 'fr';
+  var selectedCurrency = localStorage.getItem('luviaplace_currency') || 'USD';
+
+  // ============================================
+  // OUVRIR / FERMER LA MODALE
+  // ============================================
   function openModal() {
     if (overlay) {
       overlay.classList.add('open');
       document.body.style.overflow = 'hidden';
-      updateActiveLang();
+      updateSelections();
     }
   }
 
@@ -1376,80 +1817,136 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
-  function updateActiveLang() {
-    var currentLang = localStorage.getItem('luviaplace_language') || 'fr';
-    langBtns.forEach(function(btn) {
-      btn.classList.toggle('active', btn.dataset.lang === currentLang);
+  // ============================================
+  // CHANGER D'ONGLET
+  // ============================================
+  function switchTab(tabId) {
+    tabs.forEach(function(tab) {
+      tab.classList.toggle('active', tab.dataset.tab === tabId);
+    });
+    
+    Object.keys(panels).forEach(function(key) {
+      panels[key].classList.toggle('active', key === tabId);
     });
   }
-// Dans votre script principal, après avoir reçu les données de l'API
-async function displayHotels(hotels) {
-  const language = localStorage.getItem('luviaplace_language') || 'fr';
-  
-  // Si la langue est le français, afficher directement
-  if (language === 'fr') {
-    renderHotels(hotels);
-    return;
+
+  // ============================================
+  // METTRE À JOUR LES SÉLECTIONS
+  // ============================================
+  function updateSelections() {
+    // Langues
+    langOptions.forEach(function(opt) {
+      opt.classList.toggle('active', opt.dataset.lang === selectedLang);
+    });
+    
+    // Devises
+    currencyOptions.forEach(function(opt) {
+      opt.classList.toggle('active', opt.dataset.currency === selectedCurrency);
+    });
   }
-  
-  // Sinon, traduire les noms et adresses
-  const translatedHotels = await Promise.all(
-    hotels.map(async (hotel) => {
-      const translatedName = await window.translateText(hotel.name, language);
-      const translatedAddress = await window.translateText(hotel.address, language);
-      return {
-        ...hotel,
-        name: translatedName || hotel.name,
-        address: translatedAddress || hotel.address,
-        translated: true
-      };
-    })
-  );
-  
-  renderHotels(translatedHotels);
-}
-  function selectLanguage(lang) {
+
+  // ============================================
+  // APPLIQUER LES CHANGEMENTS
+  // ============================================
+  function applyChanges() {
+    // Appliquer la langue
     if (typeof window.changeLanguage === 'function') {
-      window.changeLanguage(lang);
+      window.changeLanguage(selectedLang);
     } else {
-      localStorage.setItem('luviaplace_language', lang);
-      document.documentElement.lang = lang;
-      window.location.reload();
+      localStorage.setItem('luviaplace_language', selectedLang);
+      document.documentElement.lang = selectedLang;
     }
+    
+    // Appliquer la devise
+    localStorage.setItem('luviaplace_currency', selectedCurrency);
+    
+    // Mettre à jour l'affichage des prix
+    document.dispatchEvent(new CustomEvent('currencyChanged', {
+      detail: { currency: selectedCurrency }
+    }));
+    
     closeModal();
   }
 
-  // Événements
-  if (toggleBtn) toggleBtn.addEventListener('click', openModal);
-  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  // ============================================
+  // ÉVÉNEMENTS
+  // ============================================
+  
+  // Ouvrir la modale
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', openModal);
+  }
 
+  // Fermer
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeModal);
+  }
+
+  // Fermer sur clic externe
   if (overlay) {
     overlay.addEventListener('click', function(e) {
       if (e.target === this) closeModal();
     });
   }
 
+  // Fermer avec Echap
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeModal();
   });
 
-  langBtns.forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var lang = this.dataset.lang;
-      if (lang) selectLanguage(lang);
+  // Tabs
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      switchTab(this.dataset.tab);
     });
   });
 
-  document.addEventListener('DOMContentLoaded', updateActiveLang);
-  document.addEventListener('languageChanged', updateActiveLang);
+  // Sélection langue
+  langOptions.forEach(function(opt) {
+    opt.addEventListener('click', function() {
+      langOptions.forEach(function(o) { o.classList.remove('active'); });
+      this.classList.add('active');
+      selectedLang = this.dataset.lang;
+    });
+  });
 
-  // Exposer pour utilisation externe
+  // Sélection devise
+  currencyOptions.forEach(function(opt) {
+    opt.addEventListener('click', function() {
+      currencyOptions.forEach(function(o) { o.classList.remove('active'); });
+      this.classList.add('active');
+      selectedCurrency = this.dataset.currency;
+    });
+  });
+
+  // Appliquer
+  if (applyBtn) {
+    applyBtn.addEventListener('click', applyChanges);
+  }
+
+  // Initialisation
+  document.addEventListener('DOMContentLoaded', function() {
+    updateSelections();
+  });
+
+  // Exposer
   window.openLanguageModal = openModal;
   window.closeLanguageModal = closeModal;
+  window.getSelectedCurrency = function() { return selectedCurrency; };
 
-  console.log('🌍 Modale de langue initialisée');
+  console.log('🌍 Modale langue + devises initialisée');
 
 })();
+
+// ============================================
+// ÉCOUTER LES CHANGEMENTS DE DEVISES
+// ============================================
+document.addEventListener('currencyChanged', function(e) {
+  console.log('💰 Devise changée vers:', e.detail.currency);
+  // Recharger les hôtels affichés
+  loadRecommendations();
+  loadNearbyHotels();
+});
 
 var observer=new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('in'); }); }, {threshold:0.12});
 document.addEventListener('DOMContentLoaded', function(){ document.querySelectorAll('.reveal').forEach(function(el){ observer.observe(el); }); });

@@ -1210,7 +1210,44 @@ app.get("/api/translations", (req, res) => {
   const data = translations[language] || translations.fr;
   res.json({ success: true, data: data, language: language });
 });
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
+app.post('/api/translate', async (req, res) => {
+  const { text, targetLang, sourceLang = 'fr' } = req.body;
+  
+  try {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: `Tu es un traducteur professionnel. Traduis le texte suivant du ${sourceLang} vers le ${targetLang} en gardant le sens et le ton.`
+          },
+          {
+            role: 'user',
+            content: text
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 2000
+      })
+    });
+    
+    const data = await response.json();
+    res.json({
+      success: true,
+      translation: data.choices[0].message.content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 // ============================================
 // ROUTES FRONTEND
 // ============================================

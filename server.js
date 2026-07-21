@@ -1466,7 +1466,188 @@ app.get("/api/translations", (req, res) => {
   const data = translations[language] || translations.fr;
   res.json({ success: true, data: data, language: language });
 });
+// ============================================
+// 22. TAUX DE CHANGE - API FRANKFURTER
+// ============================================
+app.get("/api/rates", async (req, res) => {
+  console.log("\n💰 ===== TAUX DE CHANGE ===== 💰");
+  
+  const baseCurrency = req.query.base || 'USD';
+  
+  try {
+    // Appel à l'API Frankfurter (gratuite, sans clé)
+    const response = await fetch(`https://api.frankfurter.app/latest?from=${baseCurrency}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Ajouter les devises africaines que Frankfurter ne supporte pas toujours
+    const africanRates = {
+      'CDF': 2800,    // Franc Congolais
+      'XAF': 600,     // FCFA (CEMAC)
+      'XOF': 600,     // FCFA (UEMOA)
+      'NGN': 1500,    // Naira Nigérian
+      'GHS': 12,      // Cedi Ghanéen
+      'TZS': 2500,    // Shilling Tanzanien
+      'UGX': 3700,    // Shilling Ougandais
+      'MAD': 10,      // Dirham Marocain
+    };
+    
+    // Fusionner les taux
+    const rates = {
+      ...data.rates,
+      ...africanRates
+    };
+    
+    // Ajouter USD si pas présent
+    if (!rates.USD) rates.USD = 1;
+    
+    console.log(`✅ Taux de change chargés (base: ${baseCurrency})`);
+    
+    res.json({
+      success: true,
+      base: data.base || baseCurrency,
+      date: data.date || new Date().toISOString().split('T')[0],
+      rates: rates
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur taux de change:', error.message);
+    
+    // Fallback avec taux fixes
+    res.json({
+      success: true,
+      base: baseCurrency,
+      date: new Date().toISOString().split('T')[0],
+      rates: {
+        'USD': 1,
+        'EUR': 0.92,
+        'GBP': 0.78,
+        'CDF': 2800,
+        'XAF': 600,
+        'XOF': 600,
+        'NGN': 1500,
+        'GHS': 12,
+        'ZAR': 18,
+        'KES': 130,
+        'TZS': 2500,
+        'UGX': 3700,
+        'MAD': 10,
+        'JPY': 150,
+        'CNY': 7.2,
+        'CHF': 0.88,
+        'CAD': 1.35,
+        'AUD': 1.5,
+        'BRL': 5.5,
+        'RUB': 90,
+        'INR': 83,
+        'KRW': 1350
+      }
+    });
+  }
+});
 
+// ============================================
+// 23. CONVERSION DE PRIX
+// ============================================
+app.post("/api/convert", async (req, res) => {
+  console.log("\n🔄 ===== CONVERSION DE PRIX ===== 🔄");
+  
+  const { amount, from, to } = req.body;
+  
+  if (!amount || !from || !to) {
+    return res.status(400).json({ 
+      success: false, 
+      error: "amount, from and to are required" 
+    });
+  }
+  
+  try {
+    // Récupérer les taux
+    const ratesResponse = await fetch(`https://api.frankfurter.app/latest?from=${from}`);
+    const ratesData = await ratesResponse.json();
+    
+    // Taux de conversion
+    let rate = 1;
+    
+    if (to === from) {
+      rate = 1;
+    } else if (ratesData.rates && ratesData.rates[to]) {
+      rate = ratesData.rates[to];
+    } else {
+      // Fallback pour les devises africaines
+      const fallbackRates = {
+        'CDF': 2800,
+        'XAF': 600,
+        'XOF': 600,
+        'NGN': 1500,
+        'GHS': 12,
+        'ZAR': 18,
+        'KES': 130,
+        'TZS': 2500,
+        'UGX': 3700,
+        'MAD': 10
+      };
+      rate = fallbackRates[to] || 1;
+    }
+    
+    const converted = amount * rate;
+    
+    res.json({
+      success: true,
+      from: from,
+      to: to,
+      amount: amount,
+      rate: rate,
+      converted: converted
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur conversion:', error.message);
+    
+    // Fallback avec taux fixes
+    const fallbackRates = {
+      'USD': 1,
+      'EUR': 0.92,
+      'GBP': 0.78,
+      'CDF': 2800,
+      'XAF': 600,
+      'XOF': 600,
+      'NGN': 1500,
+      'GHS': 12,
+      'ZAR': 18,
+      'KES': 130,
+      'TZS': 2500,
+      'UGX': 3700,
+      'MAD': 10,
+      'JPY': 150,
+      'CNY': 7.2,
+      'CHF': 0.88,
+      'CAD': 1.35,
+      'AUD': 1.5,
+      'BRL': 5.5,
+      'RUB': 90,
+      'INR': 83,
+      'KRW': 1350
+    };
+    
+    const rate = fallbackRates[to] || 1;
+    const converted = amount * rate;
+    
+    res.json({
+      success: true,
+      from: from,
+      to: to,
+      amount: amount,
+      rate: rate,
+      converted: converted,
+      fallback: true
+    });
+  }
+});
 // ============================================
 // ROUTES FRONTEND
 // ============================================

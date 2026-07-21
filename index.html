@@ -929,35 +929,100 @@ var COLLECTIONS = [
   { id:'kivu-escape', title:"Escapades au bord du lac Kivu", image:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&h=300&fit=crop', hotelNames:['Lake Kivu Serena Hotel','Kivu Lodge','Bella Vista Hotel','Hotel Des Mille Collines','Kivu Paradise Resort'] }
 ];
 
-function displayHotelsScroll(containerId, hotelsData, title){
-  var container=document.getElementById(containerId); if(!container) return;
-  container.innerHTML='';
-  if(!hotelsData || hotelsData.success===false){ container.innerHTML='<div class="error-state">Impossible de charger les hôtels'+(title?' pour '+title:'')+' pour le moment.</div>'; return; }
-  if(!hotelsData.hotels || hotelsData.hotels.length===0){ container.innerHTML='<div class="empty-state">Aucun hôtel trouvé'+(title?' pour '+title:'')+'.</div>'; return; }
-  var hotels=hotelsData.hotels.filter(function(h){return h.minPrice&&h.minPrice>0;}).slice(0,6);
-  if(hotels.length===0){ container.innerHTML='<div class="empty-state">Aucune offre disponible'+(title?' pour '+title:'')+' actuellement.</div>'; return; }
-  var checkin=getDefaultCheckin(), checkout=getDefaultCheckout(), nights=getNights(checkin,checkout);
-  hotels.forEach(function(hotel){
-    var starRating=hotel.starRating||3, fullStars=Math.min(Math.round(starRating),5);
-    var starHtml='★'.repeat(fullStars)+'☆'.repeat(5-fullStars);
-    var pricePerNight=Math.round(hotel.minPrice/nights);
-    var rating=hotel.rating||0; var ratingText=rating>=8?'Excellent':rating>=7?'Très bien':'Bien';
-    var reviewCount=hotel.reviewCount||0; var hotelId=hotel.id||'';
-    var div=document.createElement('div'); div.className='hotel-card-scroll'; div.tabIndex=0; div.setAttribute('role','link');
-    div.setAttribute('aria-label',(hotel.name||'Hôtel')+', à partir de '+pricePerNight+' dollars par nuit');
-    var goTo=function(){ if(hotelId) window.location.href='hotel-detail.html?hotelId='+encodeURIComponent(hotelId)+'&checkin='+checkin+'&checkout='+checkout+'&adults=2'; };
+function displayHotelsScroll(containerId, hotelsData, title) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (!hotelsData || hotelsData.success === false) {
+    container.innerHTML = '<div class="error-state">' + window.t('hotel.error') + '</div>';
+    return;
+  }
+  if (!hotelsData.hotels || hotelsData.hotels.length === 0) {
+    container.innerHTML = '<div class="empty-state">' + window.t('hotel.no_results') + '</div>';
+    return;
+  }
+  
+  var hotels = hotelsData.hotels.filter(function(h) { return h.minPrice && h.minPrice > 0; }).slice(0, 6);
+  if (hotels.length === 0) {
+    container.innerHTML = '<div class="empty-state">' + window.t('hotel.no_offers') + '</div>';
+    return;
+  }
+  
+  var checkin = getDefaultCheckin(), checkout = getDefaultCheckout(), nights = getNights(checkin, checkout);
+  var currentLang = localStorage.getItem('luviaplace_language') || 'fr';
+  
+  hotels.forEach(async function(hotel) {
+    var starRating = hotel.starRating || 3, fullStars = Math.min(Math.round(starRating), 5);
+    var starHtml = '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
+    var pricePerNight = Math.round(hotel.minPrice / nights);
+    var rating = hotel.rating || 0;
+    
+    // ✅ TRADUIRE SEULEMENT "Excellent" / "Très bien" / "Bien"
+    var ratingText = '';
+    if (rating >= 8) ratingText = window.t('hotel.excellent');
+    else if (rating >= 7) ratingText = window.t('hotel.very_good');
+    else ratingText = window.t('hotel.good');
+    
+    var reviewCount = hotel.reviewCount || 0;
+    var hotelId = hotel.id || '';
+    
+    var div = document.createElement('div');
+    div.className = 'hotel-card-scroll';
+    div.tabIndex = 0;
+    div.setAttribute('role', 'link');
+    
+    var goTo = function() {
+      if (hotelId) window.location.href = 'hotel-detail.html?hotelId=' + encodeURIComponent(hotelId) + '&checkin=' + checkin + '&checkout=' + checkout + '&adults=2';
+    };
     div.addEventListener('click', goTo);
-    div.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); goTo(); } });
-    var img=document.createElement('img'); img.loading='lazy'; img.alt=hotel.name||'Hôtel'; img.src=hotel.main_photo||('https://picsum.photos/seed/'+encodeURIComponent(hotelId||Math.random())+'/500/380');
-    var photo=document.createElement('div'); photo.className='photo'; photo.appendChild(img);
-    var body=document.createElement('div'); body.className='body';
-    body.innerHTML='<div class="stars">'+starHtml+'</div><h3></h3><div class="location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg><span></span></div><div class="card-bottom"><div class="score-pill"><div class="score-num">'+(rating>0?rating.toFixed(1):'N/A')+'</div><div class="score-text">'+ratingText+'<b>'+reviewCount+' avis</b></div></div><div class="price"><div class="amount">'+(hotel.minPrice>0?'$'+pricePerNight:'—')+'</div><div class="per">/ nuit</div></div></div>';
-    body.querySelector('h3').textContent=hotel.name||'Hôtel sans nom';
-    body.querySelector('.location span').textContent=hotel.address||hotel.city||'Adresse non disponible';
-    div.appendChild(photo); div.appendChild(body); container.appendChild(div);
+    div.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goTo(); }
+    });
+    
+    var img = document.createElement('img');
+    img.loading = 'lazy';
+    img.alt = hotel.name || 'Hôtel';
+    img.src = hotel.main_photo || ('https://picsum.photos/seed/' + encodeURIComponent(hotelId || Math.random()) + '/500/380');
+    
+    var photo = document.createElement('div');
+    photo.className = 'photo';
+    photo.appendChild(img);
+    
+    var body = document.createElement('div');
+    body.className = 'body';
+    
+    // ✅ NE PAS TRADUIRE : nom, adresse, étoiles, prix
+    // ✅ TRADUIRE : "avis" → "maoni", "nuit" → "usiku"
+    var translatedReviews = reviewCount + ' ' + window.t('hotel.reviews');
+    var translatedPerNight = window.t('search.per_night');
+    
+    body.innerHTML = 
+      '<div class="stars">' + starHtml + '</div>' +
+      '<h3>' + (hotel.name || 'Hôtel sans nom') + '</h3>' +
+      '<div class="location">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+          '<path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/>' +
+          '<circle cx="12" cy="9" r="2.4"/>' +
+        '</svg>' +
+        '<span>' + (hotel.address || hotel.city || 'Adresse non disponible') + '</span>' +
+      '</div>' +
+      '<div class="card-bottom">' +
+        '<div class="score-pill">' +
+          '<div class="score-num">' + (rating > 0 ? rating.toFixed(1) : 'N/A') + '</div>' +
+          '<div class="score-text">' + ratingText + '<b>' + translatedReviews + '</b></div>' +
+        '</div>' +
+        '<div class="price">' +
+          '<div class="amount">' + (hotel.minPrice > 0 ? '$' + pricePerNight : '—') + '</div>' +
+          '<div class="per">' + translatedPerNight + '</div>' +
+        '</div>' +
+      '</div>';
+    
+    div.appendChild(photo);
+    div.appendChild(body);
+    container.appendChild(div);
   });
 }
-
 function displayCollections(results){
   var container=document.getElementById('collectionsContainer'); if(!container) return;
   container.innerHTML='';

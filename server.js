@@ -20,6 +20,7 @@ app.options('*', cors());
 
 const prod_apiKey = process.env.PROD_API_KEY;
 const sandbox_apiKey = process.env.SAND_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -63,6 +64,110 @@ async function callLiteAPI(endpoint, method = 'GET', body = null, apiKey) {
 }
 
 // ============================================
+// FONCTION DEEPSEEK - TRADUCTION
+// ============================================
+async function translateWithDeepSeek(text, targetLang, sourceLang = 'fr', context = '') {
+  if (!text || !targetLang || targetLang === 'fr') return text;
+  if (!DEEPSEEK_API_KEY) {
+    console.warn('⚠️ DEEPSEEK_API_KEY non configurée');
+    return text;
+  }
+
+  // Mapping des langues
+  const langNames = {
+    'fr': 'Français',
+    'en': 'English',
+    'es': 'Español',
+    'sw': 'Kiswahili',
+    'pt': 'Português',
+    'it': 'Italiano',
+    'de': 'Deutsch',
+    'ar': 'العربية',
+    'zh': '中文',
+    'ja': '日本語',
+    'ru': 'Русский'
+  };
+  
+  const targetLangName = langNames[targetLang] || targetLang;
+  const sourceLangName = langNames[sourceLang] || sourceLang;
+
+  try {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: `Tu es un traducteur professionnel pour LuviaPlace, une plateforme de voyage en Afrique centrale.
+
+RÈGLES IMPORTANTES :
+1. Traduis le texte de ${sourceLangName} vers ${targetLangName}
+2. Garde le ton professionnel et chaleureux
+3. Préserve les nombres, dates et prix exacts
+4. Conserve les noms propres et marques
+5. Traduis les termes touristiques avec précision
+6. Ne traduis JAMAIS "LuviaPlace" - c'est le nom de la marque
+7. Ne réponds à AUCUNE question - tu es un TRADUCTEUR, PAS UN ASSISTANT
+8. La réponse DOIT être UNIQUEMENT la traduction, sans commentaire supplémentaire
+${context ? `\nCONTEXTE : ${context}` : ''}`
+          },
+          {
+            role: 'user',
+            content: text
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: Math.min(text.length * 2 + 500, 4000)
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content.trim();
+    
+  } catch (error) {
+    console.error('❌ Erreur DeepSeek:', error.message);
+    return text; // Fallback : retourner le texte original
+  }
+}
+
+// ============================================
+// CACHE DE TRADUCTION
+// ============================================
+const translationCache = new Map();
+
+function getCacheKey(text, targetLang) {
+  return `${text.substring(0, 50)}-${targetLang}`;
+}
+
+async function translateWithCache(text, targetLang, sourceLang = 'fr', context = '') {
+  if (!text || !targetLang || targetLang === 'fr') return text;
+  
+  const cacheKey = getCacheKey(text, targetLang);
+  if (translationCache.has(cacheKey)) {
+    console.log('📦 Cache hit:', cacheKey);
+    return translationCache.get(cacheKey);
+  }
+  
+  const translation = await translateWithDeepSeek(text, targetLang, sourceLang, context);
+  translationCache.set(cacheKey, translation);
+  
+  // Nettoyer le cache après 24h
+  setTimeout(() => translationCache.delete(cacheKey), 24 * 60 * 60 * 1000);
+  
+  return translation;
+}
+
+// ============================================
 // 1. RECHERCHE DE LIEUX - MULTILINGUE
 // ============================================
 app.get("/search-places", async (req, res) => {
@@ -98,7 +203,7 @@ app.get("/search-places", async (req, res) => {
 });
 
 // ============================================
-// 2. RECHERCHE HÔTELS - STANDARD MULTILINGUE
+// 2. RECHERCHE HÔTELS - STANDARD MULTILINGUE AVEC DEEPSEEK
 // ============================================
 app.get("/search-hotels", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS ===== 🔍");
@@ -134,7 +239,7 @@ app.get("/search-hotels", async (req, res) => {
     const hotelsResponse = await sdk.getHotels({
       placeId: finalPlaceId,
       limit: Math.min(parseInt(limit) || 500, 2000),
-      language: language // 👈 MULTILINGUE
+      language: language
     });
 
     let hotelList = [];
@@ -167,7 +272,7 @@ app.get("/search-hotels", async (req, res) => {
           maxRatesPerHotel: 1,
           timeout: 30,
           includeHotelData: true,
-          language: language // 👈 MULTILINGUE
+          language: language
         });
 
         let batchData = [];
@@ -216,12 +321,51 @@ app.get("/search-hotels", async (req, res) => {
         refundable: bestRate?.cancellationPolicies?.refundableTag === 'RFN',
         latitude: hotel.latitude || hotel.lat || null,
         longitude: hotel.longitude || hotel.lon || null,
-        language: language // 👈 Ajout de la langue utilisée
+        language: language
       };
     });
 
     const validHotels = hotels.filter(h => h.minPrice > 0).sort((a, b) => a.minPrice - b.minPrice);
     const finalHotels = validHotels.slice(0, 500);
+
+    // Si la langue demandée n'est pas supportée par LiteAPI (ex: sw), utiliser DeepSeek
+    const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
+    
+    if (!supportedLangs.includes(language) && language !== 'fr') {
+      console.log(`🔄 Traduction DeepSeek pour la langue: ${language}`);
+      
+      const translatedHotels = await Promise.all(
+        finalHotels.slice(0, 20).map(async (hotel) => {
+          try {
+            const translatedName = await translateWithCache(
+              hotel.name,
+              language,
+              'fr',
+              'Nom d\'hôtel à traduire'
+            );
+            
+            return {
+              ...hotel,
+              name: translatedName || hotel.name,
+              translated: true,
+              originalLanguage: 'fr',
+              translatedLanguage: language
+            };
+          } catch (error) {
+            console.warn(`⚠️ Erreur traduction hôtel ${hotel.id}:`, error.message);
+            return hotel;
+          }
+        })
+      );
+      
+      return res.json({ 
+        success: true, 
+        hotels: translatedHotels, 
+        total: translatedHotels.length, 
+        language: language,
+        translated: true
+      });
+    }
 
     res.json({ success: true, hotels: finalHotels, total: finalHotels.length, language: language });
   } catch (error) {
@@ -279,7 +423,7 @@ app.get("/search-hotels-stream", async (req, res) => {
     const hotelsResponse = await sdk.getHotels({
       placeId: finalPlaceId,
       limit: Math.min(parseInt(limit) || 500, 2000),
-      language: language // 👈 MULTILINGUE
+      language: language
     });
 
     let hotelList = [];
@@ -302,7 +446,6 @@ app.get("/search-hotels-stream", async (req, res) => {
     const BATCH_SIZE = 20;
     const allHotels = [];
 
-    // Envoyer les hôtels de base
     const baseHotels = hotelList.slice(0, 100).map(function(hotel) {
       const stars = hotel.stars ?? hotel.starRating ?? hotel.hotel?.stars ?? hotel.hotel?.starRating ?? 0;
       return {
@@ -338,7 +481,7 @@ app.get("/search-hotels-stream", async (req, res) => {
           maxRatesPerHotel: 1,
           timeout: 20,
           includeHotelData: true,
-          language: language // 👈 MULTILINGUE
+          language: language
         });
 
         let rateData = [];
@@ -397,7 +540,24 @@ app.get("/search-hotels-stream", async (req, res) => {
     }
 
     allHotels.sort((a, b) => a.minPrice - b.minPrice);
-    sendEvent('complete', { hotels: allHotels, total: allHotels.length, language: language });
+    
+    // Traduction DeepSeek pour les langues non supportées
+    const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
+    let finalHotels = allHotels;
+    
+    if (!supportedLangs.includes(language) && language !== 'fr') {
+      const translated = await Promise.all(
+        allHotels.slice(0, 20).map(async (hotel) => {
+          try {
+            const translatedName = await translateWithCache(hotel.name, language, 'fr', 'Nom d\'hôtel');
+            return { ...hotel, name: translatedName || hotel.name, translated: true };
+          } catch (e) { return hotel; }
+        })
+      );
+      finalHotels = translated;
+    }
+    
+    sendEvent('complete', { hotels: finalHotels, total: finalHotels.length, language: language });
     res.end();
   } catch (error) {
     console.error("❌ Error:", error);
@@ -431,7 +591,7 @@ app.get("/search-rates", async (req, res) => {
       roomMapping: true,
       includeHotelData: true,
       timeout: 10,
-      language: language // 👈 MULTILINGUE
+      language: language
     };
 
     const data = await callLiteAPI('hotels/rates', 'POST', body, apiKey);
@@ -657,7 +817,7 @@ app.post("/book-flight", async (req, res) => {
 });
 
 // ============================================
-// 11. DÉTAILS HÔTEL - MULTILINGUE
+// 11. DÉTAILS HÔTEL - MULTILINGUE AVEC DEEPSEEK
 // ============================================
 app.get("/hotel-details", async (req, res) => {
   console.log("\n🏨 ===== HOTEL DETAILS ===== 🏨");
@@ -682,7 +842,7 @@ app.get("/hotel-details", async (req, res) => {
     }
 
     const hotelData = data.data;
-    const hotel = {
+    let hotel = {
       id: hotelData.hotelId || hotelData.id || hotelId,
       name: hotelData.name || 'Hôtel sans nom',
       address: hotelData.address || '',
@@ -716,8 +876,34 @@ app.get("/hotel-details", async (req, res) => {
           })
         };
       }),
-      language: language // 👈 Ajout de la langue
+      language: language
     };
+
+    // Traduction DeepSeek pour les langues non supportées
+    const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
+    
+    if (!supportedLangs.includes(language) && language !== 'fr') {
+      console.log(`🔄 Traduction DeepSeek des détails hôtel en: ${language}`);
+      
+      hotel.name = await translateWithCache(hotel.name, language, 'fr', 'Nom d\'hôtel');
+      hotel.address = await translateWithCache(hotel.address, language, 'fr', 'Adresse');
+      hotel.hotelDescription = await translateWithCache(hotel.hotelDescription, language, 'fr', 'Description d\'hôtel');
+      
+      // Traduire les noms des chambres
+      hotel.rooms = await Promise.all(hotel.rooms.map(async (room) => {
+        room.roomName = await translateWithCache(room.roomName, language, 'fr', 'Nom de chambre');
+        room.description = await translateWithCache(room.description, language, 'fr', 'Description de chambre');
+        return room;
+      }));
+      
+      // Traduire les équipements
+      hotel.hotelFacilities = await Promise.all(hotel.hotelFacilities.map(async (facility) => {
+        return await translateWithCache(facility, language, 'fr', 'Équipement d\'hôtel');
+      }));
+      
+      hotel.translated = true;
+      hotel.translatedLanguage = language;
+    }
 
     console.log(`✅ Hôtel trouvé: ${hotel.name} (${language})`);
     res.json({ success: true, data: hotel });
@@ -728,7 +914,7 @@ app.get("/hotel-details", async (req, res) => {
 });
 
 // ============================================
-// 12. AVIS HÔTEL
+// 12. AVIS HÔTEL AVEC DEEPSEEK
 // ============================================
 app.get("/hotel-reviews", async (req, res) => {
   console.log("\n⭐ ===== HOTEL REVIEWS ===== ⭐");
@@ -753,7 +939,7 @@ app.get("/hotel-reviews", async (req, res) => {
       reviews = data.data;
     }
 
-    const formattedReviews = reviews.map(function(rv) {
+    let formattedReviews = reviews.map(function(rv) {
       return {
         reviewerName: rv.reviewerName || rv.name || rv.author || 'Voyageur',
         comment: rv.comment || rv.text || rv.reviewComments || rv.review || '',
@@ -766,6 +952,42 @@ app.get("/hotel-reviews", async (req, res) => {
       };
     });
 
+    // Traduire les avis si la langue n'est pas supportée
+    const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
+    
+    if (!supportedLangs.includes(language) && language !== 'fr' && formattedReviews.length > 0) {
+      console.log(`🔄 Traduction DeepSeek des avis en: ${language}`);
+      
+      const translatedReviews = await Promise.all(
+        formattedReviews.map(async (review) => {
+          try {
+            const translatedComment = await translateWithCache(
+              review.comment, 
+              language, 
+              'fr', 
+              'Avis d\'hôtel. Termes courants : "propre", "bien situé", "bon service", "confortable"'
+            );
+            
+            const translatedPros = review.pros ? await translateWithCache(review.pros, language, 'fr', 'Points positifs') : '';
+            const translatedCons = review.cons ? await translateWithCache(review.cons, language, 'fr', 'Points négatifs') : '';
+            
+            return {
+              ...review,
+              comment: translatedComment || review.comment,
+              pros: translatedPros || review.pros,
+              cons: translatedCons || review.cons,
+              translated: true
+            };
+          } catch (error) {
+            console.warn(`⚠️ Erreur traduction avis:`, error.message);
+            return review;
+          }
+        })
+      );
+      
+      formattedReviews = translatedReviews;
+    }
+
     console.log(`✅ ${formattedReviews.length} avis récupérés (${language})`);
     res.json({ success: true, data: formattedReviews, total: formattedReviews.length, language: language });
   } catch (error) {
@@ -775,7 +997,7 @@ app.get("/hotel-reviews", async (req, res) => {
 });
 
 // ============================================
-// 13. CHATBOT - Récupération de la clé (sécurisée)
+// 13. CHATBOT - Récupération de la clé
 // ============================================
 app.get("/api/chatbot-key", (req, res) => {
   console.log("\n🤖 ===== CHATBOT KEY ===== 🤖");
@@ -850,7 +1072,7 @@ app.get("/api/chatbot-script", async (req, res) => {
 });
 
 // ============================================
-// 15. LISTE DES LANGUES SUPPORTÉES (AVEC SWAHILI)
+// 15. LISTE DES LANGUES SUPPORTÉES
 // ============================================
 app.get("/api/languages", async (req, res) => {
   console.log("\n🌍 ===== LANGUES SUPPORTÉES ===== 🌍");
@@ -873,12 +1095,11 @@ app.get("/api/languages", async (req, res) => {
       }));
     }
     
-    // Ajouter les langues par défaut + SWAHILI
     const defaultLanguages = [
       { code: 'fr', name: 'Français', nativeName: 'Français', flag: '🇫🇷' },
       { code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧' },
       { code: 'es', name: 'Español', nativeName: 'Español', flag: '🇪🇸' },
-      { code: 'sw', name: 'Kiswahili', nativeName: 'Kiswahili', flag: '🇹🇿' }, // 👈 SWAHILI
+      { code: 'sw', name: 'Kiswahili', nativeName: 'Kiswahili', flag: '🇹🇿' },
       { code: 'pt', name: 'Português', nativeName: 'Português', flag: '🇵🇹' },
       { code: 'it', name: 'Italiano', nativeName: 'Italiano', flag: '🇮🇹' },
       { code: 'de', name: 'Deutsch', nativeName: 'Deutsch', flag: '🇩🇪' },
@@ -886,7 +1107,6 @@ app.get("/api/languages", async (req, res) => {
       { code: 'zh', name: '中文', nativeName: '中文', flag: '🇨🇳' }
     ];
     
-    // Fusionner les langues de l'API avec celles par défaut
     const allLanguages = [...languages];
     defaultLanguages.forEach(function(lang) {
       if (!allLanguages.some(l => l.code === lang.code)) {
@@ -894,13 +1114,11 @@ app.get("/api/languages", async (req, res) => {
       }
     });
     
-    // Trier par code
     allLanguages.sort((a, b) => a.code.localeCompare(b.code));
     
     res.json({ success: true, data: allLanguages });
   } catch (error) {
     console.error("❌ Erreur récupération langues:", error);
-    // Fallback complet avec Swahili
     res.json({
       success: true,
       data: [
@@ -921,7 +1139,7 @@ function getLanguageFlag(code) {
     'fr': '🇫🇷',
     'en': '🇬🇧',
     'es': '🇪🇸',
-    'sw': '🇹🇿', // Swahili - Tanzanie
+    'sw': '🇹🇿',
     'pt': '🇵🇹',
     'it': '🇮🇹',
     'de': '🇩🇪',
@@ -932,9 +1150,9 @@ function getLanguageFlag(code) {
     'nl': '🇳🇱',
     'pl': '🇵🇱',
     'tr': '🇹🇷',
-    'sw-ke': '🇰🇪', // Kenya
-    'sw-ug': '🇺🇬', // Ouganda
-    'sw-cd': '🇨🇩'  // RDC
+    'sw-ke': '🇰🇪',
+    'sw-ug': '🇺🇬',
+    'sw-cd': '🇨🇩'
   };
   return flags[code] || '🌐';
 }
@@ -959,7 +1177,6 @@ app.get("/api/currencies", async (req, res) => {
       symbol: curr.symbol || getCurrencySymbol(curr.code || curr.currencyCode || curr)
     }));
     
-    // Ajouter les devises d'Afrique de l'Est
     const defaultCurrencies = [
       { code: 'USD', name: 'US Dollar', symbol: '$' },
       { code: 'EUR', name: 'Euro', symbol: '€' },
@@ -968,13 +1185,12 @@ app.get("/api/currencies", async (req, res) => {
       { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr' },
       { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
       { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
-      { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh' }, // Kenya
-      { code: 'TZS', name: 'Tanzanian Shilling', symbol: 'TSh' }, // Tanzanie
-      { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh' }, // Ouganda
-      { code: 'CDF', name: 'Congolese Franc', symbol: 'FC' } // RDC
+      { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh' },
+      { code: 'TZS', name: 'Tanzanian Shilling', symbol: 'TSh' },
+      { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh' },
+      { code: 'CDF', name: 'Congolese Franc', symbol: 'FC' }
     ];
     
-    // Fusionner
     const allCurrencies = [...currencies];
     defaultCurrencies.forEach(function(curr) {
       if (!allCurrencies.some(c => c.code === curr.code)) {
@@ -1023,7 +1239,7 @@ function getCurrencySymbol(code) {
 }
 
 // ============================================
-// 17. DESTINATIONS AFRIQUE DE L'EST (SWAHILI)
+// 17. DESTINATIONS AFRIQUE DE L'EST
 // ============================================
 app.get("/api/east-africa-destinations", async (req, res) => {
   console.log("\n🌍 ===== EAST AFRICA DESTINATIONS ===== 🌍");
@@ -1032,122 +1248,26 @@ app.get("/api/east-africa-destinations", async (req, res) => {
   
   const destinations = {
     fr: [
-      { 
-        name: 'Zanzibar', 
-        country: 'Tanzanie', 
-        countryCode: 'TZ', 
-        image: 'zanzibar.jpg',
-        description: 'Île paradisiaque avec des plages de sable blanc'
-      },
-      { 
-        name: 'Nairobi', 
-        country: 'Kenya', 
-        countryCode: 'KE', 
-        image: 'nairobi.jpg',
-        description: 'Capitale dynamique du Kenya'
-      },
-      { 
-        name: 'Kinshasa', 
-        country: 'RDC', 
-        countryCode: 'CD', 
-        image: 'kinshasa.jpg',
-        description: 'Capitale de la République Démocratique du Congo'
-      },
-      { 
-        name: 'Goma', 
-        country: 'RDC', 
-        countryCode: 'CD', 
-        image: 'goma.jpg',
-        description: 'Ville au bord du lac Kivu'
-      },
-      { 
-        name: 'Dar es Salaam', 
-        country: 'Tanzanie', 
-        countryCode: 'TZ', 
-        image: 'dar-es-salaam.jpg',
-        description: 'Plus grande ville de Tanzanie'
-      },
-      { 
-        name: 'Kampala', 
-        country: 'Ouganda', 
-        countryCode: 'UG', 
-        image: 'kampala.jpg',
-        description: 'Capitale de l\'Ouganda'
-      }
+      { name: 'Zanzibar', country: 'Tanzanie', countryCode: 'TZ', image: 'zanzibar.jpg', description: 'Île paradisiaque avec des plages de sable blanc' },
+      { name: 'Nairobi', country: 'Kenya', countryCode: 'KE', image: 'nairobi.jpg', description: 'Capitale dynamique du Kenya' },
+      { name: 'Kinshasa', country: 'RDC', countryCode: 'CD', image: 'kinshasa.jpg', description: 'Capitale de la République Démocratique du Congo' },
+      { name: 'Goma', country: 'RDC', countryCode: 'CD', image: 'goma.jpg', description: 'Ville au bord du lac Kivu' },
+      { name: 'Dar es Salaam', country: 'Tanzanie', countryCode: 'TZ', image: 'dar-es-salaam.jpg', description: 'Plus grande ville de Tanzanie' },
+      { name: 'Kampala', country: 'Ouganda', countryCode: 'UG', image: 'kampala.jpg', description: 'Capitale de l\'Ouganda' }
     ],
     en: [
-      { 
-        name: 'Zanzibar', 
-        country: 'Tanzania', 
-        countryCode: 'TZ', 
-        image: 'zanzibar.jpg',
-        description: 'Paradise island with white sand beaches'
-      },
-      { 
-        name: 'Nairobi', 
-        country: 'Kenya', 
-        countryCode: 'KE', 
-        image: 'nairobi.jpg',
-        description: 'Dynamic capital of Kenya'
-      },
-      { 
-        name: 'Kinshasa', 
-        country: 'DRC', 
-        countryCode: 'CD', 
-        image: 'kinshasa.jpg',
-        description: 'Capital of the Democratic Republic of Congo'
-      },
-      { 
-        name: 'Goma', 
-        country: 'DRC', 
-        countryCode: 'CD', 
-        image: 'goma.jpg',
-        description: 'City on the shores of Lake Kivu'
-      }
+      { name: 'Zanzibar', country: 'Tanzania', countryCode: 'TZ', image: 'zanzibar.jpg', description: 'Paradise island with white sand beaches' },
+      { name: 'Nairobi', country: 'Kenya', countryCode: 'KE', image: 'nairobi.jpg', description: 'Dynamic capital of Kenya' },
+      { name: 'Kinshasa', country: 'DRC', countryCode: 'CD', image: 'kinshasa.jpg', description: 'Capital of the Democratic Republic of Congo' },
+      { name: 'Goma', country: 'DRC', countryCode: 'CD', image: 'goma.jpg', description: 'City on the shores of Lake Kivu' }
     ],
     sw: [
-      { 
-        name: 'Zanzibar', 
-        country: 'Tanzania', 
-        countryCode: 'TZ', 
-        image: 'zanzibar.jpg',
-        description: 'Kisiwa cha peponi na fukwe nyeupe'
-      },
-      { 
-        name: 'Nairobi', 
-        country: 'Kenya', 
-        countryCode: 'KE', 
-        image: 'nairobi.jpg',
-        description: 'Mji mkuu wa Kenya'
-      },
-      { 
-        name: 'Kinshasa', 
-        country: 'DRC', 
-        countryCode: 'CD', 
-        image: 'kinshasa.jpg',
-        description: 'Mji mkuu wa Jamhuri ya Kidemokrasia ya Kongo'
-      },
-      { 
-        name: 'Goma', 
-        country: 'DRC', 
-        countryCode: 'CD', 
-        image: 'goma.jpg',
-        description: 'Mji wa ziwa Kivu'
-      },
-      { 
-        name: 'Dar es Salaam', 
-        country: 'Tanzania', 
-        countryCode: 'TZ', 
-        image: 'dar-es-salaam.jpg',
-        description: 'Mji mkubwa wa Tanzania'
-      },
-      { 
-        name: 'Kampala', 
-        country: 'Uganda', 
-        countryCode: 'UG', 
-        image: 'kampala.jpg',
-        description: 'Mji mkuu wa Uganda'
-      }
+      { name: 'Zanzibar', country: 'Tanzania', countryCode: 'TZ', image: 'zanzibar.jpg', description: 'Kisiwa cha peponi na fukwe nyeupe' },
+      { name: 'Nairobi', country: 'Kenya', countryCode: 'KE', image: 'nairobi.jpg', description: 'Mji mkuu wa Kenya' },
+      { name: 'Kinshasa', country: 'DRC', countryCode: 'CD', image: 'kinshasa.jpg', description: 'Mji mkuu wa Jamhuri ya Kidemokrasia ya Kongo' },
+      { name: 'Goma', country: 'DRC', countryCode: 'CD', image: 'goma.jpg', description: 'Mji wa ziwa Kivu' },
+      { name: 'Dar es Salaam', country: 'Tanzania', countryCode: 'TZ', image: 'dar-es-salaam.jpg', description: 'Mji mkubwa wa Tanzania' },
+      { name: 'Kampala', country: 'Uganda', countryCode: 'UG', image: 'kampala.jpg', description: 'Mji mkuu wa Uganda' }
     ]
   };
   
@@ -1156,14 +1276,150 @@ app.get("/api/east-africa-destinations", async (req, res) => {
 });
 
 // ============================================
-// 18. TRANSLATIONS - Récupérer les traductions
+// 18. TRADUCTION DEEPSEEK - API PRINCIPALE
+// ============================================
+app.post('/api/translate', async (req, res) => {
+  console.log("\n🌍 ===== DEEPSEEK TRANSLATION ===== 🌍");
+  
+  const { text, targetLang, sourceLang = 'fr', context = '' } = req.body;
+  
+  if (!text || !targetLang) {
+    return res.status(400).json({ 
+      success: false, 
+      error: "Text and targetLang are required" 
+    });
+  }
+
+  if (targetLang === 'fr') {
+    return res.json({ success: true, translation: text });
+  }
+
+  try {
+    const translation = await translateWithCache(text, targetLang, sourceLang, context);
+    res.json({ 
+      success: true, 
+      translation: translation,
+      sourceLang: sourceLang,
+      targetLang: targetLang
+    });
+  } catch (error) {
+    console.error('❌ Erreur DeepSeek:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      fallback: text
+    });
+  }
+});
+
+// ============================================
+// 19. TRADUCTION DES AVIS - API DÉDIÉE
+// ============================================
+app.post("/api/translate-reviews", async (req, res) => {
+  console.log("\n⭐ ===== TRANSLATE REVIEWS ===== ⭐");
+  
+  const { reviews, targetLang } = req.body;
+  
+  if (!reviews || !Array.isArray(reviews) || reviews.length === 0) {
+    return res.json({ success: true, reviews: [] });
+  }
+  
+  if (targetLang === 'fr') {
+    return res.json({ success: true, reviews: reviews });
+  }
+  
+  try {
+    const translatedReviews = await Promise.all(
+      reviews.map(async (review) => {
+        if (!review.comment || review.comment.length === 0) {
+          return review;
+        }
+        
+        try {
+          const translatedComment = await translateWithCache(
+            review.comment,
+            targetLang,
+            'fr',
+            'Avis d\'hôtel. Termes courants : "propre", "bien situé", "bon service", "confortable"'
+          );
+          
+          return {
+            ...review,
+            comment: translatedComment || review.comment,
+            translated: true,
+            originalComment: review.comment,
+            translatedLanguage: targetLang
+          };
+        } catch (error) {
+          console.warn('⚠️ Erreur traduction avis:', error.message);
+          return review;
+        }
+      })
+    );
+    
+    res.json({
+      success: true,
+      reviews: translatedReviews,
+      targetLang: targetLang,
+      total: translatedReviews.length
+    });
+  } catch (error) {
+    console.error('❌ Erreur traduction avis:', error);
+    res.json({ success: true, reviews: reviews });
+  }
+});
+
+// ============================================
+// 20. TRADUCTION DESCRIPTION HÔTEL - API DÉDIÉE
+// ============================================
+app.post("/api/translate-hotel-description", async (req, res) => {
+  console.log("\n📝 ===== TRANSLATE HOTEL DESCRIPTION ===== 📝");
+  
+  const { hotelId, description, targetLang } = req.body;
+  
+  if (!description) {
+    return res.status(400).json({ 
+      success: false, 
+      error: "Description is required" 
+    });
+  }
+  
+  if (targetLang === 'fr') {
+    return res.json({ success: true, translation: description });
+  }
+  
+  try {
+    const translated = await translateWithCache(
+      description,
+      targetLang || 'fr',
+      'fr',
+      'Description d\'hôtel. Termes touristiques : "chambre", "suite", "petit-déjeuner", "piscine", "spa"'
+    );
+    
+    res.json({
+      success: true,
+      translation: translated,
+      original: description,
+      targetLang: targetLang
+    });
+  } catch (error) {
+    console.error('❌ Erreur traduction description:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      fallback: description
+    });
+  }
+});
+
+// ============================================
+// 21. TRANSLATIONS - Récupérer les traductions
 // ============================================
 app.get("/api/translations", (req, res) => {
   console.log("\n📝 ===== TRANSLATIONS ===== 📝");
   
   const language = req.query.language || 'fr';
   
-  // Traductions communes disponibles sur le serveur
   const translations = {
     fr: {
       welcome: 'Bienvenue sur LuviaPlace',
@@ -1210,44 +1466,7 @@ app.get("/api/translations", (req, res) => {
   const data = translations[language] || translations.fr;
   res.json({ success: true, data: data, language: language });
 });
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
-app.post('/api/translate', async (req, res) => {
-  const { text, targetLang, sourceLang = 'fr' } = req.body;
-  
-  try {
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: `Tu es un traducteur professionnel. Traduis le texte suivant du ${sourceLang} vers le ${targetLang} en gardant le sens et le ton.`
-          },
-          {
-            role: 'user',
-            content: text
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000
-      })
-    });
-    
-    const data = await response.json();
-    res.json({
-      success: true,
-      translation: data.choices[0].message.content
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
 // ============================================
 // ROUTES FRONTEND
 // ============================================
@@ -1283,26 +1502,31 @@ app.listen(port, () => {
   console.log(`📌 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔑 API Key (prod): ${prod_apiKey ? '✅' : '❌'}`);
   console.log(`🔑 API Key (sandbox): ${sandbox_apiKey ? '✅' : '❌'}`);
+  console.log(`🤖 DeepSeek API: ${DEEPSEEK_API_KEY ? '✅' : '❌'}`);
   console.log(`\n📋 ENDPOINTS:`);
-  console.log(`   📍 GET  /search-places          - Recherche de lieux (multilingue)`);
-  console.log(`   🔍 GET  /search-hotels          - Hôtels (multilingue)`);
-  console.log(`   🔍 GET  /search-hotels-stream   - Hôtels STREAMING (multilingue)`);
-  console.log(`   💰 GET  /search-rates           - Tarifs détaillés (multilingue)`);
-  console.log(`   🏨 GET  /hotel-details          - Détails hôtel (multilingue)`);
-  console.log(`   ⭐ GET  /hotel-reviews          - Avis hôtel (multilingue)`);
-  console.log(`   📋 POST /prebook                - Pré-réservation hôtel`);
-  console.log(`   📝 POST /book                   - Réservation hôtel`);
-  console.log(`   ✈️ POST /search-flights         - Recherche vols`);
-  console.log(`   ✈️ POST /prebook-flight         - Pré-réservation vol`);
-  console.log(`   ✈️ POST /book-flight            - Réservation vol`);
-  console.log(`   🤖 GET  /api/chatbot-key        - Clé chatbot`);
-  console.log(`   📦 GET  /api/chatbot-script     - Script chatbot`);
-  console.log(`   🌍 GET  /api/languages          - Langues supportées (🇹🇿 Swahili inclus)`);
-  console.log(`   💰 GET  /api/currencies         - Devises supportées`);
-  console.log(`   🌍 GET  /api/east-africa-destinations - Destinations Afrique de l'Est`);
-  console.log(`   📝 GET  /api/translations       - Traductions`);
+  console.log(`   📍 GET  /search-places                 - Recherche de lieux (multilingue)`);
+  console.log(`   🔍 GET  /search-hotels                 - Hôtels (multilingue + DeepSeek)`);
+  console.log(`   🔍 GET  /search-hotels-stream          - Hôtels STREAMING (multilingue)`);
+  console.log(`   💰 GET  /search-rates                  - Tarifs détaillés (multilingue)`);
+  console.log(`   🏨 GET  /hotel-details                 - Détails hôtel (multilingue + DeepSeek)`);
+  console.log(`   ⭐ GET  /hotel-reviews                 - Avis hôtel (multilingue + DeepSeek)`);
+  console.log(`   📋 POST /prebook                       - Pré-réservation hôtel`);
+  console.log(`   📝 POST /book                          - Réservation hôtel`);
+  console.log(`   ✈️ POST /search-flights                - Recherche vols`);
+  console.log(`   ✈️ POST /prebook-flight                - Pré-réservation vol`);
+  console.log(`   ✈️ POST /book-flight                   - Réservation vol`);
+  console.log(`   🤖 GET  /api/chatbot-key               - Clé chatbot`);
+  console.log(`   📦 GET  /api/chatbot-script            - Script chatbot`);
+  console.log(`   🌍 GET  /api/languages                 - Langues supportées`);
+  console.log(`   💰 GET  /api/currencies                - Devises supportées`);
+  console.log(`   🌍 GET  /api/east-africa-destinations  - Destinations Afrique de l'Est`);
+  console.log(`   📝 GET  /api/translations              - Traductions UI`);
+  console.log(`   🌍 POST /api/translate                 - Traduction DeepSeek`);
+  console.log(`   ⭐ POST /api/translate-reviews         - Traduction avis`);
+  console.log(`   📝 POST /api/translate-hotel-description - Traduction description`);
   console.log(`\n✅ Serveur prêt !`);
   console.log(`🌍 Langues: FR, EN, ES, SW (Kiswahili), PT, IT, DE, AR, ZH`);
   console.log(`💰 Devises: USD, EUR, GBP, KES, TZS, CDF, ...`);
+  console.log(`🤖 DeepSeek intégré pour les langues non supportées par LiteAPI`);
   console.log(`\n🇹🇿 Karibu sana! Swahili supporté !\n`);
 });

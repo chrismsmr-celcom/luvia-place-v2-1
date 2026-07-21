@@ -70,7 +70,7 @@ var translations = {
     'search.round_trip': 'Aller-retour',
     'search.one_way': 'Aller simple',
     
-    // Hôtels
+    // Hôtels (labels et descriptions)
     'hotel.rating': 'Note',
     'hotel.reviews': 'avis',
     'hotel.no_results': 'Aucun hôtel trouvé',
@@ -80,6 +80,13 @@ var translations = {
     'hotel.unavailable': 'Indisponible',
     'hotels.recommended': 'Hôtels recommandés',
     'hotels.nearby': 'Hôtels à proximité',
+    
+    // Scores et évaluations (traduits)
+    'hotel.excellent': 'Excellent',
+    'hotel.very_good': 'Très bien',
+    'hotel.good': 'Bien',
+    'hotel.no_offers': 'Aucune offre disponible',
+    'hotel.error': 'Impossible de charger les hôtels',
     
     // Collections
     'collections.eyebrow': 'Le courant LuviaPlace',
@@ -241,6 +248,13 @@ var translations = {
     'hotels.recommended': 'Recommended Hotels',
     'hotels.nearby': 'Nearby Hotels',
     
+    // Scores et évaluations (traduits)
+    'hotel.excellent': 'Excellent',
+    'hotel.very_good': 'Very good',
+    'hotel.good': 'Good',
+    'hotel.no_offers': 'No offers available',
+    'hotel.error': 'Unable to load hotels',
+    
     // Collections
     'collections.eyebrow': 'The LuviaPlace Current',
     'collections.title': 'Collections',
@@ -401,6 +415,13 @@ var translations = {
     'hotels.recommended': 'Hoteles recomendados',
     'hotels.nearby': 'Hoteles cercanos',
     
+    // Scores et évaluations (traduits)
+    'hotel.excellent': 'Excelente',
+    'hotel.very_good': 'Muy bueno',
+    'hotel.good': 'Bueno',
+    'hotel.no_offers': 'No hay ofertas disponibles',
+    'hotel.error': 'No se pudieron cargar los hoteles',
+    
     // Collections
     'collections.eyebrow': 'La corriente LuviaPlace',
     'collections.title': 'Colecciones',
@@ -560,6 +581,13 @@ var translations = {
     'hotel.unavailable': 'Haipatikani',
     'hotels.recommended': 'Hoteli zilizopendekezwa',
     'hotels.nearby': 'Hoteli zilizo karibu',
+    
+    // Scores et évaluations (traduits)
+    'hotel.excellent': 'Bora',
+    'hotel.very_good': 'Nzuri sana',
+    'hotel.good': 'Nzuri',
+    'hotel.no_offers': 'Hakuna ofa',
+    'hotel.error': 'Impossible kupakia hoteli',
     
     // Collections
     'collections.eyebrow': 'Mkondo wa LuviaPlace',

@@ -1911,17 +1911,34 @@
 </div>
 
 <!-- Chatbot LiteAPI : à ne charger que via un endpoint serveur qui ne révèle jamais la clé au client -->
-<script src="/api/chatbot-script" async></script>
 <script>
-// Tenter de charger le chatbot via le proxy
-(function() {
-    const script = document.createElement('script');
-    script.src = '/api/chatbot-script';
-    script.async = true;
-    script.onerror = function() {
-        console.warn('⚠️ Chatbot non disponible');
-    };
-    document.head.appendChild(script);
+// Charger la configuration puis le chatbot
+(async function() {
+    try {
+        // 1. Récupérer la configuration
+        const configResponse = await fetch('/api/chatbot-config');
+        const config = await configResponse.json();
+        
+        if (!config.success || !config.apiKey) {
+            console.warn('⚠️ Configuration chatbot non disponible');
+            return;
+        }
+        
+        // 2. Créer le script avec la clé
+        const script = document.createElement('script');
+        script.src = `https://components.liteapi.travel/chatbot/v1.js?liteApiKey=${config.apiKey}`;
+        script.async = true;
+        script.onload = function() {
+            console.log('✅ Chatbot LiteAPI chargé');
+        };
+        script.onerror = function() {
+            console.warn('⚠️ Erreur chargement chatbot');
+        };
+        document.head.appendChild(script);
+        
+    } catch (error) {
+        console.error('❌ Erreur:', error);
+    }
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

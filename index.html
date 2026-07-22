@@ -835,6 +835,64 @@
 .account-dropdown-overlay.active {
     display: block;
 }
+  /* ============================================
+   AVATAR UTILISATEUR
+   ============================================ */
+
+.account-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 12px 4px 6px;
+    border-radius: 100px;
+    border: 1.5px solid var(--line);
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+.account-trigger:hover {
+    border-color: var(--blue);
+    box-shadow: 0 2px 8px rgba(21,94,239,0.1);
+}
+
+.account-trigger .avatar-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.account-trigger .avatar-icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 50%;
+}
+
+.account-trigger .avatar-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Version mobile */
+@media (max-width: 600px) {
+    .account-trigger {
+        padding: 4px 8px 4px 4px;
+    }
+    .account-trigger .avatar-text {
+        font-size: 12px;
+        max-width: 80px;
+    }
+    .account-trigger .avatar-icon {
+        width: 28px;
+        height: 28px;
+    }
+}
 /* ============================================
    MARGES POUR SECTIONS SPÉCIFIQUES
    ============================================ */
@@ -1268,6 +1326,96 @@
         font-size: 14px;
     }
 }
+  /* ============================================
+   ICÔNES DU MENU DROPDOWN
+   ============================================ */
+
+.p-menuitem-link .menu-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--ink-soft);
+    transition: color 0.2s ease;
+}
+
+.p-menuitem-link:hover .menu-icon {
+    color: var(--blue);
+}
+
+.p-menuitem-link.logout-link .menu-icon {
+    color: var(--red);
+}
+
+.p-menuitem-link.logout-link:hover .menu-icon {
+    color: #B91C1C;
+}
+
+/* ============================================
+   AVATAR TRIGGER
+   ============================================ */
+
+.account-trigger {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 12px 4px 6px;
+    border-radius: 100px;
+    border: 1.5px solid var(--line);
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+.account-trigger:hover {
+    border-color: var(--blue);
+    box-shadow: 0 2px 8px rgba(21,94,239,0.1);
+}
+
+.account-trigger .avatar-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.account-trigger .avatar-initials {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.account-trigger .avatar-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .account-trigger {
+        padding: 4px 8px 4px 4px;
+    }
+    .account-trigger .avatar-text {
+        font-size: 12px;
+        max-width: 80px;
+    }
+    .account-trigger .avatar-initials {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+}
 </style>
 </head>
 <body>
@@ -1290,8 +1438,18 @@
      ACCOUNT DROPDOWN - MENU UTILISATEUR
      ============================================ -->
 <div class="account-dropdown-container">
+    <!-- Bouton "Se connecter" (caché quand connecté) -->
     <button class="btn-primary" id="loginBtn" data-i18n="nav.login">Se connecter</button>
     
+    <!-- Avatar utilisateur (visible quand connecté) -->
+    <div class="account-trigger" id="accountTrigger" style="display:none;">
+        <div class="avatar-section">
+            <div class="avatar-initials" id="avatarInitials">U</div>
+            <span class="avatar-text" id="avatarName">Utilisateur</span>
+        </div>
+    </div>
+
+    <!-- Dropdown compte -->
     <div class="account-dropdown" id="accountDropdown">
         <div class="user-info">
             <div class="user-avatar" id="accountAvatar">U</div>
@@ -1303,31 +1461,49 @@
         <ul class="p-menu-list">
             <li class="p-menuitem">
                 <a class="p-menuitem-link" href="index.html">
-                    <i></i>
+                    <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/>
+                    </svg>
                     <span class="p-menuitem-text" data-i18n="nav.home">Accueil</span>
                 </a>
             </li>
             <li class="p-menuitem">
                 <a class="p-menuitem-link" href="favorites.html">
-                    <i></i>
+                    <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
                     <span class="p-menuitem-text" data-i18n="nav.favorites">Mes favoris</span>
                 </a>
             </li>
             <li class="p-menuitem">
                 <a class="p-menuitem-link" href="#">
-                    <i></i>
+                    <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
                     <span class="p-menuitem-text">Parrainages</span>
                 </a>
             </li>
             <li class="p-menuitem">
                 <a class="p-menuitem-link" href="bookings.html">
-                    <i></i>
+                    <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
                     <span class="p-menuitem-text" data-i18n="booking.my_bookings">Mes réservations</span>
                 </a>
             </li>
             <li class="p-menuitem">
                 <a class="p-menuitem-link logout-link" id="accountLogoutBtn">
-                    <i></i>
+                    <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
                     <span class="p-menuitem-text" data-i18n="auth.logout">Se déconnecter</span>
                 </a>
             </li>

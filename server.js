@@ -1279,6 +1279,7 @@ app.get("/api/chatbot-script", async (req, res) => {
   }
   
   try {
+    // Construire l'URL avec la clé
     const scriptUrl = `https://components.liteapi.travel/chatbot/v1.js?liteApiKey=${apiKey}`;
     console.log(`📡 Chargement depuis: ${scriptUrl}`);
     
@@ -1290,15 +1291,10 @@ app.get("/api/chatbot-script", async (req, res) => {
     
     const script = await response.text();
     
-    // 👇 AJOUTER CETTE LIGNE POUR PERMETTRE LE CHARGEMENT
-    const modifiedScript = script.replace(
-      'LITE_API_KEY',
-      apiKey
-    );
-    
+    // Envoyer le script tel quel
     res.setHeader('Content-Type', 'application/javascript');
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.send(modifiedScript);
+    res.send(script);
     
     console.log('✅ Script chatbot envoyé');
   } catch (error) {

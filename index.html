@@ -1911,18 +1911,8 @@
 </div>
 
 <!-- Chatbot LiteAPI : à ne charger que via un endpoint serveur qui ne révèle jamais la clé au client -->
-<script>
-// Chargement simple du chatbot
-(function() {
-    const script = document.createElement('script');
-    script.src = '/api/chatbot-script';
-    script.async = true;
-    script.onerror = function() {
-        console.warn('⚠️ Chatbot non disponible');
-    };
-    document.head.appendChild(script);
-})();
-</script>
+<!-- Dans le <head> ou avant la fermeture du </body> -->
+<script src="https://components.liteapi.travel/chatbot/v1.js?liteApiKey=prod_public_4f1ec201-76ab-4314-8a70-38916b18e161" async></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 <script src="js/i18n.js"></script>

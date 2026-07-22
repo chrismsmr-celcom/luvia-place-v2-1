@@ -43,16 +43,53 @@ app.use((req, res, next) => {
 // FONCTION : Récupérer la nationalité par géolocalisation IP
 // ============================================
 async function getCountryFromIP(ip) {
-    try {
-        // Utiliser l'API ipapi.co (gratuite, 1000 requêtes/jour)
-        const response = await fetch(`https://ipapi.co/${ip}/json/`);
-        const data = await response.json();
-        return data.country_code || 'US';
-    } catch (error) {
-        console.warn('⚠️ Erreur géolocalisation IP:', error.message);
-        return 'US'; // Fallback
+    // Liste des APIs à tester (ordre de priorité)
+    const apis = [
+        // 1. ip-api.com - Gratuit, fiable, supporte bien l'Afrique
+        {
+            url: `http://ip-api.com/json/${ip}?fields=status,countryCode`,
+            parser: (data) => data.countryCode
+        },
+        // 2. ipapi.co - Alternative
+        {
+            url: `https://ipapi.co/${ip}/json/`,
+            parser: (data) => data.country_code
+        },
+        // 3. FreeGeoIP - Alternative
+        {
+            url: `https://freegeoip.app/json/${ip}`,
+            parser: (data) => data.country_code
+        },
+        // 4. IPInfo - Alternative (avec token optionnel)
+        {
+            url: `https://ipinfo.io/${ip}/json`,
+            parser: (data) => data.country
+        }
+    ];
+
+    for (const api of apis) {
+        try {
+            console.log(`📡 Tentative géolocalisation avec: ${api.url}`);
+            const response = await fetch(api.url, { timeout: 3000 });
+            
+            if (!response.ok) continue;
+            
+            const data = await response.json();
+            const countryCode = api.parser(data);
+            
+            if (countryCode && countryCode.length === 2) {
+                console.log(`✅ Géolocalisation réussie: ${countryCode}`);
+                return countryCode.toUpperCase();
+            }
+        } catch (error) {
+            console.warn(`⚠️ Échec API: ${api.url} - ${error.message}`);
+        }
     }
+    
+    console.warn('⚠️ Toutes les APIs de géolocalisation ont échoué');
+    return null;
 }
+
 
 // ============================================
 // MIDDLEWARE : Récupérer la nationalité
@@ -60,18 +97,24 @@ async function getCountryFromIP(ip) {
 async function getGuestNationality(req) {
     // 1. Priorité au paramètre explicite
     if (req.query.nationality) {
-        return req.query.nationality.toUpperCase();
+        const nat = req.query.nationality.toUpperCase();
+        console.log(`🌍 Nationalité via paramètre: ${nat}`);
+        return nat;
     }
     if (req.body && req.body.nationality) {
-        return req.body.nationality.toUpperCase();
+        const nat = req.body.nationality.toUpperCase();
+        console.log(`🌍 Nationalité via body: ${nat}`);
+        return nat;
     }
     
-    // 2. Récupérer depuis l'en-tête (si fourni par le frontend)
+    // 2. Récupérer depuis l'en-tête
     if (req.headers['x-nationality']) {
-        return req.headers['x-nationality'].toUpperCase();
+        const nat = req.headers['x-nationality'].toUpperCase();
+        console.log(`🌍 Nationalité via en-tête: ${nat}`);
+        return nat;
     }
     
-    // 3. Parcourir les cookies
+    // 3. Récupérer depuis les cookies
     if (req.headers.cookie) {
         const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
             const [key, value] = cookie.trim().split('=');
@@ -79,23 +122,69 @@ async function getGuestNationality(req) {
             return acc;
         }, {});
         if (cookies.nationality) {
-            return cookies.nationality.toUpperCase();
+            const nat = cookies.nationality.toUpperCase();
+            console.log(`🌍 Nationalité via cookie: ${nat}`);
+            return nat;
         }
     }
     
     // 4. Géolocalisation par IP
-    const ip = req.headers['x-forwarded-for']?.split(',')[0] || 
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
                req.connection?.remoteAddress || 
                req.socket?.remoteAddress || 
                '8.8.8.8';
     
+    console.log(`📍 IP détectée: ${ip}`);
+    
     try {
         const country = await getCountryFromIP(ip);
-        return country;
+        if (country) {
+            console.log(`🌍 Nationalité détectée par IP: ${country}`);
+            return country;
+        }
     } catch (error) {
-        console.warn('⚠️ Fallback nationalité: US');
-        return 'US';
+        console.warn('⚠️ Erreur géolocalisation:', error.message);
     }
+    
+    // 5. Fallback intelligent : Utiliser le pays de la destination si disponible
+    if (req.query.city) {
+        const city = req.query.city.toLowerCase();
+        const cityCountryMap = {
+            'kinshasa': 'CD',
+            'lubumbashi': 'CD',
+            'goma': 'CD',
+            'bukavu': 'CD',
+            'kisangani': 'CD',
+            'kananga': 'CD',
+            'mbuji-mayi': 'CD',
+            'dar es salaam': 'TZ',
+            'zanzibar': 'TZ',
+            'nairobi': 'KE',
+            'mombasa': 'KE',
+            'kampala': 'UG',
+            'entebbe': 'UG',
+            'kigali': 'RW',
+            'bujumbura': 'BI',
+            'lagos': 'NG',
+            'abuja': 'NG',
+            'accra': 'GH',
+            'dakar': 'SN',
+            'abidjan': 'CI',
+            'douala': 'CM',
+            'yaoundé': 'CM'
+        };
+        
+        for (const [cityName, countryCode] of Object.entries(cityCountryMap)) {
+            if (city.includes(cityName)) {
+                console.log(`🌍 Fallback par ville: ${city} -> ${countryCode}`);
+                return countryCode;
+            }
+        }
+    }
+    
+    // 6. Fallback final : US (comportement par défaut de LiteAPI)
+    console.warn('⚠️ Fallback final: US');
+    return 'US';
 }
 
 // ============================================

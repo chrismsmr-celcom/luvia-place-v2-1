@@ -1290,9 +1290,15 @@ app.get("/api/chatbot-script", async (req, res) => {
     
     const script = await response.text();
     
+    // 👇 AJOUTER CETTE LIGNE POUR PERMETTRE LE CHARGEMENT
+    const modifiedScript = script.replace(
+      'LITE_API_KEY',
+      apiKey
+    );
+    
     res.setHeader('Content-Type', 'application/javascript');
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.send(script);
+    res.send(modifiedScript);
     
     console.log('✅ Script chatbot envoyé');
   } catch (error) {

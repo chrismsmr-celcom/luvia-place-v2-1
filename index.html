@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --blue:#155EEF; --blue-dark:#0E3FB0; --blue-light:#E8F0FE;
@@ -40,24 +41,25 @@
 
   header.nav{
     display:flex; align-items:center; justify-content:space-between;
-    padding:12px clamp(16px,4vw,48px); position:sticky; top:0;
+    padding:0px clamp(16px,4vw,48px); position:sticky; top:0;
     background:rgba(255,255,255,0.92); backdrop-filter:blur(16px) saturate(180%);
     -webkit-backdrop-filter:blur(16px) saturate(180%); z-index:100;
     min-height:var(--header-height); border-bottom:1px solid rgba(231,234,240,0.5);
   }
-  .logo-img{ height:32px; width:auto; }
+  .logo-img{ height:50px; width:auto; }
   .nav-icons{ display:flex; align-items:center; gap:6px; }
   .icon-btn{ width:38px; height:38px; border-radius:var(--radius-sm); background:transparent; border:1px solid transparent; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); transition:var(--transition); }
   .icon-btn:hover{ background:var(--bg-soft); border-color:var(--line); }
   .icon-btn svg{ width:18px; height:18px; }
   .btn-primary{ background:var(--blue); color:#fff; font-weight:600; font-size:13px; padding:8px 18px; border-radius:var(--radius-sm); border:none; transition:var(--transition); }
   .btn-primary:hover{ background:var(--blue-dark); transform:translateY(-1px); box-shadow:0 4px 12px rgba(21,94,239,0.3); }
+  .btn-primary.logged-in{ background:var(--green); }
+  .btn-primary.logged-in:hover{ background:#0F6B4A; }
   @media (max-width:600px){
   .btn-primary{ padding:6px 14px; font-size:12px; }
-  .logo-img{ height:26px; }
+  .logo-img{ height:46px; }
   .icon-btn{ width:32px; height:32px; }
   .icon-btn svg{ width:16px; height:16px; }
-  /* .nav-icons .icon-btn:first-child{ display:none; } */  /* ← SUPPRIMER OU COMMENTER */
 }
 
   .hero{ position:relative; height:min(65vh,560px); min-height:380px; overflow:hidden; isolation:isolate; }
@@ -266,7 +268,7 @@
   .loyalty-content p{ font-size:14px; color:rgba(255,255,255,0.85); }
   @media (max-width:600px){ .loyalty{ height:160px; padding:0 20px; } .loyalty-content h3{ font-size:18px; } .loyalty-content p{ font-size:12px; } }
 
-  .feature-trio{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; padding:48px 0; border-bottom:1px solid var(--line); }
+  .feature-trio{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; padding:48px 0; ///; }
   @media (max-width:900px){ .feature-trio{ grid-template-columns:1fr 1fr; } }
   @media (max-width:600px){ .feature-trio{ grid-template-columns:1fr; gap:16px; padding:32px 0; } }
   .feature-item{ display:flex; gap:14px; }
@@ -668,6 +670,414 @@
         margin-right: 8px !important;
     }
 }
+/* ============================================
+   CORRECTION SUGGEST-DROPDOWN - visible en entier
+   ============================================ */
+
+/* 1. Permettre au conteneur de déborder */
+.search-card {
+    overflow: visible !important;
+}
+
+.search-panel {
+    overflow: visible !important;
+    position: relative;
+}
+
+/* 2. Chaque champ de destination doit aussi permettre le débordement */
+.field-destination {
+    overflow: visible !important;
+    position: relative;
+}
+
+/* 3. La dropdown elle-même - s'assurer qu'elle est au-dessus de tout */
+.suggest-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    min-width: 300px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000 !important; /* z-index très élevé */
+    display: none;
+    overflow: hidden;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+/* 4. Quand elle est ouverte - s'assurer qu'elle est visible */
+.suggest-dropdown.open {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* 5. Correction pour le conteneur de recherche */
+.search-fields {
+    overflow: visible !important;
+}
+
+.field {
+    overflow: visible !important;
+}
+
+/* 6. Pour les champs de destination dans les lignes de vol */
+.field-destination .suggest-dropdown {
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    min-width: 280px;
+}
+
+/* 7. Dans les champs de vol (multi-destination) */
+.leg-row .field-destination {
+    position: relative;
+    overflow: visible;
+}
+
+.leg-row .field-destination .suggest-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    min-width: 250px;
+    z-index: 1001;
+}
+
+/* 8. S'assurer que les autres conteneurs ne coupent pas la dropdown */
+.search-fields-wrap {
+    overflow: visible !important;
+}
+
+.scroll-horizontal {
+    overflow-y: visible !important;
+}
+
+/* 9. Correction pour mobile - la dropdown prend plus de place */
+@media (max-width: 600px) {
+    .suggest-dropdown {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        min-width: 100% !important;
+        max-height: 50vh !important;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+        box-shadow: 0 -8px 30px rgba(0,0,0,0.2) !important;
+        z-index: 2000 !important;
+    }
+    
+    .suggest-dropdown.open {
+        display: block !important;
+        animation: slideUp 0.3s ease;
+    }
+    
+    /* Le champ de recherche en mobile doit être visible */
+    .field-destination {
+        position: static !important;
+    }
+}
+
+/* Animation pour mobile */
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 10. Pour les popovers, s'assurer qu'ils ne sont pas coupés */
+.popover {
+    z-index: 500 !important;
+}
+
+/* 11. S'assurer que le container principal ne coupe rien */
+.search-wrap {
+    overflow: visible !important;
+    z-index: 10;
+}
+
+/* 12. La carte de recherche ne doit pas couper la dropdown */
+.search-card {
+    overflow: visible !important;
+    position: relative;
+    z-index: 5;
+}
+
+/* 13. Pour le champ de destination dans le panel hôtel */
+[data-panel="hotel"] .field-destination .suggest-dropdown {
+    min-width: 320px;
+}
+
+/* 14. Pour le champ de destination dans les vols */
+[data-panel="flight"] .field-destination .suggest-dropdown {
+    min-width: 300px;
+}
+
+/* 15. Pour le champ de destination dans les packages */
+[data-panel="package"] .field-destination .suggest-dropdown {
+    min-width: 300px;
+}
+/* ============================================
+   MODALE DE CONNEXION
+   ============================================ */
+
+.auth-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.auth-modal-overlay.open {
+    display: flex;
+}
+
+.auth-modal {
+    background: #fff;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 420px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(16,24,40,0.16);
+    animation: slideUp 0.3s ease;
+}
+
+.auth-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.auth-modal-header h3 {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    color: #101828;
+    margin: 0;
+}
+
+.auth-modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #F7F9FC;
+    border: none;
+    font-size: 20px;
+    color: #475467;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-modal-close:hover {
+    background: #FEE4E2;
+    color: #D92D20;
+}
+
+.auth-modal .logo-center {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.auth-modal .logo-center img {
+    height: 48px;
+    width: auto;
+    margin: 0 auto;
+}
+
+.auth-modal .subtitle {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin-bottom: 28px;
+}
+
+/* Bouton Google */
+.google-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1.5px solid #E7EAF0;
+    background: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    color: #101828;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.google-btn:hover {
+    background: #F7F9FC;
+    border-color: #155EEF;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(21,94,239,0.1);
+}
+
+.google-btn svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.google-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Divider */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 20px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #E7EAF0;
+}
+
+.auth-divider span {
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* User info */
+.auth-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: var(--bg-soft);
+    border-radius: 10px;
+    margin-top: 16px;
+}
+
+.auth-user-info .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--blue-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--blue);
+    flex-shrink: 0;
+}
+
+.auth-user-info .user-details {
+    flex: 1;
+}
+
+.auth-user-info .user-details .name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.auth-user-info .user-details .email {
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.auth-user-info .logout-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: #FEE4E2;
+    color: #D92D20;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.auth-user-info .logout-btn:hover {
+    background: #FECDC8;
+}
+
+/* Toast notification */
+.auth-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: var(--ink);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+    font-weight: 600;
+    box-shadow: var(--shadow-lg);
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.auth-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.auth-toast.error {
+    background: #D92D20;
+}
+
+.auth-toast.success {
+    background: #12805C;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .auth-modal {
+        padding: 24px;
+        margin: 10px;
+        max-width: 100%;
+        border-radius: 12px;
+    }
+    
+    .auth-modal-header h3 {
+        font-size: 18px;
+    }
+    
+    .google-btn {
+        padding: 12px;
+        font-size: 14px;
+    }
+}
 </style>
 </head>
 <body>
@@ -1043,39 +1453,9 @@
           <span class="lang-name" data-i18n="language.pt">Português</span>
           <span class="lang-check">✓</span>
         </button>
-        <button class="lang-option" data-lang="it">
-          <span class="flag">🇮🇹</span>
-          <span class="lang-name" data-i18n="language.it">Italiano</span>
-          <span class="lang-check">✓</span>
-        </button>
-        <button class="lang-option" data-lang="de">
-          <span class="flag">🇩🇪</span>
-          <span class="lang-name" data-i18n="language.de">Deutsch</span>
-          <span class="lang-check">✓</span>
-        </button>
         <button class="lang-option" data-lang="ar">
           <span class="flag">🇦🇪</span>
           <span class="lang-name" data-i18n="language.ar">العربية</span>
-          <span class="lang-check">✓</span>
-        </button>
-        <button class="lang-option" data-lang="zh">
-          <span class="flag">🇨🇳</span>
-          <span class="lang-name" data-i18n="language.zh">中文</span>
-          <span class="lang-check">✓</span>
-        </button>
-        <button class="lang-option" data-lang="ja">
-          <span class="flag">🇯🇵</span>
-          <span class="lang-name" data-i18n="language.ja">日本語</span>
-          <span class="lang-check">✓</span>
-        </button>
-        <button class="lang-option" data-lang="ru">
-          <span class="flag">🇷🇺</span>
-          <span class="lang-name" data-i18n="language.ru">Русский</span>
-          <span class="lang-check">✓</span>
-        </button>
-        <button class="lang-option" data-lang="nl">
-          <span class="flag">🇳🇱</span>
-          <span class="lang-name" data-i18n="language.nl">Nederlands</span>
           <span class="lang-check">✓</span>
         </button>
       </div>
@@ -1085,7 +1465,7 @@
     <div class="lang-panel" id="currencyPanel">
       <div class="currency-grid">
         <!-- Devises Africaines (prioritaires) -->
-        <div class="currency-group-label" data-i18n="currency.africa">🌍 Afrique</div>
+        <div class="currency-group-label" data-i18n="currency.africa">  Afrique</div>
         <button class="currency-option" data-currency="CDF">
           <span class="currency-symbol">FC</span>
           <span class="currency-name">Franc Congolais</span>
@@ -1148,7 +1528,7 @@
         </button>
         
         <!-- Devises Internationales -->
-        <div class="currency-group-label" data-i18n="currency.international">🌐 International</div>
+        <div class="currency-group-label" data-i18n="currency.international"> International</div>
         <button class="currency-option" data-currency="USD">
           <span class="currency-symbol">$</span>
           <span class="currency-name">US Dollar</span>
@@ -1227,6 +1607,69 @@
     <button class="lang-modal-apply" data-close-popover data-i18n="common.apply">Appliquer</button>
   </div>
 </div>
+
+<!-- ============================================
+     MODALE DE CONNEXION
+     ============================================ -->
+<div class="auth-modal-overlay" id="authModalOverlay">
+    <div class="auth-modal">
+        <div class="auth-modal-header">
+            <h3>Bienvenue</h3>
+            <button class="auth-modal-close" id="authModalClose">&times;</button>
+        </div>
+        
+        <div class="logo-center">
+            <img src="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png" alt="LuviaPlace">
+        </div>
+        
+        <p class="subtitle">Connectez-vous pour gérer vos réservations et gagner des LuviaCoins</p>
+        
+        <!-- Zone utilisateur connecté -->
+        <div id="authUserInfo" style="display: none;">
+            <div class="auth-user-info">
+                <div class="avatar" id="userAvatar">U</div>
+                <div class="user-details">
+                    <div class="name" id="userName">Utilisateur</div>
+                    <div class="email" id="userEmail">email@exemple.com</div>
+                </div>
+                <button class="logout-btn" id="logoutBtn">Déconnexion</button>
+            </div>
+        </div>
+        
+        <!-- Bouton Google (caché si connecté) -->
+        <div id="authLoginSection">
+            <button class="google-btn" id="googleSignInBtn">
+                <svg viewBox="0 0 24 24">
+                    <path fill="#EA4335" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                    <path fill="#4285F4" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#34A853" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                <span>Se connecter avec Google</span>
+            </button>
+        </div>
+        
+        <div class="auth-divider">
+            <span>ou</span>
+        </div>
+        
+        <button class="google-btn" style="background: var(--bg-soft); border-color: var(--bg-soft);" id="guestContinueBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                <path d="M12 12a4 4 0 100-8 4 4 0 000 8z"/>
+                <path d="M5 20v-2a4 4 0 014-4h6a4 4 0 014 4v2"/>
+            </svg>
+            <span>Continuer en tant qu'invité</span>
+        </button>
+        
+        <p style="text-align:center; font-size:11px; color:var(--ink-soft); margin-top:16px;">
+            En continuant, vous acceptez nos 
+            <a href="#" style="color:var(--blue); font-weight:600;">Conditions générales</a> 
+            et notre 
+            <a href="#" style="color:var(--blue); font-weight:600;">Politique de confidentialité</a>
+        </p>
+    </div>
+</div>
+
 <!-- Chatbot LiteAPI : à ne charger que via un endpoint serveur qui ne révèle jamais la clé au client -->
 <!-- <script src="https://components.liteapi.travel/chatbot/v1.js?liteApiKey=YOUR_LITEAPI_KEY" async></script> -->
 
@@ -1243,7 +1686,7 @@
 // ============================================
 // ⚠️ AJOUT IMPORTANT - sharedState doit être défini ICI
 // ============================================
-var sharedState = { dest: '' };  // ← AJOUTÉ
+var sharedState = { dest: '' };
 
 var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
 
@@ -1336,10 +1779,10 @@ var RECOMMENDED_CITIES = [
   { name:'Marrakech', placeId:'ChIJsbqj5zvepQ0R8X5Fg87gFJQ' }
 ];
 var COLLECTIONS = [
-  { id:'nairobi-top-20', title:"Our Top 20 Hotels in Nairobi", image:'https://images.unsplash.com/photo-1574321018380-59c7be9c6b6f?w=500&h=300&fit=crop', hotelNames:['Glee Nairobi, a Preferred LVX Hotel','Hyatt House Nairobi Westlands','Pan Pacific Serviced Suites Nairobi','Radisson Blu Hotel Nairobi Upper Hill','Fairview Hotel Nairobi, Vignette Collection by IHG','Hilton Garden Inn Nairobi Airport','Hemingways Nairobi'] },
-  { id:'kinshasa-exception', title:"Séjours d'exception à Kinshasa", image:'https://images.unsplash.com/photo-1585148785744-0e58d35e0a98?w=500&h=300&fit=crop', hotelNames:['Protea Hotel by Marriott Kinshasa','Hotel Finesse','Ixoras Hotel','Four Points By Sheraton Kinshasa','Hilton Kinshasa','Léon Hôtel Kinshasa','Golden Tulip Kin-Oasis Kinshasa'] },
-  { id:'international-ideal', title:"Votre hébergement idéal pour l'international", image:'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500&h=300&fit=crop', hotelNames:['Hyatt Place Dubai Al Rigga','Novotel Paris Centre Bercy','Royal Beach Tel Aviv by Isrotel exclusive','Fairmont Century Plaza Los Angeles at Beverly Hills','Only YOU Hotel Málaga'] },
-  { id:'kivu-escape', title:"Escapades au bord du lac Kivu", image:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&h=300&fit=crop', hotelNames:['Lake Kivu Serena Hotel','Kivu Lodge','Bella Vista Hotel','Hotel Des Mille Collines','Kivu Paradise Resort'] }
+  { id:'nairobi-top-20', title:"Our Top 20 Hotels in Nairobi", image:'https://nuitee-hotels.b-cdn.net/hotels/ex_2fb9d9b9_z.jpg?height=480&quality=80&sharpen=true', hotelNames:['Glee Nairobi, a Preferred LVX Hotel','Hyatt House Nairobi Westlands','Pan Pacific Serviced Suites Nairobi','Radisson Blu Hotel Nairobi Upper Hill','Fairview Hotel Nairobi, Vignette Collection by IHG','Hilton Garden Inn Nairobi Airport','Hemingways Nairobi'] },
+  { id:'kinshasa-exception', title:"Séjours d'exception à Kinshasa", image:'https://nuitee-hotels.b-cdn.net/hotels/553418150.jpg?height=480&quality=80&sharpen=true', hotelNames:['Protea Hotel by Marriott Kinshasa','Hotel Finesse','Ixoras Hotel','Four Points By Sheraton Kinshasa','Hilton Kinshasa','Léon Hôtel Kinshasa','Golden Tulip Kin-Oasis Kinshasa'] },
+  { id:'international-ideal', title:"Votre hébergement idéal pour l'international", image:'https://nuitee-hotels.b-cdn.net/hotels/345067577.jpg?width=1200&height=800&quality=85&sharpen=true', hotelNames:['Hyatt Place Dubai Al Rigga','Novotel Paris Centre Bercy','Royal Beach Tel Aviv by Isrotel exclusive','Fairmont Century Plaza Los Angeles at Beverly Hills','Only YOU Hotel Málaga'] },
+  { id:'kivu-escape', title:"Escapades au bord du lac Kivu", image:'https://nuitee-hotels.b-cdn.net/hotels/291961649.jpg?width=1200&height=800&quality=85&sharpen=true', hotelNames:['Lake Kivu Serena Hotel','Kivu Lodge','Bella Vista Hotel','Hotel Des Mille Collines','Kivu Paradise Resort'] }
 ];
 
 function displayHotelsScroll(containerId, hotelsData, title) {
@@ -1372,7 +1815,6 @@ function displayHotelsScroll(containerId, hotelsData, title) {
     var pricePerNightUSD = Math.round(hotel.minPrice / nights);
     var rating = hotel.rating || 0;
     
-    // ✅ TRADUIRE SEULEMENT "Excellent" / "Très bien" / "Bien"
     var ratingText = '';
     if (rating >= 8) ratingText = window.t('hotel.excellent');
     else if (rating >= 7) ratingText = window.t('hotel.very_good');
@@ -1381,7 +1823,6 @@ function displayHotelsScroll(containerId, hotelsData, title) {
     var reviewCount = hotel.reviewCount || 0;
     var hotelId = hotel.id || '';
     
-    // ✅ CONVERTIR LE PRIX
     var convertedPrice = pricePerNightUSD;
     if (typeof window.convertPrice === 'function') {
       convertedPrice = window.convertPrice(pricePerNightUSD, 'USD', currentCurrency);
@@ -1418,8 +1859,6 @@ function displayHotelsScroll(containerId, hotelsData, title) {
     var body = document.createElement('div');
     body.className = 'body';
     
-    // ✅ NE PAS TRADUIRE : nom, adresse, étoiles, prix
-    // ✅ TRADUIRE : "avis" → "maoni", "nuit" → "usiku"
     var translatedReviews = reviewCount + ' ' + window.t('hotel.reviews');
     var translatedPerNight = window.t('search.per_night');
     
@@ -1515,7 +1954,7 @@ async function loadNearbyHotels(){
   var attempts=[city+', '+cc, cc, 'Kinshasa, CD'];
   for(var i=0;i<attempts.length;i++){
     try{
-      var result=await searchHotels({checkin:checkin,checkout:checkout,adults:2,aiSearch:attempts[i],environment:'production',limit:6});
+      var result=await searchHotels({checkin:checkin,checkout:checkout,adults:1,aiSearch:attempts[i],environment:'production',limit:10});
       if(result.success && result.hotels && result.hotels.length>0){ displayHotelsScroll('nearbyHotels', result, i===0?city:null); return; }
     }catch(e){}
   }
@@ -1546,12 +1985,10 @@ document.addEventListener('DOMContentLoaded', function(){
   setupDateRange('flightDeparture','flightReturn',1,8);
   setupDateRange('pkgCheckin','pkgCheckout',1,8,function(s,e){ updateNightsNote('pkgNightsNote', s, e); });
 
-  // Dates des vols multi-destinations
   document.querySelectorAll('.leg-date').forEach(function(el, idx){
     flatpickr(el, Object.assign({},commonConfig,{ defaultDate:formatDate(addDays(new Date(), 1+idx*3)) }));
   });
 
-  // --- Onglets ---
   document.querySelectorAll('#serviceTabs .service-tab').forEach(function(tab){
     tab.addEventListener('click', function(){
       document.querySelectorAll('#serviceTabs .service-tab').forEach(function(t){ t.setAttribute('aria-selected','false'); });
@@ -1561,7 +1998,6 @@ document.addEventListener('DOMContentLoaded', function(){
       if(panel){ 
         panel.hidden=false; 
         panel.querySelectorAll('.shared-dest').forEach(function(el){ 
-          // ✅ sharedState est maintenant défini !
           if(sharedState.dest) el.value = sharedState.dest; 
         }); 
       }
@@ -1569,8 +2005,6 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   document.querySelector('#serviceTabs .service-tab[data-tab="hotel"]').click();
 
-  // --- Autocomplétion ---
-  // ⚠️ SUPPRIMER la ligne var sharedState={dest:''}; ici car elle est déjà définie en haut
   var recentSearches=['Kinshasa, Gombe','Lubumbashi, Karavia','Goma, bord du lac'];
   function buildSuggestDropdown(container, allowAllAirports){
     var html='<div class="sd-label">Récents</div>'+recentSearches.map(function(s){return '<div class="sd-item" data-value="'+s+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>'+s+'</div>';}).join('');
@@ -1620,7 +2054,6 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   document.addEventListener('click', function(e){ if(!e.target.closest('.field')&&!e.target.closest('.leg-row')){ closeAllDropdowns(); closeAllPopovers(); } });
 
-  // --- Compteurs ---
   var counts={ rooms:1, adults:2, children:0, fadults:1, fchildren:0, finfantslap:0, finfantsseat:0, krooms:1, kadults:2, kchildren:0 };
   var mins={ rooms:1, adults:1, fadults:1, krooms:1, kadults:1 };
 
@@ -1669,7 +2102,6 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   document.querySelectorAll('[data-close-popover]').forEach(function(btn){ btn.addEventListener('click', closeAllPopovers); });
 
-  // --- Pills (trajet vol) ---
   document.querySelectorAll('.pill-toggle').forEach(function(group){
     group.querySelectorAll('.pill-btn').forEach(function(btn){
       btn.addEventListener('click', function(){
@@ -1689,7 +2121,6 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   });
 
-  // --- Multi-destination : ajout/suppression d'étapes ---
   var legsContainer=document.getElementById('legsContainer');
   document.getElementById('addLegBtn').addEventListener('click', function(){
     var rows=legsContainer.querySelectorAll('.leg-row');
@@ -1712,7 +2143,6 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   legsContainer.querySelectorAll('.leg-row').forEach(bindLegRemove);
 
-  // --- Recherche ---
   function requireValue(id, message){
     var el=document.getElementById(id); var value=el?el.value.trim():'';
     if(!value){ flagFieldError(el); showToast(message); }
@@ -1799,9 +2229,6 @@ document.addEventListener('DOMContentLoaded', function(){
   var selectedLang = localStorage.getItem('luviaplace_language') || 'fr';
   var selectedCurrency = localStorage.getItem('luviaplace_currency') || 'USD';
 
-  // ============================================
-  // OUVRIR / FERMER LA MODALE
-  // ============================================
   function openModal() {
     if (overlay) {
       overlay.classList.add('open');
@@ -1817,9 +2244,6 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
-  // ============================================
-  // CHANGER D'ONGLET
-  // ============================================
   function switchTab(tabId) {
     tabs.forEach(function(tab) {
       tab.classList.toggle('active', tab.dataset.tab === tabId);
@@ -1830,26 +2254,17 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
-  // ============================================
-  // METTRE À JOUR LES SÉLECTIONS
-  // ============================================
   function updateSelections() {
-    // Langues
     langOptions.forEach(function(opt) {
       opt.classList.toggle('active', opt.dataset.lang === selectedLang);
     });
     
-    // Devises
     currencyOptions.forEach(function(opt) {
       opt.classList.toggle('active', opt.dataset.currency === selectedCurrency);
     });
   }
 
-  // ============================================
-  // APPLIQUER LES CHANGEMENTS
-  // ============================================
   function applyChanges() {
-    // Appliquer la langue
     if (typeof window.changeLanguage === 'function') {
       window.changeLanguage(selectedLang);
     } else {
@@ -1857,10 +2272,8 @@ document.addEventListener('DOMContentLoaded', function(){
       document.documentElement.lang = selectedLang;
     }
     
-    // Appliquer la devise
     localStorage.setItem('luviaplace_currency', selectedCurrency);
     
-    // Mettre à jour l'affichage des prix
     document.dispatchEvent(new CustomEvent('currencyChanged', {
       detail: { currency: selectedCurrency }
     }));
@@ -1868,40 +2281,30 @@ document.addEventListener('DOMContentLoaded', function(){
     closeModal();
   }
 
-  // ============================================
-  // ÉVÉNEMENTS
-  // ============================================
-  
-  // Ouvrir la modale
   if (toggleBtn) {
     toggleBtn.addEventListener('click', openModal);
   }
 
-  // Fermer
   if (closeBtn) {
     closeBtn.addEventListener('click', closeModal);
   }
 
-  // Fermer sur clic externe
   if (overlay) {
     overlay.addEventListener('click', function(e) {
       if (e.target === this) closeModal();
     });
   }
 
-  // Fermer avec Echap
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeModal();
   });
 
-  // Tabs
   tabs.forEach(function(tab) {
     tab.addEventListener('click', function() {
       switchTab(this.dataset.tab);
     });
   });
 
-  // Sélection langue
   langOptions.forEach(function(opt) {
     opt.addEventListener('click', function() {
       langOptions.forEach(function(o) { o.classList.remove('active'); });
@@ -1910,7 +2313,6 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   });
 
-  // Sélection devise
   currencyOptions.forEach(function(opt) {
     opt.addEventListener('click', function() {
       currencyOptions.forEach(function(o) { o.classList.remove('active'); });
@@ -1919,31 +2321,24 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   });
 
-  // Appliquer
   if (applyBtn) {
     applyBtn.addEventListener('click', applyChanges);
   }
 
-  // Initialisation
   document.addEventListener('DOMContentLoaded', function() {
     updateSelections();
   });
 
-  // Exposer
   window.openLanguageModal = openModal;
   window.closeLanguageModal = closeModal;
   window.getSelectedCurrency = function() { return selectedCurrency; };
 
-  console.log('🌍 Modale langue + devises initialisée');
+  console.log('Modale langue + devises initialisée');
 
 })();
 
-// ============================================
-// ÉCOUTER LES CHANGEMENTS DE DEVISES
-// ============================================
 document.addEventListener('currencyChanged', function(e) {
   console.log('💰 Devise changée vers:', e.detail.currency);
-  // Recharger les hôtels affichés
   loadRecommendations();
   loadNearbyHotels();
 });
@@ -1953,6 +2348,422 @@ document.addEventListener('DOMContentLoaded', function(){ document.querySelector
 
 console.log('LuviaPlace connecté au backend :', API_BASE_URL);
 })();
+
+// ============================================
+// AUTHENTIFICATION SUPABASE - GOOGLE (CORRIGÉE)
+// ============================================
+
+(function() {
+    'use strict';
+
+    // Configuration Supabase
+    const SUPABASE_URL = 'https://ukbekfcjfcjcqrpxfpmq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrYmVrZmNqZmNqY3FycHhmcG1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDk2NzcsImV4cCI6MjA4OTkyNTY3N30.KK3nxQOLTi3IZjYoRtrNC6mS_ixSsrZMI3J4WfxJVYU';
+
+    // Initialiser Supabase avec les bons paramètres
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: true,
+            flowType: 'pkce'
+        }
+    });
+
+    // Déterminer l'URL de redirection
+    function getRedirectUrl() {
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        if (isLocalhost) {
+            return `http://localhost:${window.location.port || '10000'}`;
+        }
+        
+        // En production
+        return 'https://luvia-place-v2-1-plh1.onrender.com';
+    }
+
+    // Éléments DOM
+    const authModal = document.getElementById('authModalOverlay');
+    const authModalClose = document.getElementById('authModalClose');
+    const loginBtn = document.getElementById('loginBtn');
+    const googleBtn = document.getElementById('googleSignInBtn');
+    const guestBtn = document.getElementById('guestContinueBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const authUserInfo = document.getElementById('authUserInfo');
+    const authLoginSection = document.getElementById('authLoginSection');
+    const userName = document.getElementById('userName');
+    const userEmail = document.getElementById('userEmail');
+    const userAvatar = document.getElementById('userAvatar');
+
+    let currentUser = null;
+
+    // ============================================
+    // TOAST NOTIFICATIONS
+    // ============================================
+    function showAuthToast(message, type = 'info') {
+        let toast = document.getElementById('authToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'authToast';
+            toast.className = 'auth-toast';
+            document.body.appendChild(toast);
+        }
+        
+        toast.textContent = message;
+        toast.className = 'auth-toast show';
+        if (type === 'error') toast.classList.add('error');
+        if (type === 'success') toast.classList.add('success');
+        
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3500);
+    }
+
+    // ============================================
+    // OUVRIR / FERMER LA MODALE
+    // ============================================
+    function openAuthModal() {
+        if (authModal) {
+            authModal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeAuthModal() {
+        if (authModal) {
+            authModal.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+    }
+
+    // ============================================
+    // METTRE À JOUR L'UI UTILISATEUR
+    // ============================================
+    function updateUserUI(user) {
+        if (user) {
+            authUserInfo.style.display = 'block';
+            authLoginSection.style.display = 'none';
+            
+            const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+            const email = user.email || 'email@exemple.com';
+            
+            userName.textContent = name;
+            userEmail.textContent = email;
+            
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            userAvatar.textContent = initials;
+            
+            if (loginBtn) {
+                loginBtn.textContent = '👤 ' + name;
+                loginBtn.classList.add('logged-in');
+            }
+            
+            document.dispatchEvent(new CustomEvent('userLoggedIn', {
+                detail: { user: user }
+            }));
+            
+            console.log('✅ Utilisateur connecté:', name, email);
+            
+        } else {
+            authUserInfo.style.display = 'none';
+            authLoginSection.style.display = 'block';
+            
+            if (loginBtn) {
+                loginBtn.textContent = 'Se connecter';
+                loginBtn.classList.remove('logged-in');
+            }
+            
+            document.dispatchEvent(new CustomEvent('userLoggedOut'));
+        }
+        
+        localStorage.setItem('luviaplace_user', JSON.stringify(user));
+    }
+
+    // ============================================
+    // SE CONNECTER AVEC GOOGLE (CORRIGÉ)
+    // ============================================
+    async function signInWithGoogle() {
+        try {
+            if (googleBtn) {
+                googleBtn.disabled = true;
+                googleBtn.innerHTML = '<span>⏳ Connexion en cours...</span>';
+            }
+            
+            const redirectUrl = getRedirectUrl();
+            console.log('🔗 URL de redirection:', redirectUrl);
+            
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: redirectUrl,
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent'
+                    }
+                }
+            });
+            
+            if (error) {
+                console.error('❌ Erreur Supabase:', error);
+                throw error;
+            }
+            
+            console.log('✅ Redirection vers Google...');
+            
+        } catch (error) {
+            console.error('❌ Erreur connexion Google:', error);
+            showAuthToast('Erreur de connexion: ' + error.message, 'error');
+            
+            if (googleBtn) {
+                googleBtn.disabled = false;
+                googleBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" style="width:20px;height:20px;">
+                        <path fill="#EA4335" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                        <path fill="#4285F4" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#34A853" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <span>Se connecter avec Google</span>
+                `;
+            }
+        }
+    }
+
+    // ============================================
+    // SE DÉCONNECTER
+    // ============================================
+    async function signOut() {
+        try {
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
+            
+            currentUser = null;
+            updateUserUI(null);
+            closeAuthModal();
+            showAuthToast('Déconnecté avec succès', 'success');
+            
+        } catch (error) {
+            console.error('❌ Erreur déconnexion:', error.message);
+            showAuthToast('Erreur lors de la déconnexion', 'error');
+        }
+    }
+
+    // ============================================
+    // RÉCUPÉRER LA SESSION
+    // ============================================
+    async function getSession() {
+        try {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (error) throw error;
+            
+            if (session?.user) {
+                currentUser = session.user;
+                updateUserUI(session.user);
+                return session.user;
+            } else {
+                const cached = localStorage.getItem('luviaplace_user');
+                if (cached) {
+                    try {
+                        const user = JSON.parse(cached);
+                        if (user?.email) {
+                            const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+                            if (!userError && currentUser) {
+                                updateUserUI(currentUser);
+                                return currentUser;
+                            }
+                        }
+                    } catch (e) {}
+                }
+                updateUserUI(null);
+                return null;
+            }
+        } catch (error) {
+            console.error('❌ Erreur récupération session:', error.message);
+            updateUserUI(null);
+            return null;
+        }
+    }
+
+    // ============================================
+    // GÉRER LE RETOUR OAuth
+    // ============================================
+    async function handleAuthCallback() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const accessToken = urlParams.get('access_token');
+            const refreshToken = urlParams.get('refresh_token');
+            
+            console.log('🔐 Gestion du callback OAuth...');
+            
+            if (code || accessToken) {
+                console.log('✅ Token détecté, récupération de la session...');
+                
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    console.error('❌ Erreur récupération session:', error);
+                    return;
+                }
+                
+                if (session?.user) {
+                    console.log('✅ Utilisateur connecté:', session.user.email);
+                    currentUser = session.user;
+                    updateUserUI(session.user);
+                    closeAuthModal();
+                    showAuthToast('Bienvenue ' + (session.user.user_metadata?.full_name || session.user.email), 'success');
+                    
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } else {
+                    console.warn('⚠️ Aucune session trouvée après callback');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Erreur callback:', error);
+        }
+    }
+
+    // ============================================
+    // ÉCOUTEUR D'ÉVÉNEMENTS AUTH
+    // ============================================
+    supabase.auth.onAuthStateChange((event, session) => {
+        console.log('🔐 État auth:', event);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+            currentUser = session.user;
+            updateUserUI(session.user);
+            closeAuthModal();
+            showAuthToast('Bienvenue ' + (session.user.user_metadata?.full_name || session.user.email), 'success');
+            
+        } else if (event === 'SIGNED_OUT') {
+            currentUser = null;
+            updateUserUI(null);
+            
+        } else if (event === 'TOKEN_REFRESHED') {
+            console.log('🔄 Token rafraîchi');
+            
+        } else if (event === 'USER_UPDATED') {
+            if (session?.user) {
+                currentUser = session.user;
+                updateUserUI(session.user);
+            }
+        }
+    });
+
+    // ============================================
+    // ÉVÉNEMENTS DOM
+    // ============================================
+    
+    if (loginBtn) {
+        loginBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (currentUser) {
+                if (confirm('Vous êtes connecté en tant que ' + (currentUser.user_metadata?.full_name || currentUser.email) + '. Voulez-vous vous déconnecter ?')) {
+                    signOut();
+                }
+            } else {
+                openAuthModal();
+            }
+        });
+    }
+
+    if (authModalClose) {
+        authModalClose.addEventListener('click', closeAuthModal);
+    }
+
+    if (authModal) {
+        authModal.addEventListener('click', function(e) {
+            if (e.target === this) closeAuthModal();
+        });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeAuthModal();
+    });
+
+    if (googleBtn) {
+        googleBtn.addEventListener('click', signInWithGoogle);
+    }
+
+    if (guestBtn) {
+        guestBtn.addEventListener('click', function() {
+            closeAuthModal();
+            showAuthToast('Vous naviguez en tant qu\'invité', 'info');
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            signOut();
+        });
+    }
+
+    // ============================================
+    // INITIALISATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', async function() {
+        console.log('🔐 Initialisation de l\'authentification...');
+        await getSession();
+        await handleAuthCallback();
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
+        
+        if (error) {
+            console.error('❌ Erreur OAuth:', error, errorDescription);
+            showAuthToast('Erreur de connexion: ' + (errorDescription || error), 'error');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    });
+
+    // ============================================
+    // EXPOSER LES FONCTIONS
+    // ============================================
+    window.auth = {
+        supabase: supabase,
+        signInWithGoogle: signInWithGoogle,
+        signOut: signOut,
+        getSession: getSession,
+        getUser: () => currentUser,
+        isLoggedIn: () => !!currentUser,
+        openModal: openAuthModal,
+        closeModal: closeAuthModal,
+        showToast: showAuthToast
+    };
+
+    console.log('🔐 Authentification Supabase initialisée (corrigée)');
+
+})();
+
+// ============================================
+// RÉCUPÉRATION LUVIA COINS
+// ============================================
+document.addEventListener('userLoggedIn', function(e) {
+    const user = e.detail.user;
+    console.log('🎉 Utilisateur connecté, bienvenue !');
+    fetchLuviaCoins(user.id);
+});
+
+async function fetchLuviaCoins(userId) {
+    try {
+        const response = await fetch(`/api/loyalty/coins?userId=${userId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('💰 LuviaCoins:', data.coins);
+            const coinsElement = document.getElementById('luviaCoins');
+            if (coinsElement) {
+                coinsElement.textContent = data.coins + ' LuviaCoins';
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erreur récupération coins:', error);
+    }
+}
 </script>
 </body>
 </html>

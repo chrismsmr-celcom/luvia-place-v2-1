@@ -1,5 +1,5 @@
 // ============================================
-// main.js - Fichier principal LuviaPlace
+// main.js - Fichier principal LuviaPlace (CORRIGÉ)
 // ============================================
 
 (function() {
@@ -1081,19 +1081,28 @@
     }
 
     // ============================================
-    // ÉVÉNEMENTS
+    // ✅ ÉVÉNEMENTS - UN SEUL ÉVÉNEMENT SUR loginBtn
     // ============================================
 
-    // Bouton de connexion
+    // ✅ Bouton de connexion - Gère la modale ET le dropdown
     if (loginBtn) {
-        loginBtn.addEventListener('click', function(e) {
+        // Nettoyer les anciens événements
+        const newLoginBtn = loginBtn.cloneNode(true);
+        loginBtn.parentNode.replaceChild(newLoginBtn, loginBtn);
+        
+        const updatedLoginBtn = document.getElementById('loginBtn');
+        
+        updatedLoginBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+
+            console.log('🖱️ Clic loginBtn, loggedIn:', this.dataset.loggedIn);
 
             const isLoggedIn = this.dataset.loggedIn === 'true' || currentUser !== null;
 
             if (isLoggedIn) {
-                // Connecté → ouvrir le dropdown
+                // ✅ Connecté → ouvrir le dropdown
+                console.log('👤 Ouverture du dropdown');
                 if (window.accountDropdown && window.accountDropdown.toggle) {
                     window.accountDropdown.toggle();
                 } else {
@@ -1103,6 +1112,8 @@
                     if (overlay) overlay.classList.toggle('active');
                 }
             } else {
+                // ❌ Non connecté → ouvrir la modale
+                console.log('🔓 Ouverture de la modale');
                 openAuthModal();
             }
         });
@@ -1195,7 +1206,6 @@
 
     const accountDropdown = document.getElementById('accountDropdown');
     const accountDropdownOverlay = document.getElementById('accountDropdownOverlay');
-    const loginBtn = document.getElementById('loginBtn');
     const accountName = document.getElementById('accountName');
     const accountEmail = document.getElementById('accountEmail');
     const accountAvatar = document.getElementById('accountAvatar');
@@ -1244,41 +1254,14 @@
             const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
             if (accountAvatar) accountAvatar.textContent = initials;
 
-            if (loginBtn) {
-                loginBtn.textContent = '👤 ' + name;
-                loginBtn.classList.add('logged-in');
-                loginBtn.dataset.loggedIn = 'true';
-            }
-
             closeAccountDropdown();
 
         } else {
-            if (loginBtn) {
-                loginBtn.textContent = 'Se connecter';
-                loginBtn.classList.remove('logged-in');
-                loginBtn.dataset.loggedIn = 'false';
-            }
             closeAccountDropdown();
         }
     }
 
-    // Événements du dropdown
-    if (loginBtn) {
-        loginBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const isLoggedIn = this.dataset.loggedIn === 'true';
-
-            if (isLoggedIn) {
-                toggleAccountDropdown();
-            } else {
-                if (typeof window.openAuthModal === 'function') {
-                    window.openAuthModal();
-                }
-            }
-        });
-    }
+    // ✅ PLUS D'ÉVÉNEMENT SUR loginBtn ICI (supprimé)
 
     if (accountDropdownOverlay) {
         accountDropdownOverlay.addEventListener('click', closeAccountDropdown);

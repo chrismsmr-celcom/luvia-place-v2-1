@@ -40,6 +40,135 @@ app.use((req, res, next) => {
 });
 
 // ============================================
+// FONCTION : Récupérer la nationalité par géolocalisation IP
+// ============================================
+async function getCountryFromIP(ip) {
+    try {
+        // Utiliser l'API ipapi.co (gratuite, 1000 requêtes/jour)
+        const response = await fetch(`https://ipapi.co/${ip}/json/`);
+        const data = await response.json();
+        return data.country_code || 'US';
+    } catch (error) {
+        console.warn('⚠️ Erreur géolocalisation IP:', error.message);
+        return 'US'; // Fallback
+    }
+}
+
+// ============================================
+// MIDDLEWARE : Récupérer la nationalité
+// ============================================
+async function getGuestNationality(req) {
+    // 1. Priorité au paramètre explicite
+    if (req.query.nationality) {
+        return req.query.nationality.toUpperCase();
+    }
+    if (req.body && req.body.nationality) {
+        return req.body.nationality.toUpperCase();
+    }
+    
+    // 2. Récupérer depuis l'en-tête (si fourni par le frontend)
+    if (req.headers['x-nationality']) {
+        return req.headers['x-nationality'].toUpperCase();
+    }
+    
+    // 3. Parcourir les cookies
+    if (req.headers.cookie) {
+        const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
+            const [key, value] = cookie.trim().split('=');
+            acc[key] = value;
+            return acc;
+        }, {});
+        if (cookies.nationality) {
+            return cookies.nationality.toUpperCase();
+        }
+    }
+    
+    // 4. Géolocalisation par IP
+    const ip = req.headers['x-forwarded-for']?.split(',')[0] || 
+               req.connection?.remoteAddress || 
+               req.socket?.remoteAddress || 
+               '8.8.8.8';
+    
+    try {
+        const country = await getCountryFromIP(ip);
+        return country;
+    } catch (error) {
+        console.warn('⚠️ Fallback nationalité: US');
+        return 'US';
+    }
+}
+
+// ============================================
+// FONCTION UTILITAIRE : Normaliser le code pays
+// ============================================
+function normalizeCountryCode(code) {
+    if (!code) return 'US';
+    code = code.toUpperCase().trim();
+    
+    // Mapping des codes courants
+    const countryMap = {
+        'CONGO': 'CD',
+        'DRC': 'CD',
+        'RDC': 'CD',
+        'Congo': 'CD',
+        'Kinshasa': 'CD',
+        'Lubumbashi': 'CD',
+        'Goma': 'CD',
+        'Bukavu': 'CD',
+        'Kisangani': 'CD',
+        'Kananga': 'CD',
+        'Mbuji-Mayi': 'CD',
+        'TANZANIA': 'TZ',
+        'TANZANIE': 'TZ',
+        'Dar es Salaam': 'TZ',
+        'Zanzibar': 'TZ',
+        'KENYA': 'KE',
+        'Nairobi': 'KE',
+        'Mombasa': 'KE',
+        'UGANDA': 'UG',
+        'UGANDE': 'UG',
+        'Kampala': 'UG',
+        'Entebbe': 'UG',
+        'RWANDA': 'RW',
+        'Kigali': 'RW',
+        'BURUNDI': 'BI',
+        'Bujumbura': 'BI',
+        'SOUTH AFRICA': 'ZA',
+        'AFRIQUE DU SUD': 'ZA',
+        'Johannesburg': 'ZA',
+        'Cape Town': 'ZA',
+        'ETHIOPIA': 'ET',
+        'ETHIOPIE': 'ET',
+        'Addis Ababa': 'ET',
+        'NIGERIA': 'NG',
+        'Lagos': 'NG',
+        'Abuja': 'NG',
+        'GHANA': 'GH',
+        'Accra': 'GH',
+        'SENEGAL': 'SN',
+        'Dakar': 'SN',
+        'COTE D\'IVOIRE': 'CI',
+        'Abidjan': 'CI',
+        'CAMEROON': 'CM',
+        'CAMEROUN': 'CM',
+        'Douala': 'CM',
+        'Yaoundé': 'CM'
+    };
+    
+    // Vérifier si c'est un nom de pays
+    if (countryMap[code]) {
+        return countryMap[code];
+    }
+    
+    // Vérifier si c'est un code pays valide (2 lettres)
+    if (/^[A-Z]{2}$/.test(code)) {
+        return code;
+    }
+    
+    return 'US';
+}
+
+// ============================================
 // FONCTION UTILITAIRE : Appel REST LiteAPI
 // ============================================
 async function callLiteAPI(endpoint, method = 'GET', body = null, apiKey) {
@@ -211,6 +340,10 @@ app.get("/search-hotels", async (req, res) => {
   const apiKey = environment == "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
+  // ✅ Récupérer la nationalité dynamiquement
+  const guestNationality = await getGuestNationality(req);
+  console.log(`🌍 Nationalité du client: ${guestNationality}`);
+
   try {
     let finalPlaceId = placeId;
 
@@ -266,7 +399,7 @@ app.get("/search-hotels", async (req, res) => {
           hotelIds: batch,
           occupancies: [{ adults: parseInt(adults, 10) || 2 }],
           currency: "USD",
-          guestNationality: "US",
+          guestNationality: guestNationality, // ✅ Plus en dur !
           checkin: checkin,
           checkout: checkout,
           maxRatesPerHotel: 1,
@@ -383,6 +516,10 @@ app.get("/search-hotels-stream", async (req, res) => {
   const apiKey = environment == "sandbox" ? sandbox_apiKey : prod_apiKey;
   const sdk = liteApi(apiKey);
 
+  // ✅ Récupérer la nationalité dynamiquement
+  const guestNationality = await getGuestNationality(req);
+  console.log(`🌍 Nationalité du client: ${guestNationality}`);
+
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -475,7 +612,7 @@ app.get("/search-hotels-stream", async (req, res) => {
           hotelIds: batch,
           occupancies: [{ adults: parseInt(adults, 10) || 2 }],
           currency: "USD",
-          guestNationality: "US",
+          guestNationality: guestNationality, // ✅ Plus en dur !
           checkin: checkin,
           checkout: checkout,
           maxRatesPerHotel: 1,
@@ -577,6 +714,10 @@ app.get("/search-rates", async (req, res) => {
     return res.status(400).json({ success: false, error: "hotelId is required" });
   }
 
+  // ✅ Récupérer la nationalité dynamiquement
+  const guestNationality = await getGuestNationality(req);
+  console.log(`🌍 Nationalité du client: ${guestNationality}`);
+
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
 
   try {
@@ -584,7 +725,7 @@ app.get("/search-rates", async (req, res) => {
       hotelIds: [hotelId],
       occupancies: [{ adults: parseInt(adults, 10) || 2 }],
       currency: "USD",
-      guestNationality: "US",
+      guestNationality: guestNationality, // ✅ Plus en dur !
       checkin: checkin,
       checkout: checkout,
       maxRatesPerHotel: parseInt(maxRates) || 20,
@@ -1466,8 +1607,25 @@ app.get("/api/translations", (req, res) => {
   const data = translations[language] || translations.fr;
   res.json({ success: true, data: data, language: language });
 });
+
 // ============================================
-// 22. TAUX DE CHANGE - API FRANKFURTER
+// 22. NATIONALITÉ DU CLIENT
+// ============================================
+app.get("/api/nationality", async (req, res) => {
+  console.log("\n🌍 ===== NATIONALITÉ CLIENT ===== 🌍");
+  
+  const guestNationality = await getGuestNationality(req);
+  console.log(`🌍 Nationalité détectée: ${guestNationality}`);
+  
+  res.json({
+    success: true,
+    nationality: guestNationality,
+    detected: true
+  });
+});
+
+// ============================================
+// 23. TAUX DE CHANGE - API FRANKFURTER
 // ============================================
 app.get("/api/rates", async (req, res) => {
   console.log("\n💰 ===== TAUX DE CHANGE ===== 💰");
@@ -1551,7 +1709,7 @@ app.get("/api/rates", async (req, res) => {
 });
 
 // ============================================
-// 23. CONVERSION DE PRIX
+// 24. CONVERSION DE PRIX
 // ============================================
 app.post("/api/convert", async (req, res) => {
   console.log("\n🔄 ===== CONVERSION DE PRIX ===== 🔄");
@@ -1648,8 +1806,9 @@ app.post("/api/convert", async (req, res) => {
     });
   }
 });
+
 // ============================================
-// 24. LOYALTY CONFIGURATION
+// 25. LOYALTY CONFIGURATION
 // ============================================
 app.get("/api/loyalty/config", (req, res) => {
     console.log("\n⭐ ===== LOYALTY CONFIG ===== ⭐");
@@ -1672,6 +1831,7 @@ app.get("/api/loyalty/config", (req, res) => {
         }
     });
 });
+
 // ============================================
 // ROUTES FRONTEND
 // ============================================
@@ -1710,9 +1870,9 @@ app.listen(port, () => {
   console.log(`🤖 DeepSeek API: ${DEEPSEEK_API_KEY ? '✅' : '❌'}`);
   console.log(`\n📋 ENDPOINTS:`);
   console.log(`   📍 GET  /search-places                 - Recherche de lieux (multilingue)`);
-  console.log(`   🔍 GET  /search-hotels                 - Hôtels (multilingue + DeepSeek)`);
-  console.log(`   🔍 GET  /search-hotels-stream          - Hôtels STREAMING (multilingue)`);
-  console.log(`   💰 GET  /search-rates                  - Tarifs détaillés (multilingue)`);
+  console.log(`   🔍 GET  /search-hotels                 - Hôtels (multilingue + DeepSeek + Nationalité)`);
+  console.log(`   🔍 GET  /search-hotels-stream          - Hôtels STREAMING (multilingue + Nationalité)`);
+  console.log(`   💰 GET  /search-rates                  - Tarifs détaillés (multilingue + Nationalité)`);
   console.log(`   🏨 GET  /hotel-details                 - Détails hôtel (multilingue + DeepSeek)`);
   console.log(`   ⭐ GET  /hotel-reviews                 - Avis hôtel (multilingue + DeepSeek)`);
   console.log(`   📋 POST /prebook                       - Pré-réservation hôtel`);
@@ -1729,9 +1889,11 @@ app.listen(port, () => {
   console.log(`   🌍 POST /api/translate                 - Traduction DeepSeek`);
   console.log(`   ⭐ POST /api/translate-reviews         - Traduction avis`);
   console.log(`   📝 POST /api/translate-hotel-description - Traduction description`);
+  console.log(`   🌍 GET  /api/nationality               - Nationalité du client`);
   console.log(`\n✅ Serveur prêt !`);
   console.log(`🌍 Langues: FR, EN, ES, SW (Kiswahili), PT, IT, DE, AR, ZH`);
   console.log(`💰 Devises: USD, EUR, GBP, KES, TZS, CDF, ...`);
   console.log(`🤖 DeepSeek intégré pour les langues non supportées par LiteAPI`);
+  console.log(`🌍 Nationalité: Détection automatique par IP + Override`);
   console.log(`\n🇹🇿 Karibu sana! Swahili supporté !\n`);
 });

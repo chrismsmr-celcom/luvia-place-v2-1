@@ -646,6 +646,196 @@
   }
 }
 /* ============================================
+   ACCOUNT DROPDOWN - MENU UTILISATEUR
+   ============================================ */
+
+.account-dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.account-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 260px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    box-shadow: 0 12px 40px rgba(16,24,40,0.18);
+    padding: 8px 0;
+    z-index: 1000;
+    display: none;
+    overflow: hidden;
+}
+
+.account-dropdown.active {
+    display: block;
+    animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.account-dropdown .user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px 16px;
+    border-bottom: 1px solid var(--line);
+}
+
+.account-dropdown .user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--blue-light);
+    color: var(--blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.account-dropdown .user-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.account-dropdown .user-details .name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.account-dropdown .user-details .email {
+    font-size: 12px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.account-dropdown .p-menu-list {
+    list-style: none;
+    padding: 4px 0;
+    margin: 0;
+}
+
+.account-dropdown .p-menuitem {
+    margin: 0;
+    padding: 0;
+}
+
+.account-dropdown .p-menuitem-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    transition: all 0.15s ease;
+    cursor: pointer;
+    text-decoration: none;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.account-dropdown .p-menuitem-link:hover {
+    background: var(--bg-soft);
+    color: var(--ink);
+}
+
+.account-dropdown .p-menuitem-link i {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--ink-light);
+    flex-shrink: 0;
+    font-style: normal;
+}
+
+.account-dropdown .p-menuitem-link .p-menuitem-text {
+    flex: 1;
+}
+
+.account-dropdown .p-menuitem-link.logout-link {
+    color: var(--red);
+    border-top: 1px solid var(--line);
+    margin-top: 4px;
+    padding-top: 12px;
+}
+
+.account-dropdown .p-menuitem-link.logout-link:hover {
+    background: #FEF3F2;
+}
+
+.account-dropdown .p-menuitem-link.logout-link i {
+    color: var(--red);
+}
+
+/* Version mobile */
+@media (max-width: 600px) {
+    .account-dropdown {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        min-width: 100%;
+        border-radius: 16px 16px 0 0;
+        max-height: 70vh;
+        animation: slideUp 0.3s ease;
+    }
+    
+    .account-dropdown.active {
+        animation: slideUp 0.3s ease;
+    }
+    
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
+
+/* Overlay pour fermer le dropdown sur mobile */
+.account-dropdown-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 999;
+    display: none;
+}
+
+.account-dropdown-overlay.active {
+    display: block;
+}
+/* ============================================
    MARGES POUR SECTIONS SPÉCIFIQUES
    ============================================ */
 
@@ -1096,7 +1286,57 @@
         <path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/>
       </svg>
     </button>
+    <!-- ============================================
+     ACCOUNT DROPDOWN - MENU UTILISATEUR
+     ============================================ -->
+<div class="account-dropdown-container">
     <button class="btn-primary" id="loginBtn" data-i18n="nav.login">Se connecter</button>
+    
+    <div class="account-dropdown" id="accountDropdown">
+        <div class="user-info">
+            <div class="user-avatar" id="accountAvatar">U</div>
+            <div class="user-details">
+                <div class="name" id="accountName">Utilisateur</div>
+                <div class="email" id="accountEmail">email@exemple.com</div>
+            </div>
+        </div>
+        <ul class="p-menu-list">
+            <li class="p-menuitem">
+                <a class="p-menuitem-link" href="index.html">
+                    <i></i>
+                    <span class="p-menuitem-text" data-i18n="nav.home">Accueil</span>
+                </a>
+            </li>
+            <li class="p-menuitem">
+                <a class="p-menuitem-link" href="favorites.html">
+                    <i></i>
+                    <span class="p-menuitem-text" data-i18n="nav.favorites">Mes favoris</span>
+                </a>
+            </li>
+            <li class="p-menuitem">
+                <a class="p-menuitem-link" href="#">
+                    <i></i>
+                    <span class="p-menuitem-text">Parrainages</span>
+                </a>
+            </li>
+            <li class="p-menuitem">
+                <a class="p-menuitem-link" href="bookings.html">
+                    <i></i>
+                    <span class="p-menuitem-text" data-i18n="booking.my_bookings">Mes réservations</span>
+                </a>
+            </li>
+            <li class="p-menuitem">
+                <a class="p-menuitem-link logout-link" id="accountLogoutBtn">
+                    <i></i>
+                    <span class="p-menuitem-text" data-i18n="auth.logout">Se déconnecter</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Overlay pour fermer le dropdown -->
+<div class="account-dropdown-overlay" id="accountDropdownOverlay"></div>
   </div>
 </header>
 
@@ -2441,44 +2681,65 @@ console.log('LuviaPlace connecté au backend :', API_BASE_URL);
     // METTRE À JOUR L'UI UTILISATEUR
     // ============================================
     function updateUserUI(user) {
-        if (user) {
-            authUserInfo.style.display = 'block';
-            authLoginSection.style.display = 'none';
-            
-            const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
-            const email = user.email || 'email@exemple.com';
-            
-            userName.textContent = name;
-            userEmail.textContent = email;
-            
-            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-            userAvatar.textContent = initials;
-            
-            if (loginBtn) {
-                loginBtn.textContent = '👤 ' + name;
-                loginBtn.classList.add('logged-in');
-            }
-            
-            document.dispatchEvent(new CustomEvent('userLoggedIn', {
-                detail: { user: user }
-            }));
-            
-            console.log('✅ Utilisateur connecté:', name, email);
-            
-        } else {
-            authUserInfo.style.display = 'none';
-            authLoginSection.style.display = 'block';
-            
-            if (loginBtn) {
-                loginBtn.textContent = 'Se connecter';
-                loginBtn.classList.remove('logged-in');
-            }
-            
-            document.dispatchEvent(new CustomEvent('userLoggedOut'));
+    if (user) {
+        // Mise à jour de la modale de connexion
+        authUserInfo.style.display = 'block';
+        authLoginSection.style.display = 'none';
+        
+        const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+        const email = user.email || 'email@exemple.com';
+        
+        userName.textContent = name;
+        userEmail.textContent = email;
+        
+        const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        userAvatar.textContent = initials;
+        
+        // ✅ Mise à jour du bouton de connexion pour ouvrir le dropdown
+        if (loginBtn) {
+            loginBtn.textContent = '👤 ' + name;
+            loginBtn.classList.add('logged-in');
+            loginBtn.dataset.loggedIn = 'true'; // ← AJOUTÉ
         }
         
-        localStorage.setItem('luviaplace_user', JSON.stringify(user));
+        // ✅ Mise à jour du dropdown compte (si disponible)
+        if (window.accountDropdown && window.accountDropdown.updateUI) {
+            window.accountDropdown.updateUI(user);
+        }
+        
+        // Émettre l'événement de connexion
+        document.dispatchEvent(new CustomEvent('userLoggedIn', {
+            detail: { user: user }
+        }));
+        
+        console.log('✅ Utilisateur connecté:', name, email);
+        
+    } else {
+        // Mise à jour de la modale de connexion
+        authUserInfo.style.display = 'none';
+        authLoginSection.style.display = 'block';
+        
+        // ✅ Réinitialisation du bouton de connexion
+        if (loginBtn) {
+            loginBtn.textContent = 'Se connecter';
+            loginBtn.classList.remove('logged-in');
+            loginBtn.dataset.loggedIn = 'false'; // ← AJOUTÉ
+        }
+        
+        // ✅ Mise à jour du dropdown compte (si disponible)
+        if (window.accountDropdown && window.accountDropdown.updateUI) {
+            window.accountDropdown.updateUI(null);
+        }
+        
+        // Émettre l'événement de déconnexion
+        document.dispatchEvent(new CustomEvent('userLoggedOut'));
+        
+        console.log('🔓 Utilisateur déconnecté');
     }
+    
+    // Sauvegarder l'utilisateur dans le cache
+    localStorage.setItem('luviaplace_user', JSON.stringify(user));
+}
 
     // ============================================
     // SE CONNECTER AVEC GOOGLE (CORRIGÉ)
@@ -2764,6 +3025,203 @@ async function fetchLuviaCoins(userId) {
         console.error('❌ Erreur récupération coins:', error);
     }
 }
+// ============================================
+// ACCOUNT DROPDOWN - GESTION DU MENU UTILISATEUR
+// ============================================
+
+(function() {
+    'use strict';
+
+    const accountDropdown = document.getElementById('accountDropdown');
+    const accountDropdownOverlay = document.getElementById('accountDropdownOverlay');
+    const loginBtn = document.getElementById('loginBtn');
+    const accountName = document.getElementById('accountName');
+    const accountEmail = document.getElementById('accountEmail');
+    const accountAvatar = document.getElementById('accountAvatar');
+    const accountLogoutBtn = document.getElementById('accountLogoutBtn');
+
+    let isDropdownOpen = false;
+
+    // ============================================
+    // OUVRIR / FERMER LE DROPDOWN
+    // ============================================
+    function openAccountDropdown() {
+        if (accountDropdown) {
+            accountDropdown.classList.add('active');
+            isDropdownOpen = true;
+            if (accountDropdownOverlay) {
+                accountDropdownOverlay.classList.add('active');
+            }
+            document.body.style.overflow = window.innerWidth <= 600 ? 'hidden' : '';
+        }
+    }
+
+    function closeAccountDropdown() {
+        if (accountDropdown) {
+            accountDropdown.classList.remove('active');
+            isDropdownOpen = false;
+            if (accountDropdownOverlay) {
+                accountDropdownOverlay.classList.remove('active');
+            }
+            document.body.style.overflow = '';
+        }
+    }
+
+    function toggleAccountDropdown() {
+        if (isDropdownOpen) {
+            closeAccountDropdown();
+        } else {
+            openAccountDropdown();
+        }
+    }
+
+    // ============================================
+    // METTRE À JOUR L'UI DU DROPDOWN
+    // ============================================
+    function updateAccountUI(user) {
+        if (user) {
+            const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+            const email = user.email || 'email@exemple.com';
+            
+            if (accountName) accountName.textContent = name;
+            if (accountEmail) accountEmail.textContent = email;
+            
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            if (accountAvatar) accountAvatar.textContent = initials;
+            
+            // Le bouton de connexion reste visible, mais ouvre le dropdown
+            if (loginBtn) {
+                loginBtn.textContent = '👤 ' + name;
+                loginBtn.classList.add('logged-in');
+                loginBtn.dataset.loggedIn = 'true';
+            }
+            
+            // Cacher le dropdown si ouvert
+            closeAccountDropdown();
+            
+        } else {
+            // Réinitialiser le bouton
+            if (loginBtn) {
+                loginBtn.textContent = 'Se connecter';
+                loginBtn.classList.remove('logged-in');
+                loginBtn.dataset.loggedIn = 'false';
+            }
+            
+            closeAccountDropdown();
+        }
+    }
+
+    // ============================================
+    // ÉVÉNEMENTS
+    // ============================================
+    
+    // Ouvrir/fermer le dropdown au clic sur le bouton
+    if (loginBtn) {
+        loginBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Si l'utilisateur est connecté, ouvrir le dropdown
+            if (this.dataset.loggedIn === 'true') {
+                toggleAccountDropdown();
+            } else {
+                // Sinon, ouvrir la modale de connexion
+                if (typeof window.auth !== 'undefined' && window.auth.openModal) {
+                    window.auth.openModal();
+                } else {
+                    // Fallback: ouvrir la modale via l'événement
+                    document.dispatchEvent(new CustomEvent('openAuthModal'));
+                }
+            }
+        });
+    }
+
+    // Fermer le dropdown au clic sur l'overlay
+    if (accountDropdownOverlay) {
+        accountDropdownOverlay.addEventListener('click', closeAccountDropdown);
+    }
+
+    // Fermer le dropdown avec la touche Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isDropdownOpen) {
+            closeAccountDropdown();
+        }
+    });
+
+    // Fermer le dropdown en cliquant ailleurs
+    document.addEventListener('click', function(e) {
+        if (isDropdownOpen) {
+            const target = e.target;
+            const isDropdownClick = target.closest('.account-dropdown-container');
+            const isLoginBtnClick = target.closest('#loginBtn');
+            
+            if (!isDropdownClick && !isLoginBtnClick) {
+                closeAccountDropdown();
+            }
+        }
+    });
+
+    // ============================================
+    // DÉCONNEXION
+    // ============================================
+    if (accountLogoutBtn) {
+        accountLogoutBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (typeof window.auth !== 'undefined' && window.auth.signOut) {
+                window.auth.signOut();
+            } else {
+                // Fallback: émettre un événement de déconnexion
+                document.dispatchEvent(new CustomEvent('userLoggedOut'));
+            }
+            
+            closeAccountDropdown();
+        });
+    }
+
+    // ============================================
+    // ÉCOUTER LES ÉVÉNEMENTS D'AUTH
+    // ============================================
+    document.addEventListener('userLoggedIn', function(e) {
+        const user = e.detail.user;
+        updateAccountUI(user);
+        closeAccountDropdown();
+    });
+
+    document.addEventListener('userLoggedOut', function(e) {
+        updateAccountUI(null);
+        closeAccountDropdown();
+    });
+
+    // ============================================
+    // INITIALISATION - Vérifier la session existante
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        // Vérifier si l'utilisateur est déjà connecté via le cache
+        const cachedUser = localStorage.getItem('luviaplace_user');
+        if (cachedUser) {
+            try {
+                const user = JSON.parse(cachedUser);
+                if (user?.email) {
+                    updateAccountUI(user);
+                }
+            } catch (e) {}
+        }
+    });
+
+    // Exposer les fonctions
+    window.accountDropdown = {
+        open: openAccountDropdown,
+        close: closeAccountDropdown,
+        toggle: toggleAccountDropdown,
+        updateUI: updateAccountUI,
+        isOpen: () => isDropdownOpen
+    };
+
+    console.log('👤 Account dropdown initialisé');
+
+})();
 </script>
 </body>
 </html>

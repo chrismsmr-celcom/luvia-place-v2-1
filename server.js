@@ -1258,7 +1258,37 @@ app.get("/api/chatbot-key", (req, res) => {
     environment: environment
   });
 });
-
+// ============================================
+// CHATBOT - Configuration
+// ============================================
+app.get("/api/chatbot-config", (req, res) => {
+  console.log("\n⚙️ ===== CHATBOT CONFIG ===== ⚙️");
+  
+  const environment = req.query.environment || process.env.NODE_ENV || 'sandbox';
+  
+  let apiKey;
+  if (environment === 'production' || environment === 'prod') {
+    apiKey = process.env.PROD_API_KEY;
+  } else {
+    apiKey = process.env.SAND_API_KEY;
+  }
+  
+  // ✅ Retourner la configuration même si la clé est manquante
+  if (!apiKey) {
+    console.warn('⚠️ Aucune clé API configurée pour le chatbot');
+    return res.json({
+      success: false,
+      error: 'Configuration API manquante',
+      environment: environment
+    });
+  }
+  
+  res.json({
+    success: true,
+    apiKey: apiKey,
+    environment: environment
+  });
+});
 // ============================================
 // 14. CHATBOT - Proxy pour le script
 // ============================================

@@ -1,5 +1,5 @@
 // ============================================
-// js/i18n.js - TRADUCTIONS MULTILINGUES
+// js/i18n.js - TRADUCTIONS MULTILINGUES (COMPLET)
 // ============================================
 
 var translations = {
@@ -84,7 +84,7 @@ var translations = {
     'search.round_trip': 'Aller-retour',
     'search.one_way': 'Aller simple',
     
-    // Hôtels
+    // Hôtels - Résultats
     'hotel.rating': 'Note',
     'hotel.reviews': 'avis',
     'hotel.no_results': 'Aucun hôtel trouvé',
@@ -99,6 +99,41 @@ var translations = {
     'hotel.good': 'Bien',
     'hotel.no_offers': 'Aucune offre disponible',
     'hotel.error': 'Impossible de charger les hôtels',
+    'hotel.property_name': 'Nom de la propriété',
+    'hotel.price_per_night': 'Prix (par nuit)',
+    'hotel.popular_filters': 'Filtres populaires',
+    'hotel.free_cancellation': 'Annulation gratuite',
+    'hotel.parking': 'Parking',
+    'hotel.breakfast_included': 'Petit déjeuner inclus',
+    'hotel.pool': 'Piscine',
+    'hotel.wifi': 'Wi-Fi gratuit',
+    'hotel.property_type': "Type d'hébergement",
+    'hotel.hotel': 'Hôtel',
+    'hotel.apartment': 'Appartement',
+    'hotel.villa': 'Villa',
+    'hotel.guest_house': 'Maison d\'hôtes',
+    'hotel.sort_by': 'Trier par',
+    'hotel.sort_popularity': 'Nos meilleurs choix',
+    'hotel.sort_price_asc': 'Prix (du plus bas au plus élevé)',
+    'hotel.sort_price_desc': 'Prix (du plus élevé au plus bas)',
+    'hotel.sort_rating': 'Note (du plus élevé au plus bas)',
+    'hotel.sort_stars': 'Étoiles (du plus haut au plus bas)',
+    'hotel.properties_found': 'propriétés trouvées',
+    'hotel.price_warning': 'Les prix et disponibilités peuvent varier rapidement pour ces dates.',
+    'hotel.try_modify_filters': 'Essayez de modifier vos filtres.',
+    'hotel.try_modify_search': 'Essayez de modifier votre destination ou vos dates.',
+    'hotel.missing_params': 'Paramètres manquants',
+    'hotel.go_back_search': 'Veuillez retourner à la page d\'accueil et effectuer une recherche.',
+    'hotel.save_amount': 'Connectez-vous et économisez {amount}',
+    'hotel.earn_coins': 'Validez votre commande et gagnez {coins} LuviaCoins',
+    'hotel.public_price': 'Prix public',
+    'hotel.price_unavailable': 'Prix non disponible',
+    'hotel.rating_wonderful': 'Fabuleux',
+    'hotel.rating_superb': 'Merveilleux',
+    'hotel.rating_very_good': 'Très bien',
+    'hotel.rating_good': 'Bien',
+    'hotel.rating_pleasant': 'Agréable',
+    'hotel.rating_fair': 'Correct',
     
     // Collections
     'collections.eyebrow': 'Le courant LuviaPlace',
@@ -140,6 +175,7 @@ var translations = {
     'detail.cancellation_policy': 'Politique d\'annulation',
     'detail.free_cancellation': 'Annulation gratuite',
     'detail.non_refundable': 'Non remboursable',
+    'detail.see_availability': 'Voir les disponibilités',
     
     // Réservation
     'booking.guest_details': 'Coordonnées du voyageur',
@@ -183,9 +219,27 @@ var translations = {
     'common.from': 'À partir de',
     'common.rewards': 'Programme Rewards',
     'common.apply': 'Appliquer',
+    'common.filters': 'Filtres',
+    'common.sort': 'Trier',
+    'common.clear_filters': 'Effacer les filtres',
+    'common.reset': 'Réinitialiser',
+    'common.list': 'Liste',
+    'common.map': 'Carte',
+    'common.map_view': 'Vue carte',
     'best_offers': 'Meilleures offres',
     'central_africa': 'Fait pour l\'Afrique centrale',
-    'support': 'Toujours là pour aider'
+    'support': 'Toujours là pour aider',
+    
+    // Accessibilité
+    'accessibility.filters': 'Filtres d\'accessibilité',
+    'accessibility.wheelchair': 'Chambre accessible en fauteuil roulant',
+    'accessibility.elevator': 'Ascenseur disponible',
+    'accessibility.bathroom': 'Salle de bain adaptée',
+    'accessibility.parking': 'Stationnement accessible',
+    'accessibility.trained_staff': 'Personnel formé',
+    
+    // Pages
+    'page.sejours': 'Séjours — LuviaPlace'
   },
 
   // ============================================
@@ -269,7 +323,7 @@ var translations = {
     'search.round_trip': 'Round trip',
     'search.one_way': 'One way',
     
-    // Hôtels
+    // Hôtels - Résultats
     'hotel.rating': 'Rating',
     'hotel.reviews': 'reviews',
     'hotel.no_results': 'No hotels found',
@@ -284,6 +338,41 @@ var translations = {
     'hotel.good': 'Good',
     'hotel.no_offers': 'No offers available',
     'hotel.error': 'Unable to load hotels',
+    'hotel.property_name': 'Property name',
+    'hotel.price_per_night': 'Price (per night)',
+    'hotel.popular_filters': 'Popular filters',
+    'hotel.free_cancellation': 'Free cancellation',
+    'hotel.parking': 'Parking',
+    'hotel.breakfast_included': 'Breakfast included',
+    'hotel.pool': 'Swimming pool',
+    'hotel.wifi': 'Free Wi-Fi',
+    'hotel.property_type': 'Property type',
+    'hotel.hotel': 'Hotel',
+    'hotel.apartment': 'Apartment',
+    'hotel.villa': 'Villa',
+    'hotel.guest_house': 'Guest house',
+    'hotel.sort_by': 'Sort by',
+    'hotel.sort_popularity': 'Our best picks',
+    'hotel.sort_price_asc': 'Price (lowest to highest)',
+    'hotel.sort_price_desc': 'Price (highest to lowest)',
+    'hotel.sort_rating': 'Rating (highest to lowest)',
+    'hotel.sort_stars': 'Stars (highest to lowest)',
+    'hotel.properties_found': 'properties found',
+    'hotel.price_warning': 'Prices and availability may vary quickly for these dates.',
+    'hotel.try_modify_filters': 'Try modifying your filters.',
+    'hotel.try_modify_search': 'Try changing your destination or dates.',
+    'hotel.missing_params': 'Missing parameters',
+    'hotel.go_back_search': 'Please go back to the homepage and perform a search.',
+    'hotel.save_amount': 'Sign in and save {amount}',
+    'hotel.earn_coins': 'Confirm your booking and earn {coins} LuviaCoins',
+    'hotel.public_price': 'Public price',
+    'hotel.price_unavailable': 'Price unavailable',
+    'hotel.rating_wonderful': 'Wonderful',
+    'hotel.rating_superb': 'Superb',
+    'hotel.rating_very_good': 'Very good',
+    'hotel.rating_good': 'Good',
+    'hotel.rating_pleasant': 'Pleasant',
+    'hotel.rating_fair': 'Fair',
     
     // Collections
     'collections.eyebrow': 'The LuviaPlace Current',
@@ -325,6 +414,7 @@ var translations = {
     'detail.cancellation_policy': 'Cancellation policy',
     'detail.free_cancellation': 'Free cancellation',
     'detail.non_refundable': 'Non-refundable',
+    'detail.see_availability': 'See availability',
     
     // Réservation
     'booking.guest_details': 'Guest details',
@@ -368,9 +458,27 @@ var translations = {
     'common.from': 'From',
     'common.rewards': 'Rewards Program',
     'common.apply': 'Apply',
+    'common.filters': 'Filters',
+    'common.sort': 'Sort',
+    'common.clear_filters': 'Clear filters',
+    'common.reset': 'Reset',
+    'common.list': 'List',
+    'common.map': 'Map',
+    'common.map_view': 'Map view',
     'best_offers': 'Best offers',
     'central_africa': 'Made for Central Africa',
-    'support': 'Always here to help'
+    'support': 'Always here to help',
+    
+    // Accessibilité
+    'accessibility.filters': 'Accessibility filters',
+    'accessibility.wheelchair': 'Wheelchair accessible room',
+    'accessibility.elevator': 'Elevator available',
+    'accessibility.bathroom': 'Adapted bathroom',
+    'accessibility.parking': 'Accessible parking',
+    'accessibility.trained_staff': 'Trained staff',
+    
+    // Pages
+    'page.sejours': 'Stays — LuviaPlace'
   },
 
   // ============================================
@@ -454,7 +562,7 @@ var translations = {
     'search.round_trip': 'Ida y vuelta',
     'search.one_way': 'Solo ida',
     
-    // Hôtels
+    // Hôtels - Résultats
     'hotel.rating': 'Puntuación',
     'hotel.reviews': 'opiniones',
     'hotel.no_results': 'No se encontraron hoteles',
@@ -469,6 +577,41 @@ var translations = {
     'hotel.good': 'Bueno',
     'hotel.no_offers': 'No hay ofertas disponibles',
     'hotel.error': 'No se pudieron cargar los hoteles',
+    'hotel.property_name': 'Nombre de la propiedad',
+    'hotel.price_per_night': 'Precio (por noche)',
+    'hotel.popular_filters': 'Filtros populares',
+    'hotel.free_cancellation': 'Cancelación gratuita',
+    'hotel.parking': 'Estacionamiento',
+    'hotel.breakfast_included': 'Desayuno incluido',
+    'hotel.pool': 'Piscina',
+    'hotel.wifi': 'Wi-Fi gratuito',
+    'hotel.property_type': 'Tipo de alojamiento',
+    'hotel.hotel': 'Hotel',
+    'hotel.apartment': 'Apartamento',
+    'hotel.villa': 'Villa',
+    'hotel.guest_house': 'Casa de huéspedes',
+    'hotel.sort_by': 'Ordenar por',
+    'hotel.sort_popularity': 'Nuestras mejores selecciones',
+    'hotel.sort_price_asc': 'Precio (de más bajo a más alto)',
+    'hotel.sort_price_desc': 'Precio (de más alto a más bajo)',
+    'hotel.sort_rating': 'Puntuación (de más alta a más baja)',
+    'hotel.sort_stars': 'Estrellas (de más altas a más bajas)',
+    'hotel.properties_found': 'propiedades encontradas',
+    'hotel.price_warning': 'Los precios y la disponibilidad pueden variar rápidamente para estas fechas.',
+    'hotel.try_modify_filters': 'Intenta modificar tus filtros.',
+    'hotel.try_modify_search': 'Intenta cambiar tu destino o tus fechas.',
+    'hotel.missing_params': 'Parámetros faltantes',
+    'hotel.go_back_search': 'Vuelve a la página de inicio y realiza una búsqueda.',
+    'hotel.save_amount': 'Inicia sesión y ahorra {amount}',
+    'hotel.earn_coins': 'Confirma tu reserva y gana {coins} LuviaCoins',
+    'hotel.public_price': 'Precio público',
+    'hotel.price_unavailable': 'Precio no disponible',
+    'hotel.rating_wonderful': 'Maravilloso',
+    'hotel.rating_superb': 'Excelente',
+    'hotel.rating_very_good': 'Muy bueno',
+    'hotel.rating_good': 'Bueno',
+    'hotel.rating_pleasant': 'Agradable',
+    'hotel.rating_fair': 'Aceptable',
     
     // Collections
     'collections.eyebrow': 'La corriente LuviaPlace',
@@ -510,6 +653,7 @@ var translations = {
     'detail.cancellation_policy': 'Política de cancelación',
     'detail.free_cancellation': 'Cancelación gratuita',
     'detail.non_refundable': 'No reembolsable',
+    'detail.see_availability': 'Ver disponibilidad',
     
     // Réservation
     'booking.guest_details': 'Datos del viajero',
@@ -553,9 +697,27 @@ var translations = {
     'common.from': 'Desde',
     'common.rewards': 'Programa de Recompensas',
     'common.apply': 'Aplicar',
+    'common.filters': 'Filtros',
+    'common.sort': 'Ordenar',
+    'common.clear_filters': 'Borrar filtros',
+    'common.reset': 'Reiniciar',
+    'common.list': 'Lista',
+    'common.map': 'Mapa',
+    'common.map_view': 'Vista de mapa',
     'best_offers': 'Mejores ofertas',
     'central_africa': 'Hecho para África Central',
-    'support': 'Siempre aquí para ayudar'
+    'support': 'Siempre aquí para ayudar',
+    
+    // Accessibilité
+    'accessibility.filters': 'Filtros de accesibilidad',
+    'accessibility.wheelchair': 'Habitación accesible en silla de ruedas',
+    'accessibility.elevator': 'Ascensor disponible',
+    'accessibility.bathroom': 'Baño adaptado',
+    'accessibility.parking': 'Estacionamiento accesible',
+    'accessibility.trained_staff': 'Personal capacitado',
+    
+    // Pages
+    'page.sejours': 'Estancias — LuviaPlace'
   },
 
   // ============================================
@@ -639,7 +801,7 @@ var translations = {
     'search.round_trip': 'Kwenda na kurudi',
     'search.one_way': 'Kwenda tu',
     
-    // Hôtels
+    // Hôtels - Résultats
     'hotel.rating': 'Alama',
     'hotel.reviews': 'maoni',
     'hotel.no_results': 'Hakuna hoteli zilizopatikana',
@@ -654,6 +816,41 @@ var translations = {
     'hotel.good': 'Nzuri',
     'hotel.no_offers': 'Hakuna ofa',
     'hotel.error': 'Impossible kupakia hoteli',
+    'hotel.property_name': 'Jina la hoteli',
+    'hotel.price_per_night': 'Bei (kwa usiku)',
+    'hotel.popular_filters': 'Vichujio maarufu',
+    'hotel.free_cancellation': 'Kufuta bila malipo',
+    'hotel.parking': 'Maegesho',
+    'hotel.breakfast_included': 'Kiamsha kinywa kimejumuishwa',
+    'hotel.pool': 'Bwawa la kuogelea',
+    'hotel.wifi': 'Wi-Fi bure',
+    'hotel.property_type': 'Aina ya makazi',
+    'hotel.hotel': 'Hoteli',
+    'hotel.apartment': 'Ghorofa',
+    'hotel.villa': 'Villa',
+    'hotel.guest_house': 'Nyumba ya wageni',
+    'hotel.sort_by': 'Panga kwa',
+    'hotel.sort_popularity': 'Chaguo bora',
+    'hotel.sort_price_asc': 'Bei (chini hadi juu)',
+    'hotel.sort_price_desc': 'Bei (juu hadi chini)',
+    'hotel.sort_rating': 'Alama (juu hadi chini)',
+    'hotel.sort_stars': 'Nyota (juu hadi chini)',
+    'hotel.properties_found': 'mali zilizopatikana',
+    'hotel.price_warning': 'Bei na upatikanaji vinaweza kubadilika haraka kwa tarehe hizi.',
+    'hotel.try_modify_filters': 'Jaribu kubadilisha vichujio vyako.',
+    'hotel.try_modify_search': 'Jaribu kubadilisha mahali unakoenda au tarehe.',
+    'hotel.missing_params': 'Vigezo havipo',
+    'hotel.go_back_search': 'Tafadhali rudi kwenye ukurasa wa mwanzo na ufanye utafutaji.',
+    'hotel.save_amount': 'Ingia na uokoe {amount}',
+    'hotel.earn_coins': 'Thibitisha nafasi yako na upate {coins} LuviaCoins',
+    'hotel.public_price': 'Bei ya umma',
+    'hotel.price_unavailable': 'Bei haipatikani',
+    'hotel.rating_wonderful': 'Ajabu',
+    'hotel.rating_superb': 'Bora sana',
+    'hotel.rating_very_good': 'Nzuri sana',
+    'hotel.rating_good': 'Nzuri',
+    'hotel.rating_pleasant': 'Inapendeza',
+    'hotel.rating_fair': 'Inakubalika',
     
     // Collections
     'collections.eyebrow': 'Mkondo wa LuviaPlace',
@@ -695,6 +892,7 @@ var translations = {
     'detail.cancellation_policy': 'Sera ya kufuta',
     'detail.free_cancellation': 'Kufuta bila malipo',
     'detail.non_refundable': 'Haijarejeshwa',
+    'detail.see_availability': 'Angalia upatikanaji',
     
     // Réservation
     'booking.guest_details': 'Maelezo ya msafiri',
@@ -738,9 +936,27 @@ var translations = {
     'common.from': 'Kuanzia',
     'common.rewards': 'Mpango wa Zawadi',
     'common.apply': 'Weka',
+    'common.filters': 'Vichujio',
+    'common.sort': 'Panga',
+    'common.clear_filters': 'Futa vichujio',
+    'common.reset': 'Weka upya',
+    'common.list': 'Orodha',
+    'common.map': 'Ramani',
+    'common.map_view': 'Mwonekano wa ramani',
     'best_offers': 'Ofa bora',
     'central_africa': 'Imetengenezwa kwa Afrika ya Kati',
-    'support': 'Tuko hapa kusaidia'
+    'support': 'Tuko hapa kusaidia',
+    
+    // Accessibilité
+    'accessibility.filters': 'Vichujio vya ufikiaji',
+    'accessibility.wheelchair': 'Chumba kinachoweza kufikiwa na kiti cha magurudumu',
+    'accessibility.elevator': 'Eleveta inapatikana',
+    'accessibility.bathroom': 'Bafuni iliyobadilishwa',
+    'accessibility.parking': 'Maegesho yanayoweza kufikiwa',
+    'accessibility.trained_staff': 'Wafanyakazi waliofunzwa',
+    
+    // Pages
+    'page.sejours': 'Makazi — LuviaPlace'
   }
 };
 

@@ -1649,6 +1649,30 @@ app.post("/api/convert", async (req, res) => {
   }
 });
 // ============================================
+// 24. LOYALTY CONFIGURATION
+// ============================================
+app.get("/api/loyalty/config", (req, res) => {
+    console.log("\n⭐ ===== LOYALTY CONFIG ===== ⭐");
+    
+    res.json({
+        success: true,
+        data: {
+            programName: 'LuviaPlace Rewards',
+            rewardType: 'points',
+            value: 1,
+            reward: 10,
+            label: 'Gagnez {points} points',
+            color: '#155EEF',
+            tiers: {
+                bronze: 1,
+                silver: 1.5,
+                gold: 2,
+                platinum: 3
+            }
+        }
+    });
+});
+// ============================================
 // ROUTES FRONTEND
 // ============================================
 app.use(express.static(path.join(__dirname)));

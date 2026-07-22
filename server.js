@@ -1956,26 +1956,47 @@ app.post("/api/convert", async (req, res) => {
 // ============================================
 // 25. LOYALTY CONFIGURATION
 // ============================================
-app.get("/api/loyalty/config", (req, res) => {
-    console.log("\n⭐ ===== LOYALTY CONFIG ===== ⭐");
+app.get("/api/loyalty/coins", async (req, res) => {
+  console.log("\n💰 ===== LOYALTY COINS ===== 💰");
+  
+  const { userId } = req.query;
+  
+  if (!userId) {
+    return res.status(400).json({
+      success: false,
+      error: 'userId est requis'
+    });
+  }
+  
+  try {
+    // Si tu as une table Supabase pour les coins
+    // const { data, error } = await supabase
+    //   .from('loyalty_coins')
+    //   .select('coins')
+    //   .eq('user_id', userId)
+    //   .single();
+    
+    // Si error -> retourner 0 par défaut
+    // if (error) throw error;
+    
+    // Pour l'instant, retourner un montant fictif
+    const mockCoins = Math.floor(Math.random() * 500) + 100;
     
     res.json({
-        success: true,
-        data: {
-            programName: 'LuviaPlace Rewards',
-            rewardType: 'points',
-            value: 1,
-            reward: 10,
-            label: 'Gagnez {points} points',
-            color: '#155EEF',
-            tiers: {
-                bronze: 1,
-                silver: 1.5,
-                gold: 2,
-                platinum: 3
-            }
-        }
+      success: true,
+      coins: mockCoins,
+      userId: userId
     });
+    
+  } catch (error) {
+    console.error('❌ Erreur récupération coins:', error.message);
+    res.json({
+      success: true,
+      coins: 0,
+      userId: userId,
+      error: error.message
+    });
+  }
 });
 
 // ============================================

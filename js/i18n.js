@@ -240,6 +240,50 @@ var translations = {
     
     // Pages
     'page.sejours': 'Séjours — LuviaPlace'
+    // Authentification
+    'auth.welcome': 'Bienvenue',
+    'auth.login_title': 'Connectez-vous pour gérer vos réservations et gagner des LuviaCoins',
+    'auth.google': 'Se connecter avec Google',
+    'auth.guest': 'Continuer en tant qu\'invité',
+    'auth.terms_accept': 'En continuant, vous acceptez nos',
+    'auth.terms': 'Conditions générales',
+    'auth.privacy': 'Politique de confidentialité',
+    'auth.logged_in_as': 'Vous êtes connecté en tant que',
+    'auth.logout_confirm': 'Voulez-vous vous déconnecter ?',
+    'auth.logout': 'Déconnexion',
+    'auth.logout_success': 'Déconnecté avec succès',
+    'auth.logout_error': 'Erreur lors de la déconnexion',
+    'auth.login_success': 'Bienvenue {name}',
+    'auth.login_error': 'Erreur de connexion: {error}',
+    'auth.guest_mode': 'Vous naviguez en tant qu\'invité',
+    'auth.connecting': 'Connexion en cours...',
+    
+    // Packages
+    'packages.activities': 'Avec activités',
+    'packages.type': 'Type de package',
+    'packages.flight_hotel': 'Hôtel + Vol',
+    'packages.flight_hotel_activities': 'Hôtel + Vol + Activités',
+    'packages.all_inclusive': 'Tout inclus',
+    
+    // Flights
+    'flight.departure': 'Départ',
+    'flight.return': 'Retour',
+    'flight.date': 'Date',
+    'flight.one_way': 'Aller simple',
+    'flight.round_trip': 'Aller-retour',
+    'flight.multi_destination': 'Multi-destinations',
+    'flight.infants_lap': 'Bébés (sur les genoux)',
+    'flight.infants_seat': 'Bébés (sur siège)',
+    'flight.children_ages': '2-11 ans',
+    'flight.infants_lap_desc': 'Sur les genoux',
+    'flight.infants_seat_desc': 'Sur un siège',
+    
+    // Search errors
+    'error.enter_destination': 'Veuillez indiquer une destination.',
+    'error.enter_origin': 'Veuillez indiquer une ville d\'origine.',
+    'error.enter_destination_flight': 'Veuillez indiquer une destination.',
+    'error.complete_flights': 'Merci de compléter tous les vols de votre itinéraire.',
+    'error.max_flights': 'Maximum 4 vols pour un itinéraire multi-destinations.',
   },
 
   // ============================================
@@ -479,6 +523,50 @@ var translations = {
     
     // Pages
     'page.sejours': 'Stays — LuviaPlace'
+         // Authentification
+    'auth.welcome': 'Welcome',
+    'auth.login_title': 'Sign in to manage your bookings and earn LuviaCoins',
+    'auth.google': 'Sign in with Google',
+    'auth.guest': 'Continue as guest',
+    'auth.terms_accept': 'By continuing, you agree to our',
+    'auth.terms': 'Terms & Conditions',
+    'auth.privacy': 'Privacy Policy',
+    'auth.logged_in_as': 'You are signed in as',
+    'auth.logout_confirm': 'Do you want to sign out?',
+    'auth.logout': 'Sign out',
+    'auth.logout_success': 'Signed out successfully',
+    'auth.logout_error': 'Error signing out',
+    'auth.login_success': 'Welcome {name}',
+    'auth.login_error': 'Connection error: {error}',
+    'auth.guest_mode': 'You are browsing as a guest',
+    'auth.connecting': 'Connecting...',
+    
+    // Packages
+    'packages.activities': 'With activities',
+    'packages.type': 'Package type',
+    'packages.flight_hotel': 'Hotel + Flight',
+    'packages.flight_hotel_activities': 'Hotel + Flight + Activities',
+    'packages.all_inclusive': 'All inclusive',
+    
+    // Flights
+    'flight.departure': 'Departure',
+    'flight.return': 'Return',
+    'flight.date': 'Date',
+    'flight.one_way': 'One way',
+    'flight.round_trip': 'Round trip',
+    'flight.multi_destination': 'Multi-destination',
+    'flight.infants_lap': 'Infants (lap)',
+    'flight.infants_seat': 'Infants (seat)',
+    'flight.children_ages': '2-11 years',
+    'flight.infants_lap_desc': 'On lap',
+    'flight.infants_seat_desc': 'On seat',
+    
+    // Search errors
+    'error.enter_destination': 'Please enter a destination.',
+    'error.enter_origin': 'Please enter an origin city.',
+    'error.enter_destination_flight': 'Please enter a destination.',
+    'error.complete_flights': 'Please complete all flight legs.',
+    'error.max_flights': 'Maximum 4 flights for multi-destination itinerary.',
   },
 
   // ============================================
@@ -718,6 +806,51 @@ var translations = {
     
     // Pages
     'page.sejours': 'Estancias — LuviaPlace'
+  
+   // Authentification
+    'auth.welcome': 'Bienvenido',
+    'auth.login_title': 'Inicia sesión para gestionar tus reservas y ganar LuviaCoins',
+    'auth.google': 'Iniciar sesión con Google',
+    'auth.guest': 'Continuar como invitado',
+    'auth.terms_accept': 'Al continuar, aceptas nuestros',
+    'auth.terms': 'Términos y condiciones',
+    'auth.privacy': 'Política de privacidad',
+    'auth.logged_in_as': 'Has iniciado sesión como',
+    'auth.logout_confirm': '¿Quieres cerrar sesión?',
+    'auth.logout': 'Cerrar sesión',
+    'auth.logout_success': 'Sesión cerrada correctamente',
+    'auth.logout_error': 'Error al cerrar sesión',
+    'auth.login_success': 'Bienvenido {name}',
+    'auth.login_error': 'Error de conexión: {error}',
+    'auth.guest_mode': 'Estás navegando como invitado',
+    'auth.connecting': 'Conectando...',
+    
+    // Packages
+    'packages.activities': 'Con actividades',
+    'packages.type': 'Tipo de paquete',
+    'packages.flight_hotel': 'Hotel + Vuelo',
+    'packages.flight_hotel_activities': 'Hotel + Vuelo + Actividades',
+    'packages.all_inclusive': 'Todo incluido',
+    
+    // Flights
+    'flight.departure': 'Salida',
+    'flight.return': 'Regreso',
+    'flight.date': 'Fecha',
+    'flight.one_way': 'Solo ida',
+    'flight.round_trip': 'Ida y vuelta',
+    'flight.multi_destination': 'Multi-destino',
+    'flight.infants_lap': 'Bebés (en brazos)',
+    'flight.infants_seat': 'Bebés (en asiento)',
+    'flight.children_ages': '2-11 años',
+    'flight.infants_lap_desc': 'En brazos',
+    'flight.infants_seat_desc': 'En asiento',
+    
+    // Search errors
+    'error.enter_destination': 'Por favor, indica un destino.',
+    'error.enter_origin': 'Por favor, indica una ciudad de origen.',
+    'error.enter_destination_flight': 'Por favor, indica un destino.',
+    'error.complete_flights': 'Por favor, completa todos los vuelos.',
+    'error.max_flights': 'Máximo 4 vuelos para itinerario multi-destino.',
   },
 
   // ============================================
@@ -957,6 +1090,51 @@ var translations = {
     
     // Pages
     'page.sejours': 'Makazi — LuviaPlace'
+   
+    // Authentification
+    'auth.welcome': 'Karibu',
+    'auth.login_title': 'Ingia ili kudhibiti nafasi zako na kupata LuviaCoins',
+    'auth.google': 'Ingia kwa Google',
+    'auth.guest': 'Endelea kama mgeni',
+    'auth.terms_accept': 'Kwa kuendelea, unakubali',
+    'auth.terms': 'Masharti',
+    'auth.privacy': 'Sera ya faragha',
+    'auth.logged_in_as': 'Umeingia kama',
+    'auth.logout_confirm': 'Je, unataka kutoka?',
+    'auth.logout': 'Toka',
+    'auth.logout_success': 'Umetoka kikamilifu',
+    'auth.logout_error': 'Hitilafu wakati wa kutoka',
+    'auth.login_success': 'Karibu {name}',
+    'auth.login_error': 'Hitilafu ya kuunganisha: {error}',
+    'auth.guest_mode': 'Unavinjari kama mgeni',
+    'auth.connecting': 'Inaunganisha...',
+    
+    // Packages
+    'packages.activities': 'Na shughuli',
+    'packages.type': 'Aina ya paketi',
+    'packages.flight_hotel': 'Hoteli + Ndege',
+    'packages.flight_hotel_activities': 'Hoteli + Ndege + Shughuli',
+    'packages.all_inclusive': 'Kila kitu kimejumuishwa',
+    
+    // Flights
+    'flight.departure': 'Kuondoka',
+    'flight.return': 'Kurudi',
+    'flight.date': 'Tarehe',
+    'flight.one_way': 'Kwenda tu',
+    'flight.round_trip': 'Kwenda na kurudi',
+    'flight.multi_destination': 'Maeneo mengi',
+    'flight.infants_lap': 'Watoto wachanga (miguu)',
+    'flight.infants_seat': 'Watoto wachanga (kiti)',
+    'flight.children_ages': 'Miaka 2-11',
+    'flight.infants_lap_desc': 'Kwenye miguu',
+    'flight.infants_seat_desc': 'Kwenye kiti',
+    
+    // Search errors
+    'error.enter_destination': 'Tafadhali weka mahali unakoenda.',
+    'error.enter_origin': 'Tafadhali weka mji wa kuondokea.',
+    'error.enter_destination_flight': 'Tafadhali weka mahali unakoenda.',
+    'error.complete_flights': 'Tafadhali kamilisha ndege zote.',
+    'error.max_flights': 'Upeo wa ndege 4 kwa safari ya maeneo mengi.',
   }
 };
 

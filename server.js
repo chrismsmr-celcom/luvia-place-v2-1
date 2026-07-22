@@ -1275,12 +1275,13 @@ app.get("/api/chatbot-script", async (req, res) => {
   }
   
   if (!apiKey) {
+    console.error('❌ Aucune clé API configurée');
     return res.status(500).send('Configuration API manquante');
   }
   
   try {
-    // Construire l'URL avec la clé
-    const scriptUrl = `https://components.liteapi.travel/chatbot/v1.js?liteApiKey=${apiKey}`;
+    // Récupérer le script depuis le CDN
+    const scriptUrl = `https://components.liteapi.travel/chatbot/v1.js`;
     console.log(`📡 Chargement depuis: ${scriptUrl}`);
     
     const response = await fetch(scriptUrl);
@@ -1289,19 +1290,43 @@ app.get("/api/chatbot-script", async (req, res) => {
       throw new Error(`HTTP ${response.status}`);
     }
     
-    const script = await response.text();
+    let script = await response.text();
     
-    // Envoyer le script tel quel
+    // ✅ INJECTER LA CLÉ DANS LE SCRIPT
+    // Remplacer la façon dont le script cherche la clé
+    // La plupart des widgets LiteAPI utilisent une variable globale ou une configuration
+    
+    // Option 1: Ajouter la clé en variable globale avant le script
+    const wrappedScript = `
+      // Configuration du chatbot
+      window.LITEAPI_CONFIG = {
+        apiKey: '${apiKey}',
+        environment: '${environment}'
+      };
+      
+      // Script original
+      ${script}
+    `;
+    
+    // Option 2: Si le widget utilise une fonction d'initialisation
+    // const wrappedScript = `
+    //   ${script}
+    //   if (typeof LiteAPI !== 'undefined' && LiteAPI.init) {
+    //     LiteAPI.init({ apiKey: '${apiKey}' });
+    //   }
+    // `;
+    
     res.setHeader('Content-Type', 'application/javascript');
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.send(script);
+    res.send(wrappedScript);
     
-    console.log('✅ Script chatbot envoyé');
+    console.log(`✅ Script chatbot envoyé avec clé (${environment})`);
   } catch (error) {
     console.error('❌ Erreur proxy chatbot:', error);
     res.status(500).send('Erreur de chargement du chatbot');
   }
 });
+
 
 // ============================================
 // 15. LISTE DES LANGUES SUPPORTÉES

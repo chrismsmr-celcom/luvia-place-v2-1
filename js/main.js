@@ -912,55 +912,89 @@
     }
 
     function updateUserUI(user) {
-        if (user) {
-            authUserInfo.style.display = 'block';
-            authLoginSection.style.display = 'none';
+    const loginBtn = document.getElementById('loginBtn');
+    const accountTrigger = document.getElementById('accountTrigger');
+    const avatarName = document.getElementById('avatarName');
+    const avatarInitials = document.getElementById('avatarInitials');
 
-            const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
-            const email = user.email || 'email@exemple.com';
+    // Modale de connexion
+    const authUserInfo = document.getElementById('authUserInfo');
+    const authLoginSection = document.getElementById('authLoginSection');
+    const userName = document.getElementById('userName');
+    const userEmail = document.getElementById('userEmail');
+    const userAvatar = document.getElementById('userAvatar');
 
-            userName.textContent = name;
-            userEmail.textContent = email;
+    if (user) {
+        // Mise à jour de la modale
+        if (authUserInfo) authUserInfo.style.display = 'block';
+        if (authLoginSection) authLoginSection.style.display = 'none';
 
-            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-            userAvatar.textContent = initials;
+        const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+        const email = user.email || 'email@exemple.com';
 
-            if (loginBtn) {
-                loginBtn.textContent = '👤 ' + name;
-                loginBtn.classList.add('logged-in');
-                loginBtn.dataset.loggedIn = 'true';
-            }
+        if (userName) userName.textContent = name;
+        if (userEmail) userEmail.textContent = email;
 
-            if (window.accountDropdown && window.accountDropdown.updateUI) {
-                window.accountDropdown.updateUI(user);
-            }
+        const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        if (userAvatar) userAvatar.textContent = initials;
 
-            document.dispatchEvent(new CustomEvent('userLoggedIn', {
-                detail: { user: user }
-            }));
-
-            console.log('✅ Utilisateur connecté:', name, email);
-
-        } else {
-            authUserInfo.style.display = 'none';
-            authLoginSection.style.display = 'block';
-
-            if (loginBtn) {
-                loginBtn.textContent = 'Se connecter';
-                loginBtn.classList.remove('logged-in');
-                loginBtn.dataset.loggedIn = 'false';
-            }
-
-            if (window.accountDropdown && window.accountDropdown.updateUI) {
-                window.accountDropdown.updateUI(null);
-            }
-
-            document.dispatchEvent(new CustomEvent('userLoggedOut'));
-            console.log('🔓 Utilisateur déconnecté');
+        // ✅ Avatar dans le header
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (accountTrigger) {
+            accountTrigger.style.display = 'flex';
         }
+        if (avatarName) avatarName.textContent = name;
+        if (avatarInitials) avatarInitials.textContent = initials;
 
-        localStorage.setItem('luviaplace_user', JSON.stringify(user));
+        // Mise à jour du dropdown
+        const accountName = document.getElementById('accountName');
+        const accountEmail = document.getElementById('accountEmail');
+        const accountAvatar = document.getElementById('accountAvatar');
+        
+        if (accountName) accountName.textContent = name;
+        if (accountEmail) accountEmail.textContent = email;
+        if (accountAvatar) accountAvatar.textContent = initials;
+
+        // Émettre l'événement
+        document.dispatchEvent(new CustomEvent('userLoggedIn', {
+            detail: { user: user }
+        }));
+
+        console.log('✅ Utilisateur connecté:', name, email);
+
+    } else {
+        // Déconnexion
+        if (authUserInfo) authUserInfo.style.display = 'none';
+        if (authLoginSection) authLoginSection.style.display = 'block';
+
+        // ✅ Réafficher le bouton, cacher l'avatar
+        if (loginBtn) loginBtn.style.display = 'block';
+        if (accountTrigger) accountTrigger.style.display = 'none';
+
+        // Émettre l'événement
+        document.dispatchEvent(new CustomEvent('userLoggedOut'));
+        console.log('🔓 Utilisateur déconnecté');
     }
+
+    localStorage.setItem('luviaplace_user', JSON.stringify(user));
+}
+// ============================================
+// ÉVÉNEMENT CLIC SUR L'AVATAR
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    const accountTrigger = document.getElementById('accountTrigger');
+    
+    if (accountTrigger) {
+        accountTrigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (window.accountDropdown && window.accountDropdown.toggle) {
+                window.accountDropdown.toggle();
+            }
+        });
+    }
+});
 
     async function signInWithGoogle() {
         try {

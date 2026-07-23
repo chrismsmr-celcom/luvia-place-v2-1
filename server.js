@@ -466,10 +466,11 @@ app.get("/search-hotels", async (req, res) => {
       checkin: checkin,
       checkout: checkout,
       roomMapping: true,
-      maxRatesPerHotel: 1,
+      maxRatesPerHotel: 20,
       includeHotelData: true,
       timeout: 25,
-      limit: requestedLimit
+      limit: 2000
+      raduis: 50000
     };
  
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);
@@ -626,10 +627,10 @@ app.get("/search-hotels-stream", async (req, res) => {
       checkin: checkin,
       checkout: checkout,
       roomMapping: true,
-      maxRatesPerHotel: 1,
+      maxRatesPerHotel: 20,
       includeHotelData: true,
       timeout: 25,
-      limit: requestedLimit
+      limit:2000
     };
  
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);

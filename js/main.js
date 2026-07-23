@@ -1392,3 +1392,308 @@ async function fetchLuviaCoins(userId) {
         console.error('❌ Erreur récupération coins:', error);
     }
 }
+// ============================================
+// RECHERCHES RÉCENTES - CAROUSEL
+// ============================================
+
+const RECENT_SEARCHES_KEY = 'luviaplace_recent_searches';
+const MAX_RECENT_SEARCHES = 6;
+const RECENT_CAROUSEL_IMAGE = 'https://images.unsplash.com/photo-1717343824623-06293a62a70d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fG1hcHxlbnwwfHwwfHx8MA%3D%3D';
+
+// ============================================
+// FORMATER UNE DATE POUR L'AFFICHAGE
+// ============================================
+function formatDisplayDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('fr-FR', { 
+        day: 'numeric',
+        month: 'short'
+    });
+}
+
+// ============================================
+// SAUVEGARDER UNE RECHERCHE
+// ============================================
+function saveRecentSearch(searchData) {
+    try {
+        let searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+        
+        const exists = searches.some(function(s) {
+            return s.destination === searchData.destination && 
+                   s.checkin === searchData.checkin && 
+                   s.checkout === searchData.checkout &&
+                   s.type === searchData.type;
+        });
+        
+        if (!exists) {
+            searches.unshift({
+                ...searchData,
+                timestamp: new Date().toISOString(),
+                id: Date.now()
+            });
+            
+            if (searches.length > MAX_RECENT_SEARCHES) {
+                searches = searches.slice(0, MAX_RECENT_SEARCHES);
+            }
+            
+            localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+            displayRecentSearches();
+        }
+        
+        return searches;
+    } catch (error) {
+        console.error('❌ Erreur sauvegarde recherche:', error);
+        return [];
+    }
+}
+
+// ============================================
+// RÉCUPÉRER LES RECHERCHES RÉCENTES
+// ============================================
+function getRecentSearches() {
+    try {
+        return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+    } catch (error) {
+        console.error('❌ Erreur récupération recherches:', error);
+        return [];
+    }
+}
+
+// ============================================
+// CONSTRUIRE L'URL DE REDIRECTION
+// ============================================
+function buildSearchUrl(search) {
+    if (search.type === 'flight') {
+        const params = new URLSearchParams({
+            tripType: search.tripType || 'round',
+            origin: search.origin || '',
+            destination: search.destination || '',
+            departure: search.departure || '',
+            adults: search.adults || 1
+        });
+        if (search.tripType === 'round' && search.return) {
+            params.append('return', search.return);
+        }
+        return 'resultats-vols.html?' + params.toString();
+    } else if (search.type === 'package') {
+        const params = new URLSearchParams({
+            destination: search.destination || '',
+            checkin: search.checkin || '',
+            checkout: search.checkout || '',
+            rooms: search.rooms || 1,
+            adults: search.adults || 2,
+            children: search.children || 0
+        });
+        return 'resultats-package.html?' + params.toString();
+    } else {
+        const params = new URLSearchParams({
+            destination: search.destination || '',
+            checkin: search.checkin || '',
+            checkout: search.checkout || '',
+            rooms: search.rooms || 1,
+            adults: search.adults || 2,
+            children: search.children || 0
+        });
+        return 'resultats-hebergement.html?' + params.toString();
+    }
+}
+
+// ============================================
+// AFFICHER LES SKELETONS
+// ============================================
+function showRecentSkeletons(count) {
+    const container = document.getElementById('recentSearchesCarousel');
+    if (!container) return;
+    
+    container.innerHTML = Array.from({ length: count || 3 }).map(function() {
+        return `
+            <div class="recent-search-skeleton">
+                <div class="skeleton-img"></div>
+                <div style="flex:1;min-width:0;">
+                    <div class="skeleton-line w70"></div>
+                    <div class="skeleton-line w50" style="margin-bottom:0;"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ============================================
+// AFFICHER LES RECHERCHES RÉCENTES
+// ============================================
+function displayRecentSearches() {
+    const section = document.getElementById('recentSearchesSection');
+    const container = document.getElementById('recentSearchesCarousel');
+    
+    if (!section || !container) return;
+    
+    const searches = getRecentSearches();
+    
+    // Si pas de recherches, cacher toute la section
+    if (searches.length === 0) {
+        section.classList.remove('visible');
+        container.innerHTML = '';
+        return;
+    }
+    
+    // Afficher la section
+    section.classList.add('visible');
+    
+    // Afficher les recherches
+    container.innerHTML = searches.map(function(search) {
+        let title = search.destination || 'Recherche';
+        if (search.type === 'flight') {
+            title = (search.origin || '') + ' → ' + (search.destination || '');
+        } else if (search.type === 'package') {
+            title = 'Package ' + (search.destination || '');
+        }
+        
+        let dates = '';
+        let guests = '';
+        
+        if (search.type === 'flight') {
+            dates = formatDisplayDate(search.departure);
+            if (search.tripType === 'round' && search.return) {
+                dates += ' → ' + formatDisplayDate(search.return);
+            }
+            guests = (search.adults || 1) + ' passager' + (search.adults > 1 ? 's' : '');
+        } else {
+            dates = formatDisplayDate(search.checkin) + ' → ' + formatDisplayDate(search.checkout);
+            const totalGuests = (search.adults || 2) + (search.children || 0);
+            guests = totalGuests + ' client' + (totalGuests > 1 ? 's' : '');
+        }
+        
+        const url = buildSearchUrl(search);
+        
+        return `
+            <a href="${url}" class="recent-search-card" data-search-id="${search.id}" data-search-type="${search.type || 'hotel'}">
+                <img src="${RECENT_CAROUSEL_IMAGE}" alt="${escapeHtml(title)}" class="recent-search-card__image" loading="lazy">
+                <div class="recent-search-card__content">
+                    <div class="recent-search-card__title">${escapeHtml(title)}</div>
+                    <div class="recent-search-card__details">
+                        <span>${escapeHtml(dates)}</span>
+                        <span>${escapeHtml(guests)}</span>
+                    </div>
+                </div>
+                <button class="recent-search-card__remove" onclick="event.preventDefault();event.stopPropagation();removeRecentSearch(${search.id})" aria-label="Supprimer cette recherche">
+                    ×
+                </button>
+            </a>
+        `;
+    }).join('');
+}
+
+// ============================================
+// SUPPRIMER UNE RECHERCHE
+// ============================================
+function removeRecentSearch(searchId) {
+    try {
+        let searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+        searches = searches.filter(s => s.id !== searchId);
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+        displayRecentSearches();
+    } catch (error) {
+        console.error('❌ Erreur suppression recherche:', error);
+    }
+}
+
+// ============================================
+// VIDER TOUTES LES RECHERCHES RÉCENTES
+// ============================================
+function clearRecentSearches() {
+    if (confirm('Voulez-vous supprimer toutes vos recherches récentes ?')) {
+        localStorage.removeItem(RECENT_SEARCHES_KEY);
+        displayRecentSearches();
+    }
+}
+
+// ============================================
+// INTERCEPTEUR DE RECHERCHE
+// ============================================
+function setupSearchSaving() {
+    const hotelSearchBtn = document.querySelector('[data-search="hotel"]');
+    if (hotelSearchBtn) {
+        hotelSearchBtn.addEventListener('click', function() {
+            const destination = document.getElementById('hotelDestination')?.value || '';
+            const checkin = document.getElementById('hotelCheckin')?.value || '';
+            const checkout = document.getElementById('hotelCheckout')?.value || '';
+            
+            if (destination) {
+                saveRecentSearch({
+                    type: 'hotel',
+                    destination: destination,
+                    checkin: checkin,
+                    checkout: checkout,
+                    rooms: parseInt(document.querySelector('[data-panel=hotel] .step-count[data-count="rooms"]')?.textContent || '1'),
+                    adults: parseInt(document.querySelector('[data-panel=hotel] .step-count[data-count="adults"]')?.textContent || '2'),
+                    children: parseInt(document.querySelector('[data-panel=hotel] .step-count[data-count="children"]')?.textContent || '0')
+                });
+            }
+        });
+    }
+    
+    const flightSearchBtn = document.querySelector('[data-search="flight"]');
+    if (flightSearchBtn) {
+        flightSearchBtn.addEventListener('click', function() {
+            const origin = document.getElementById('flightOrigin')?.value || '';
+            const destination = document.getElementById('flightDestination')?.value || '';
+            const departure = document.getElementById('flightDeparture')?.value || '';
+            const returnDate = document.getElementById('flightReturn')?.value || '';
+            const tripType = document.querySelector('[data-toggle=tripType] .pill-btn[aria-pressed="true"]')?.dataset?.trip || 'round';
+            
+            if (origin && destination) {
+                saveRecentSearch({
+                    type: 'flight',
+                    tripType: tripType,
+                    origin: origin,
+                    destination: destination,
+                    departure: departure,
+                    return: returnDate,
+                    adults: parseInt(document.querySelector('[data-panel=flight] .step-count[data-count="fadults"]')?.textContent || '1')
+                });
+            }
+        });
+    }
+    
+    const pkgSearchBtn = document.querySelector('[data-search="package"]');
+    if (pkgSearchBtn) {
+        pkgSearchBtn.addEventListener('click', function() {
+            const destination = document.getElementById('pkgDestination')?.value || '';
+            const checkin = document.getElementById('pkgCheckin')?.value || '';
+            const checkout = document.getElementById('pkgCheckout')?.value || '';
+            
+            if (destination) {
+                saveRecentSearch({
+                    type: 'package',
+                    destination: destination,
+                    checkin: checkin,
+                    checkout: checkout,
+                    rooms: parseInt(document.querySelector('[data-panel=package] .step-count[data-count="krooms"]')?.textContent || '1'),
+                    adults: parseInt(document.querySelector('[data-panel=package] .step-count[data-count="kadults"]')?.textContent || '2'),
+                    children: parseInt(document.querySelector('[data-panel=package] .step-count[data-count="kchildren"]')?.textContent || '0')
+                });
+            }
+        });
+    }
+}
+
+// ============================================
+// INITIALISATION DES RECHERCHES RÉCENTES
+// ============================================
+// ⚠️ Cette partie doit être placée APRÈS toutes les définitions de fonctions
+// et à l'INTÉRIEUR du DOMContentLoaded principal
+
+// Ajoute ceci à la fin du DOMContentLoaded existant :
+// showRecentSkeletons(3);
+// setTimeout(function() { displayRecentSearches(); }, 300);
+// setupSearchSaving();
+
+// Exposer les fonctions globalement
+window.saveRecentSearch = saveRecentSearch;
+window.getRecentSearches = getRecentSearches;
+window.displayRecentSearches = displayRecentSearches;
+window.removeRecentSearch = removeRecentSearch;
+window.clearRecentSearches = clearRecentSearches;
+window.showRecentSkeletons = showRecentSkeletons;

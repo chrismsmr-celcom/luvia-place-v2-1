@@ -469,8 +469,8 @@ app.get("/search-hotels", async (req, res) => {
       maxRatesPerHotel: 20,
       includeHotelData: true,
       timeout: 25,
-      limit: 2000
-      raduis: 50000
+      limit: 2000,
+      radius: 50000
     };
  
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);
@@ -630,7 +630,8 @@ app.get("/search-hotels-stream", async (req, res) => {
       maxRatesPerHotel: 20,
       includeHotelData: true,
       timeout: 25,
-      limit:2000
+      limit:2000,
+      radius: 50000
     };
  
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);

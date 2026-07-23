@@ -833,7 +833,7 @@
     }
 
     // ============================================
-// RENDU DES HÔTELS (CORRIGÉ)
+// RENDU DES HÔTELS (CORRIGÉ - PHOTO PLEINE HAUTEUR)
 // ============================================
 function renderHotels(hotels) {
     var container = document.getElementById('resultsContainer');
@@ -886,7 +886,6 @@ function renderHotels(hotels) {
         // ✅ AFFICHER UNIQUEMENT LES ÉTOILES DISPONIBLES
         var starRating = hotel.starRating || 0;
         var fullStars = Math.min(Math.round(starRating), 5);
-        // ✅ Si pas d'étoiles ou 0, on n'affiche rien
         var starHtml = '';
         if (starRating > 0 && fullStars > 0) {
             starHtml = '★'.repeat(fullStars);
@@ -896,50 +895,41 @@ function renderHotels(hotels) {
         var pricePerNightUSD = hotel.minPrice > 0 ? Math.round(hotel.minPrice / nights) : 0;
         var totalPriceUSD = hotel.minPrice > 0 ? Math.round(hotel.minPrice) : 0;
 
-        // ✅ Prix public = prix actuel (c'est le vrai prix)
-        var publicPricePerNight = pricePerNightUSD;
-        var publicTotalPrice = totalPriceUSD;
+        // ✅ Prix de base = prix réel de l'API
+        var basePricePerNight = pricePerNightUSD;
+        var baseTotalPrice = totalPriceUSD;
 
-        // ✅ Prix membre = prix public - 10% (pour les connectés)
-        var memberDiscount = 0.10;
-        var memberPricePerNight = publicPricePerNight - (publicPricePerNight * memberDiscount);
-        var memberTotalPrice = publicTotalPrice - (publicTotalPrice * memberDiscount);
+        // ✅ Prix public (non-membre) = prix de base + 10%
+        var publicPricePerNight = basePricePerNight + (basePricePerNight * 0.10);
+        var publicTotalPrice = baseTotalPrice + (baseTotalPrice * 0.10);
 
-        // ✅ Prix invité = prix public + 10% (pour les non connectés)
-        var guestSurcharge = 0.10;
-        var guestPricePerNight = publicPricePerNight + (publicPricePerNight * guestSurcharge);
-        var guestTotalPrice = publicTotalPrice + (publicTotalPrice * guestSurcharge);
-
-        // ✅ Déterminer quel prix afficher selon le statut de connexion
-        var displayPricePerNight = isLoggedIn ? memberPricePerNight : guestPricePerNight;
-        var displayTotalPrice = isLoggedIn ? memberTotalPrice : guestTotalPrice;
-        var displayPriceLabel = isLoggedIn ? 'Prix membre' : 'Prix public';
+        // ✅ Prix affiché = prix de base (pour tout le monde)
+        var displayPricePerNight = basePricePerNight;
+        var displayTotalPrice = baseTotalPrice;
 
         // ✅ Convertir les prix dans la devise choisie
-        var pricePerNight = displayPricePerNight;
-        var totalPrice = displayTotalPrice;
+        var displayPrice = displayPricePerNight;
+        var publicPriceConverted = publicPricePerNight;
         if (typeof window.convertPrice === 'function') {
-            pricePerNight = window.convertPrice(displayPricePerNight, 'USD', currentCurrency);
-            totalPrice = window.convertPrice(displayTotalPrice, 'USD', currentCurrency);
+            displayPrice = window.convertPrice(displayPricePerNight, 'USD', currentCurrency);
+            publicPriceConverted = window.convertPrice(publicPricePerNight, 'USD', currentCurrency);
         }
 
-        var formattedPricePerNight = '';
+        var formattedDisplayPrice = '';
+        var formattedPublicPrice = '';
         if (typeof window.formatPrice === 'function') {
-            formattedPricePerNight = window.formatPrice(pricePerNight, currentCurrency);
+            formattedDisplayPrice = window.formatPrice(displayPrice, currentCurrency);
+            formattedPublicPrice = window.formatPrice(publicPriceConverted, currentCurrency);
         } else {
-            formattedPricePerNight = '$' + pricePerNight.toFixed(2);
-        }
-
-        // ✅ Prix public original (pour référence)
-        var publicPriceFormatted = '';
-        if (typeof window.formatPrice === 'function') {
-            publicPriceFormatted = window.formatPrice(publicPricePerNight, currentCurrency);
-        } else {
-            publicPriceFormatted = '$' + publicPricePerNight.toFixed(2);
+            formattedDisplayPrice = '$' + displayPrice.toFixed(2);
+            formattedPublicPrice = '$' + publicPriceConverted.toFixed(2);
         }
 
         var rating = hotel.rating || 0;
 
+        // ============================================
+        // CRÉATION DE LA CARTE HÔTEL
+        // ============================================
         var div = document.createElement('div');
         div.className = 'hotel-result';
         div.id = 'hotel-' + hotelId;
@@ -953,7 +943,9 @@ function renderHotels(hotels) {
             }
         });
 
-        // Photo
+        // ============================================
+        // PHOTO - PREND TOUTE LA HAUTEUR
+        // ============================================
         var photo = document.createElement('div');
         photo.className = 'photo';
         var img = document.createElement('img');
@@ -969,15 +961,16 @@ function renderHotels(hotels) {
         wishlistBtn.addEventListener('click', function(e) { e.stopPropagation(); });
         photo.appendChild(wishlistBtn);
 
-        // Info
+        // ============================================
+        // INFO - CONTENU TEXTUEL
+        // ============================================
         var info = document.createElement('div');
         info.className = 'info';
 
-        // ✅ Étoiles - uniquement celles disponibles
+        // Étoiles
         var starsDiv = document.createElement('div');
         starsDiv.className = 'stars';
         starsDiv.textContent = starHtml;
-        // Si pas d'étoiles, cacher l'élément
         if (!starHtml) {
             starsDiv.style.display = 'none';
         }
@@ -999,7 +992,9 @@ function renderHotels(hotels) {
         distRow.querySelector('span').textContent = hotel.roomName || 'Chambre standard';
         info.appendChild(distRow);
 
-        // Side
+        // ============================================
+        // SIDE - PRIX ET ACTIONS
+        // ============================================
         var side = document.createElement('div');
         side.className = 'side';
 
@@ -1033,32 +1028,13 @@ function renderHotels(hotels) {
         scoreChip.appendChild(reviewText);
         side.appendChild(scoreChip);
 
-        // ✅ Savings Pill - Afficher l'économie si connecté
-        if (isLoggedIn && hotel.minPrice > 0) {
-            var savingsAmount = publicPricePerNight - memberPricePerNight;
-            var savingsAmountInCurrency = savingsAmount;
-            if (typeof window.convertPrice === 'function') {
-                savingsAmountInCurrency = window.convertPrice(savingsAmount, 'USD', currentCurrency);
-            }
-            var formattedSavings = '';
-            if (typeof window.formatPrice === 'function') {
-                formattedSavings = window.formatPrice(savingsAmountInCurrency, currentCurrency);
-            } else {
-                formattedSavings = '$' + savingsAmountInCurrency.toFixed(2);
-            }
-            if (savingsAmount > 0) {
-                var savingsPill = document.createElement('div');
-                savingsPill.className = 'savings-pill';
-                savingsPill.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg><span></span>';
-                savingsPill.querySelector('span').textContent = 'Économisez ' + formattedSavings + ' / ' + window.t('search.night');
-                side.appendChild(savingsPill);
-            }
-        } else if (!isLoggedIn && hotel.minPrice > 0) {
-            // ✅ Message d'invitation à se connecter pour économiser
+        // Savings Pill - Invitation à se connecter
+        if (!isLoggedIn && hotel.minPrice > 0) {
             var connectPill = document.createElement('div');
             connectPill.className = 'savings-pill';
             connectPill.style.background = '#c1ebab';
             connectPill.style.color = '#000000';
+            connectPill.style.cursor = 'pointer';
             connectPill.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6h6l-5 4 2 6-6-4-6 4 2-6-5-4h6z"/></svg><span></span>';
             connectPill.querySelector('span').textContent = 'Connectez-vous pour économiser 10%';
             connectPill.addEventListener('click', function(e) {
@@ -1067,64 +1043,26 @@ function renderHotels(hotels) {
                     window.openAuthModal();
                 }
             });
-            connectPill.style.cursor = 'pointer';
             side.appendChild(connectPill);
         }
 
-        // ✅ Price Block
-        // ✅ CORRECTION : Price Block
-var priceBlock = document.createElement('div');
-priceBlock.className = 'price-block';
+        // Price Block
+        var priceBlock = document.createElement('div');
+        priceBlock.className = 'price-block';
 
-if (hotel.minPrice > 0) {
-    var nightsText = nights + ' ' + window.t('search.nights');
-    var roomsText = '1 ' + window.t('search.rooms');
+        if (hotel.minPrice > 0) {
+            var nightsText = nights + ' ' + window.t('search.nights');
+            var roomsText = '1 ' + window.t('search.rooms');
 
-    // ✅ Prix de base = prix réel de l'API (celui affiché en grand)
-    var basePricePerNight = pricePerNightUSD;
-    var baseTotalPrice = totalPriceUSD;
+            priceBlock.innerHTML =
+                '<div class="amount">' + formattedDisplayPrice + ' <span class="per">' + window.t('search.per_night') + '</span></div>' +
+                '<div class="note">' + nightsText + ', ' + roomsText + ', taxes et frais inclus</div>' +
+                '<div class="public-price">Prix public <s>' + formattedPublicPrice + '</s></div>';
+        } else {
+            priceBlock.innerHTML = '<span style="font-size:14px;color:var(--ink-soft);">' + window.t('hotel.price_unavailable') + '</span>';
+        }
+        side.appendChild(priceBlock);
 
-    // ✅ Prix public (non-membre) = prix de base + 10%
-    var publicPricePerNight = basePricePerNight + (basePricePerNight * 0.10);
-    var publicTotalPrice = baseTotalPrice + (baseTotalPrice * 0.10);
-
-    // ✅ Prix affiché = prix de base (pour tout le monde)
-    var displayPricePerNight = basePricePerNight;
-    var displayTotalPrice = baseTotalPrice;
-
-    // ✅ Si connecté, on affiche le prix de base (déjà le meilleur prix)
-    // ✅ Si non connecté, on affiche aussi le prix de base (pour ne pas faire peur)
-    // Le prix public barré montre l'économie réalisée
-
-    // ✅ Convertir les prix dans la devise choisie
-    var displayPrice = displayPricePerNight;
-    var publicPriceConverted = publicPricePerNight;
-    if (typeof window.convertPrice === 'function') {
-        displayPrice = window.convertPrice(displayPricePerNight, 'USD', currentCurrency);
-        publicPriceConverted = window.convertPrice(publicPricePerNight, 'USD', currentCurrency);
-    }
-
-    var formattedDisplayPrice = '';
-    var formattedPublicPrice = '';
-    if (typeof window.formatPrice === 'function') {
-        formattedDisplayPrice = window.formatPrice(displayPrice, currentCurrency);
-        formattedPublicPrice = window.formatPrice(publicPriceConverted, currentCurrency);
-    } else {
-        formattedDisplayPrice = '$' + displayPrice.toFixed(2);
-        formattedPublicPrice = '$' + publicPriceConverted.toFixed(2);
-    }
-
-    // ✅ AFFICHAGE :
-    // - amount : prix de base (prix réel)
-    // - public-price : prix public majoré de 10% (barré)
-    priceBlock.innerHTML =
-        '<div class="amount">' + formattedDisplayPrice + ' <span class="per">' + window.t('search.per_night') + '</span></div>' +
-        '<div class="note">' + nightsText + ', ' + roomsText + ', taxes et frais inclus</div>' +
-        '<div class="public-price">Prix public <s>' + formattedPublicPrice + '</s></div>';
-} else {
-    priceBlock.innerHTML = '<span style="font-size:14px;color:var(--ink-soft);">' + window.t('hotel.price_unavailable') + '</span>';
-}
-side.appendChild(priceBlock);
         // Loyalty Badge
         if (hotel.minPrice > 0 && totalPriceUSD >= 1500) {
             var coinsEarned = calculateLuviaCoins(totalPriceUSD);
@@ -1154,13 +1092,15 @@ side.appendChild(priceBlock);
         });
         side.appendChild(ctaBtn);
 
+        // ============================================
+        // ASSEMBLAGE
+        // ============================================
         div.appendChild(photo);
         div.appendChild(info);
         div.appendChild(side);
         container.appendChild(div);
     });
 }
-
     function voirHotel(hotelId) {
         if (!hotelId) {
             console.error('❌ Aucun ID d\'hôtel spécifié');

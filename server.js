@@ -427,13 +427,13 @@ app.get("/search-hotels", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS ===== 🔍");
   const { checkin, checkout, adults, placeId, city, environment, limit = 500, language = 'fr' } = req.query;
   const apiKey = environment == "sandbox" ? sandbox_apiKey : prod_apiKey;
-
+ 
   const guestNationality = await getGuestNationality(req);
   console.log(`🌍 Nationalité du client: ${guestNationality}`);
-
+ 
   try {
     let finalPlaceId = placeId;
-
+ 
     if (!finalPlaceId && city) {
       console.log(`⏳ Récupération du placeId pour "${city}"...`);
       try {
@@ -449,12 +449,15 @@ app.get("/search-hotels", async (req, res) => {
         console.warn(`⚠️ Erreur géocodage: ${error.message}`);
       }
     }
-
+ 
     if (!finalPlaceId) {
       return res.json({ success: true, hotels: [], total: 0, message: "Ville non reconnue" });
     }
-
+ 
     // ✅ Appel unique recommandé par LiteAPI : POST /hotels/rates avec placeId
+    // maxRatesPerHotel:1 pour le listing (on veut beaucoup d'hôtels, pas beaucoup de chambres par hôtel)
+    // limit + timeout augmentés suite au retour du support LiteAPI
+    const requestedLimit = Math.min(parseInt(limit) || 500, 2000);
     const ratesBody = {
       placeId: finalPlaceId,
       occupancies: [{ adults: parseInt(adults, 10) || 2 }],
@@ -465,27 +468,38 @@ app.get("/search-hotels", async (req, res) => {
       roomMapping: true,
       maxRatesPerHotel: 1,
       includeHotelData: true,
-      timeout: 15
+      timeout: 25,
+      limit: requestedLimit
     };
-
+ 
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);
-
+ 
     const rateEntries = Array.isArray(ratesResponse.data) ? ratesResponse.data : [];
     const hotelInfoList = Array.isArray(ratesResponse.hotels) ? ratesResponse.hotels : [];
-
+ 
+    // ---- Diagnostic : à surveiller dans les logs Render ----
+    const withRoomTypes = rateEntries.filter(e => Array.isArray(e.roomTypes) && e.roomTypes.length > 0).length;
+    const withRates = rateEntries.filter(e => e.roomTypes?.[0]?.rates?.length > 0).length;
+    console.log(`📊 Diagnostic /search-hotels :`);
+    console.log(`   - data[] reçues de LiteAPI : ${rateEntries.length}`);
+    console.log(`   - hotels[] (infos hôtel) reçues : ${hotelInfoList.length}`);
+    console.log(`   - avec roomTypes non vide : ${withRoomTypes}`);
+    console.log(`   - avec au moins 1 rate : ${withRates}`);
+    // ---------------------------------------------------------
+ 
     // Indexer les infos hôtel (nom, photo, adresse...) par id
     const hotelInfoMap = {};
     hotelInfoList.forEach(h => { hotelInfoMap[h.id || h.hotelId] = h; });
-
+ 
     let hotels = rateEntries.map(function (entry) {
       const hotelId = entry.hotelId || entry.id;
       const info = hotelInfoMap[hotelId] || entry.hotel || {};
       const bestRate = entry.roomTypes?.[0]?.rates?.[0];
-
+ 
       const stars = info.stars ?? info.starRating ?? entry.stars ?? entry.starRating ?? 0;
       const photo = info.main_photo || info.photo || info.image ||
         `https://picsum.photos/seed/${hotelId || Math.random()}/460/380`;
-
+ 
       return {
         id: hotelId || `hotel-${Math.random()}`,
         name: info.name || 'Hôtel sans nom',
@@ -506,16 +520,19 @@ app.get("/search-hotels", async (req, res) => {
         language: language
       };
     });
-
+ 
+    const beforeFilterCount = hotels.length;
     hotels = hotels.filter(h => h.minPrice > 0).sort((a, b) => a.minPrice - b.minPrice);
+    console.log(`   - après filtre minPrice > 0 : ${hotels.length} / ${beforeFilterCount}`);
+ 
     const finalHotels = hotels.slice(0, Math.min(parseInt(limit) || 500, hotels.length));
-
+ 
     // Traduction DeepSeek pour les langues non supportées par LiteAPI
     const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
-
+ 
     if (!supportedLangs.includes(language) && language !== 'fr') {
       console.log(`🔄 Traduction DeepSeek pour la langue: ${language}`);
-
+ 
       const translatedHotels = await Promise.all(
         finalHotels.slice(0, 20).map(async (hotel) => {
           try {
@@ -533,7 +550,7 @@ app.get("/search-hotels", async (req, res) => {
           }
         })
       );
-
+ 
       return res.json({
         success: true,
         hotels: translatedHotels,
@@ -542,14 +559,14 @@ app.get("/search-hotels", async (req, res) => {
         translated: true
       });
     }
-
+ 
     res.json({ success: true, hotels: finalHotels, total: finalHotels.length, language: language });
   } catch (error) {
     console.error("❌ Error:", error);
     res.status(500).json({ success: false, error: "Internal server error", message: error.message });
   }
 });
-
+ 
 // ============================================
 // 3. RECHERCHE HÔTELS - STREAMING (SSE) MULTILINGUE
 // ============================================
@@ -557,23 +574,23 @@ app.get("/search-hotels-stream", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS (STREAMING) ===== 🔍");
   const { checkin, checkout, adults, placeId, city, environment, limit = 500, language = 'fr' } = req.query;
   const apiKey = environment == "sandbox" ? sandbox_apiKey : prod_apiKey;
-
+ 
   const guestNationality = await getGuestNationality(req);
   console.log(`🌍 Nationalité du client: ${guestNationality}`);
-
+ 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('Access-Control-Allow-Origin', '*');
-
+ 
   function sendEvent(event, data) {
     res.write(`event: ${event}\n`);
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   }
-
+ 
   try {
     let finalPlaceId = placeId;
-
+ 
     if (!finalPlaceId && city) {
       sendEvent('status', { step: 'geocoding', message: `📍 Recherche de "${city}"...`, language });
       try {
@@ -590,15 +607,17 @@ app.get("/search-hotels-stream", async (req, res) => {
         return res.end();
       }
     }
-
+ 
     if (!finalPlaceId) {
       sendEvent('error', { message: 'Ville non reconnue' });
       return res.end();
     }
-
+ 
     sendEvent('status', { step: 'rates', message: '🔍 Recherche des hôtels disponibles...' });
-
+ 
     // ✅ Appel unique recommandé par LiteAPI : POST /hotels/rates avec placeId
+    // maxRatesPerHotel:1 pour le listing, limit + timeout augmentés
+    const requestedLimit = Math.min(parseInt(limit) || 500, 2000);
     const ratesBody = {
       placeId: finalPlaceId,
       occupancies: [{ adults: parseInt(adults, 10) || 2 }],
@@ -609,22 +628,34 @@ app.get("/search-hotels-stream", async (req, res) => {
       roomMapping: true,
       maxRatesPerHotel: 1,
       includeHotelData: true,
-      timeout: 15
+      timeout: 25,
+      limit: requestedLimit
     };
-
+ 
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);
-
+ 
     const rateEntries = Array.isArray(ratesResponse.data) ? ratesResponse.data : [];
     const hotelInfoList = Array.isArray(ratesResponse.hotels) ? ratesResponse.hotels : [];
+ 
+    // ---- Diagnostic ----
+    const withRoomTypes = rateEntries.filter(e => Array.isArray(e.roomTypes) && e.roomTypes.length > 0).length;
+    const withRates = rateEntries.filter(e => e.roomTypes?.[0]?.rates?.length > 0).length;
+    console.log(`📊 Diagnostic /search-hotels-stream :`);
+    console.log(`   - data[] reçues de LiteAPI : ${rateEntries.length}`);
+    console.log(`   - hotels[] (infos hôtel) reçues : ${hotelInfoList.length}`);
+    console.log(`   - avec roomTypes non vide : ${withRoomTypes}`);
+    console.log(`   - avec au moins 1 rate : ${withRates}`);
+    // ---------------------
+ 
     const hotelInfoMap = {};
     hotelInfoList.forEach(h => { hotelInfoMap[h.id || h.hotelId] = h; });
-
+ 
     let allHotels = rateEntries.map(function (entry) {
       const hotelId = entry.hotelId || entry.id;
       const info = hotelInfoMap[hotelId] || entry.hotel || {};
       const bestRate = entry.roomTypes?.[0]?.rates?.[0];
       const stars = info.stars ?? info.starRating ?? entry.stars ?? entry.starRating ?? 0;
-
+ 
       return {
         id: hotelId,
         name: info.name || 'Hôtel sans nom',
@@ -643,16 +674,20 @@ app.get("/search-hotels-stream", async (req, res) => {
         loading: false,
         language: language
       };
-    }).filter(h => h.minPrice > 0);
-
+    });
+ 
+    const beforeFilterCount = allHotels.length;
+    allHotels = allHotels.filter(h => h.minPrice > 0);
+    console.log(`   - après filtre minPrice > 0 : ${allHotels.length} / ${beforeFilterCount}`);
+ 
     allHotels.sort((a, b) => a.minPrice - b.minPrice);
-
+ 
     sendEvent('status', { step: 'found', message: `✅ ${allHotels.length} hôtels disponibles trouvés` });
-
+ 
     // Envoyer les résultats par paquets pour garder un rendu progressif côté UI
     const CHUNK_SIZE = 20;
     const totalChunks = Math.ceil(allHotels.length / CHUNK_SIZE) || 1;
-
+ 
     for (let i = 0; i < allHotels.length; i += CHUNK_SIZE) {
       const chunk = allHotels.slice(i, i + CHUNK_SIZE);
       sendEvent('batch', {
@@ -663,11 +698,11 @@ app.get("/search-hotels-stream", async (req, res) => {
         total: allHotels.length
       });
     }
-
+ 
     // Traduction DeepSeek pour les langues non supportées
     const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
     let finalHotels = allHotels;
-
+ 
     if (!supportedLangs.includes(language) && language !== 'fr') {
       const translated = await Promise.all(
         allHotels.slice(0, 20).map(async (hotel) => {
@@ -679,7 +714,7 @@ app.get("/search-hotels-stream", async (req, res) => {
       );
       finalHotels = translated;
     }
-
+ 
     sendEvent('complete', { hotels: finalHotels, total: finalHotels.length, language: language });
     res.end();
   } catch (error) {

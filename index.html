@@ -1416,6 +1416,206 @@
         font-size: 11px;
     }
 }
+/* ============================================
+   RECHERCHES RÉCENTES - CAROUSEL
+   ============================================ */
+
+#recentSearchesSection {
+    display: none;
+}
+
+#recentSearchesSection.visible {
+    display: block;
+}
+
+/* Carte de recherche récente - style carousel */
+.recent-search-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 340px;
+    min-width: 300px;
+    padding: 12px 16px 12px 12px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-decoration: none;
+    color: inherit;
+    flex-shrink: 0;
+    height: 80px;
+}
+
+.recent-search-card:hover {
+    border-color: var(--blue);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.recent-search-card__image {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--bg-soft);
+}
+
+.recent-search-card__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.recent-search-card__title {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.recent-search-card__details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.recent-search-card__details span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.recent-search-card__remove {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+}
+
+.recent-search-card:hover .recent-search-card__remove {
+    opacity: 1;
+}
+
+.recent-search-card__remove:hover {
+    background: #FEE4E2;
+    color: var(--red);
+}
+
+/* Skeleton pour le carousel */
+.recent-search-skeleton {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 340px;
+    min-width: 300px;
+    padding: 12px 16px 12px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+    height: 80px;
+    background: #fff;
+}
+
+.recent-search-skeleton .skeleton-img {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    background: var(--bg-soft);
+    animation: pulse 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+.recent-search-skeleton .skeleton-line {
+    height: 10px;
+    border-radius: 6px;
+    background: var(--bg-soft);
+    animation: pulse 1.5s ease-in-out infinite;
+    margin-bottom: 4px;
+}
+
+.recent-search-skeleton .skeleton-line.w70 {
+    width: 70%;
+}
+
+.recent-search-skeleton .skeleton-line.w50 {
+    width: 50%;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .recent-search-card,
+    .recent-search-skeleton {
+        width: 280px;
+        min-width: 240px;
+        height: 72px;
+        padding: 10px 12px 10px 10px;
+    }
+    
+    .recent-search-card__image,
+    .recent-search-skeleton .skeleton-img {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .recent-search-card__title {
+        font-size: 13px;
+    }
+    
+    .recent-search-card__details {
+        font-size: 11px;
+        gap: 4px 8px;
+    }
+    
+    .recent-search-card__remove {
+        opacity: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .recent-search-card,
+    .recent-search-skeleton {
+        width: 240px;
+        min-width: 200px;
+        height: 64px;
+        padding: 8px 10px 8px 8px;
+    }
+    
+    .recent-search-card__image,
+    .recent-search-skeleton .skeleton-img {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .recent-search-card__title {
+        font-size: 12px;
+    }
+    
+    .recent-search-card__details {
+        font-size: 10px;
+    }
+}
 </style>
 </head>
 <body>
@@ -1763,13 +1963,24 @@
   </div>
 </section>
 
-<section class="section wrap reveal">
-  <div class="section-head"><h2 data-i18n="recent.searches">Vos recherches récentes</h2></div>
-  <div class="card-row">
-    <div class="recent-card"><div class="thumb"><img src="https://picsum.photos/seed/luvia-recent1/120/120" alt=""></div><div><h5>Kinshasa, Gombe</h5><div class="meta">Juil. 25 - Juil. 30 · 2 clients</div></div></div>
-    <div class="recent-card"><div class="thumb"><img src="https://picsum.photos/seed/luvia-recent2/120/120" alt=""></div><div><h5>Vol KIN → BRU</h5><div class="meta">Août 12 · 1 passager</div></div></div>
-    <div class="recent-card"><div class="thumb"><img src="https://picsum.photos/seed/luvia-recent3/120/120" alt=""></div><div><h5>Package Zanzibar</h5><div class="meta">Sept. 5 - Sept. 12</div></div></div>
-  </div>
+<!-- ============================================
+     RECHERCHES RÉCENTES - CAROUSEL
+     ============================================ -->
+<section class="section wrap reveal" id="recentSearchesSection" style="display:none;">
+    <div class="section-head">
+        <h2 data-i18n="recent.searches">Vos recherches récentes</h2>
+        <div class="nav-arrows" id="recentNavArrows">
+            <button class="nav-arrow" onclick="scrollHorizontal('recentSearchesCarousel', -280)" aria-label="Précédent">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <button class="nav-arrow" onclick="scrollHorizontal('recentSearchesCarousel', 280)" aria-label="Suivant">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+        </div>
+    </div>
+    <div class="scroll-horizontal" id="recentSearchesCarousel">
+        <!-- Rempli dynamiquement par JavaScript -->
+    </div>
 </section>
 
 <section class="section wrap reveal">

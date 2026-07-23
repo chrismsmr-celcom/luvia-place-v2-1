@@ -239,7 +239,8 @@ var translations = {
     'accessibility.trained_staff': 'Personnel formé',
     
     // Pages
-    'page.sejours': 'Séjours — LuviaPlace'
+    'page.sejours': 'Séjours — LuviaPlace',
+    
     // Authentification
     'auth.welcome': 'Bienvenue',
     'auth.login_title': 'Connectez-vous pour gérer vos réservations et gagner des LuviaCoins',
@@ -283,7 +284,7 @@ var translations = {
     'error.enter_origin': 'Veuillez indiquer une ville d\'origine.',
     'error.enter_destination_flight': 'Veuillez indiquer une destination.',
     'error.complete_flights': 'Merci de compléter tous les vols de votre itinéraire.',
-    'error.max_flights': 'Maximum 4 vols pour un itinéraire multi-destinations.',
+    'error.max_flights': 'Maximum 4 vols pour un itinéraire multi-destinations.'
   },
 
   // ============================================
@@ -522,8 +523,9 @@ var translations = {
     'accessibility.trained_staff': 'Trained staff',
     
     // Pages
-    'page.sejours': 'Stays — LuviaPlace'
-         // Authentification
+    'page.sejours': 'Stays — LuviaPlace',
+    
+    // Authentification
     'auth.welcome': 'Welcome',
     'auth.login_title': 'Sign in to manage your bookings and earn LuviaCoins',
     'auth.google': 'Sign in with Google',
@@ -566,7 +568,7 @@ var translations = {
     'error.enter_origin': 'Please enter an origin city.',
     'error.enter_destination_flight': 'Please enter a destination.',
     'error.complete_flights': 'Please complete all flight legs.',
-    'error.max_flights': 'Maximum 4 flights for multi-destination itinerary.',
+    'error.max_flights': 'Maximum 4 flights for multi-destination itinerary.'
   },
 
   // ============================================
@@ -805,9 +807,9 @@ var translations = {
     'accessibility.trained_staff': 'Personal capacitado',
     
     // Pages
-    'page.sejours': 'Estancias — LuviaPlace'
-  
-   // Authentification
+    'page.sejours': 'Estancias — LuviaPlace',
+    
+    // Authentification
     'auth.welcome': 'Bienvenido',
     'auth.login_title': 'Inicia sesión para gestionar tus reservas y ganar LuviaCoins',
     'auth.google': 'Iniciar sesión con Google',
@@ -850,7 +852,7 @@ var translations = {
     'error.enter_origin': 'Por favor, indica una ciudad de origen.',
     'error.enter_destination_flight': 'Por favor, indica un destino.',
     'error.complete_flights': 'Por favor, completa todos los vuelos.',
-    'error.max_flights': 'Máximo 4 vuelos para itinerario multi-destino.',
+    'error.max_flights': 'Máximo 4 vuelos para itinerario multi-destino.'
   },
 
   // ============================================
@@ -1089,8 +1091,8 @@ var translations = {
     'accessibility.trained_staff': 'Wafanyakazi waliofunzwa',
     
     // Pages
-    'page.sejours': 'Makazi — LuviaPlace'
-   
+    'page.sejours': 'Makazi — LuviaPlace',
+    
     // Authentification
     'auth.welcome': 'Karibu',
     'auth.login_title': 'Ingia ili kudhibiti nafasi zako na kupata LuviaCoins',
@@ -1134,7 +1136,7 @@ var translations = {
     'error.enter_origin': 'Tafadhali weka mji wa kuondokea.',
     'error.enter_destination_flight': 'Tafadhali weka mahali unakoenda.',
     'error.complete_flights': 'Tafadhali kamilisha ndege zote.',
-    'error.max_flights': 'Upeo wa ndege 4 kwa safari ya maeneo mengi.',
+    'error.max_flights': 'Upeo wa ndege 4 kwa safari ya maeneo mengi.'
   }
 };
 

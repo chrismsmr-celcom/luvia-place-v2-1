@@ -828,14 +828,17 @@
   </div>
 </div>
 
-<!-- Leaflet CSS et JS - DOIVENT être avant vos scripts -->
+<!-- 1. Feuilles de style -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<!-- 2. Bibliothèques externes -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- Vos scripts -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
+
+<!-- 3. Vos scripts (dans l'ordre) -->
 <script src="js/i18n.js"></script>
 <script src="js/language.js"></script>
 <script src="js/translation.js"></script>

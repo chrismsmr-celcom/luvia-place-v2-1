@@ -722,11 +722,11 @@ app.get("/search-hotels-stream", async (req, res) => {
 });
 
 // ============================================
-// 4. TARIFS DÉTAILLÉS HÔTEL - DÉTAIL (beaucoup de chambres)
+// 4. TARIFS DÉTAILLÉS HÔTEL - MULTILINGUE
 // ============================================
 app.get("/search-rates", async (req, res) => {
-  console.log("\n💰 ===== SEARCH RATES (DÉTAIL) ===== 💰");
-  const { checkin, checkout, adults, hotelId, environment, maxRates = 30, language = 'fr' } = req.query;
+  console.log("\n💰 ===== SEARCH RATES ===== 💰");
+  const { checkin, checkout, adults, hotelId, environment, maxRates = 20, language = 'fr' } = req.query;
   
   if (!hotelId) {
     return res.status(400).json({ success: false, error: "hotelId is required" });
@@ -738,7 +738,7 @@ app.get("/search-rates", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
 
   try {
-    // ✅ DÉTAIL: beaucoup de chambres par hôtel
+    // ✅ maxRatesPerHotel = 30 pour avoir plus de chambres
     const max = Math.min(parseInt(maxRates) || 30, 100);
     const body = {
       hotelIds: [hotelId],
@@ -749,8 +749,8 @@ app.get("/search-rates", async (req, res) => {
       checkout: checkout,
       includeHotelData: true,
       roomMapping: true,
-      maxRatesPerHotel: max,      // ✅ Beaucoup de chambres
-      timeout: 15                 // ✅ Suffisant pour un seul hôtel
+      maxRatesPerHotel: max,      // ✅ 30 par défaut (au lieu de 20)
+      timeout: 15
     };
 
     const data = await callLiteAPI('hotels/rates', 'POST', body, apiKey);

@@ -414,7 +414,7 @@
     }
 
     // ============================================
-    // INITIALISATION - DOMContentLoaded
+    // INITIALISATION - DOMContentLoaded (CORRIGÉ)
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         var tomorrow = addDays(new Date(), 1);
@@ -464,7 +464,45 @@
                 }
             });
         });
-        document.querySelector('#serviceTabs .service-tab[data-tab="hotel"]').click();
+        
+        // ✅ CORRECTION : Vérifier que l'onglet hôtel existe avant de cliquer
+        var hotelTab = document.querySelector('#serviceTabs .service-tab[data-tab="hotel"]');
+        if (hotelTab) {
+            hotelTab.click();
+        } else {
+            console.warn('⚠️ Onglet hôtel non trouvé sur cette page');
+        }
+
+        // ✅ INITIALISATION DE L'ÉTAT DE CONNEXION
+        var cachedUser = localStorage.getItem('luviaplace_user');
+        if (cachedUser) {
+            try {
+                var user = JSON.parse(cachedUser);
+                if (user && user.email) {
+                    var loginBtns = document.querySelectorAll('#loginBtn, .btn-primary[data-i18n="nav.login"]');
+                    var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+                    loginBtns.forEach(function(btn) {
+                        btn.textContent = '👤 ' + name;
+                        btn.classList.add('logged-in');
+                        btn.dataset.loggedIn = 'true';
+                    });
+                    
+                    var accountTrigger = document.getElementById('accountTrigger');
+                    if (accountTrigger) {
+                        accountTrigger.style.display = 'flex';
+                        var avatarName = document.getElementById('avatarName');
+                        var avatarInitials = document.getElementById('avatarInitials');
+                        if (avatarName) avatarName.textContent = name;
+                        if (avatarInitials) {
+                            var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
+                            avatarInitials.textContent = initials;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('⚠️ Erreur lecture cache utilisateur:', e);
+            }
+        }
 
         // --- Autocomplétion ---
         var recentSearches = ['Kinshasa, Gombe', 'Lubumbashi, Karavia', 'Goma, bord du lac'];
@@ -700,6 +738,13 @@
         loadNearbyHotels();
         loadAllCollections();
 
+        // --- Recherches récentes ---
+        showRecentSkeletons(3);
+        setTimeout(function() {
+            displayRecentSearches();
+        }, 300);
+        setupSearchSaving();
+
         // --- Intersection Observer pour les animations ---
         var observer = new IntersectionObserver(function(entries) {
             entries.forEach(function(e) {
@@ -912,89 +957,82 @@
     }
 
     function updateUserUI(user) {
-    const loginBtn = document.getElementById('loginBtn');
-    const accountTrigger = document.getElementById('accountTrigger');
-    const avatarName = document.getElementById('avatarName');
-    const avatarInitials = document.getElementById('avatarInitials');
+        const loginBtn = document.getElementById('loginBtn');
+        const accountTrigger = document.getElementById('accountTrigger');
+        const avatarName = document.getElementById('avatarName');
+        const avatarInitials = document.getElementById('avatarInitials');
 
-    // Modale de connexion
-    const authUserInfo = document.getElementById('authUserInfo');
-    const authLoginSection = document.getElementById('authLoginSection');
-    const userName = document.getElementById('userName');
-    const userEmail = document.getElementById('userEmail');
-    const userAvatar = document.getElementById('userAvatar');
+        const authUserInfo = document.getElementById('authUserInfo');
+        const authLoginSection = document.getElementById('authLoginSection');
+        const userName = document.getElementById('userName');
+        const userEmail = document.getElementById('userEmail');
+        const userAvatar = document.getElementById('userAvatar');
 
-    if (user) {
-        // Mise à jour de la modale
-        if (authUserInfo) authUserInfo.style.display = 'block';
-        if (authLoginSection) authLoginSection.style.display = 'none';
+        if (user) {
+            if (authUserInfo) authUserInfo.style.display = 'block';
+            if (authLoginSection) authLoginSection.style.display = 'none';
 
-        const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
-        const email = user.email || 'email@exemple.com';
+            const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+            const email = user.email || 'email@exemple.com';
 
-        if (userName) userName.textContent = name;
-        if (userEmail) userEmail.textContent = email;
+            if (userName) userName.textContent = name;
+            if (userEmail) userEmail.textContent = email;
 
-        const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-        if (userAvatar) userAvatar.textContent = initials;
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            if (userAvatar) userAvatar.textContent = initials;
 
-        // ✅ Avatar dans le header
-        if (loginBtn) loginBtn.style.display = 'none';
-        if (accountTrigger) {
-            accountTrigger.style.display = 'flex';
-        }
-        if (avatarName) avatarName.textContent = name;
-        if (avatarInitials) avatarInitials.textContent = initials;
-
-        // Mise à jour du dropdown
-        const accountName = document.getElementById('accountName');
-        const accountEmail = document.getElementById('accountEmail');
-        const accountAvatar = document.getElementById('accountAvatar');
-        
-        if (accountName) accountName.textContent = name;
-        if (accountEmail) accountEmail.textContent = email;
-        if (accountAvatar) accountAvatar.textContent = initials;
-
-        // Émettre l'événement
-        document.dispatchEvent(new CustomEvent('userLoggedIn', {
-            detail: { user: user }
-        }));
-
-        console.log('✅ Utilisateur connecté:', name, email);
-
-    } else {
-        // Déconnexion
-        if (authUserInfo) authUserInfo.style.display = 'none';
-        if (authLoginSection) authLoginSection.style.display = 'block';
-
-        // ✅ Réafficher le bouton, cacher l'avatar
-        if (loginBtn) loginBtn.style.display = 'block';
-        if (accountTrigger) accountTrigger.style.display = 'none';
-
-        // Émettre l'événement
-        document.dispatchEvent(new CustomEvent('userLoggedOut'));
-        console.log('🔓 Utilisateur déconnecté');
-    }
-
-    localStorage.setItem('luviaplace_user', JSON.stringify(user));
-}
-// ============================================
-// ÉVÉNEMENT CLIC SUR L'AVATAR
-// ============================================
-document.addEventListener('DOMContentLoaded', function() {
-    const accountTrigger = document.getElementById('accountTrigger');
-    
-    if (accountTrigger) {
-        accountTrigger.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            if (window.accountDropdown && window.accountDropdown.toggle) {
-                window.accountDropdown.toggle();
+            if (loginBtn) loginBtn.style.display = 'none';
+            if (accountTrigger) {
+                accountTrigger.style.display = 'flex';
             }
-        });
+            if (avatarName) avatarName.textContent = name;
+            if (avatarInitials) avatarInitials.textContent = initials;
+
+            const accountName = document.getElementById('accountName');
+            const accountEmail = document.getElementById('accountEmail');
+            const accountAvatar = document.getElementById('accountAvatar');
+            
+            if (accountName) accountName.textContent = name;
+            if (accountEmail) accountEmail.textContent = email;
+            if (accountAvatar) accountAvatar.textContent = initials;
+
+            // ✅ Émettre l'événement userLoggedIn
+            document.dispatchEvent(new CustomEvent('userLoggedIn', {
+                detail: { user: user }
+            }));
+
+            console.log('✅ Utilisateur connecté:', name, email);
+
+        } else {
+            if (authUserInfo) authUserInfo.style.display = 'none';
+            if (authLoginSection) authLoginSection.style.display = 'block';
+
+            if (loginBtn) loginBtn.style.display = 'block';
+            if (accountTrigger) accountTrigger.style.display = 'none';
+
+            // ✅ Émettre l'événement userLoggedOut
+            document.dispatchEvent(new CustomEvent('userLoggedOut'));
+            console.log('🔓 Utilisateur déconnecté');
+        }
+
+        localStorage.setItem('luviaplace_user', JSON.stringify(user));
     }
-});
+
+    // ✅ ÉVÉNEMENT CLIC SUR L'AVATAR
+    document.addEventListener('DOMContentLoaded', function() {
+        const accountTrigger = document.getElementById('accountTrigger');
+        
+        if (accountTrigger) {
+            accountTrigger.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (window.accountDropdown && window.accountDropdown.toggle) {
+                    window.accountDropdown.toggle();
+                }
+            });
+        }
+    });
 
     async function signInWithGoogle() {
         try {
@@ -1118,9 +1156,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ✅ ÉVÉNEMENTS - UN SEUL ÉVÉNEMENT SUR loginBtn
     // ============================================
 
-    // ✅ Bouton de connexion - Gère la modale ET le dropdown
     if (loginBtn) {
-        // Nettoyer les anciens événements
         const newLoginBtn = loginBtn.cloneNode(true);
         loginBtn.parentNode.replaceChild(newLoginBtn, loginBtn);
         
@@ -1135,7 +1171,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const isLoggedIn = this.dataset.loggedIn === 'true' || currentUser !== null;
 
             if (isLoggedIn) {
-                // ✅ Connecté → ouvrir le dropdown
                 console.log('👤 Ouverture du dropdown');
                 if (window.accountDropdown && window.accountDropdown.toggle) {
                     window.accountDropdown.toggle();
@@ -1146,7 +1181,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (overlay) overlay.classList.toggle('active');
                 }
             } else {
-                // ❌ Non connecté → ouvrir la modale
                 console.log('🔓 Ouverture de la modale');
                 openAuthModal();
             }
@@ -1224,7 +1258,6 @@ document.addEventListener('DOMContentLoaded', function() {
         showToast: showAuthToast
     };
 
-    // Exposer aussi les fonctions de modale pour le dropdown
     window.openAuthModal = openAuthModal;
     window.closeAuthModal = closeAuthModal;
 
@@ -1294,8 +1327,6 @@ document.addEventListener('DOMContentLoaded', function() {
             closeAccountDropdown();
         }
     }
-
-    // ✅ PLUS D'ÉVÉNEMENT SUR loginBtn ICI (supprimé)
 
     if (accountDropdownOverlay) {
         accountDropdownOverlay.addEventListener('click', closeAccountDropdown);
@@ -1392,6 +1423,7 @@ async function fetchLuviaCoins(userId) {
         console.error('❌ Erreur récupération coins:', error);
     }
 }
+
 // ============================================
 // RECHERCHES RÉCENTES - CAROUSEL
 // ============================================
@@ -1531,17 +1563,14 @@ function displayRecentSearches() {
     
     const searches = getRecentSearches();
     
-    // Si pas de recherches, cacher toute la section
     if (searches.length === 0) {
         section.classList.remove('visible');
         container.innerHTML = '';
         return;
     }
     
-    // Afficher la section
     section.classList.add('visible');
     
-    // Afficher les recherches
     container.innerHTML = searches.map(function(search) {
         let title = search.destination || 'Recherche';
         if (search.type === 'flight') {
@@ -1680,20 +1709,12 @@ function setupSearchSaving() {
 }
 
 // ============================================
-// INITIALISATION DES RECHERCHES RÉCENTES
+// EXPOSER LES FONCTIONS GLOBALEMENT
 // ============================================
-// ⚠️ Cette partie doit être placée APRÈS toutes les définitions de fonctions
-// et à l'INTÉRIEUR du DOMContentLoaded principal
-
-// Ajoute ceci à la fin du DOMContentLoaded existant :
-// showRecentSkeletons(3);
-// setTimeout(function() { displayRecentSearches(); }, 300);
-// setupSearchSaving();
-
-// Exposer les fonctions globalement
 window.saveRecentSearch = saveRecentSearch;
 window.getRecentSearches = getRecentSearches;
 window.displayRecentSearches = displayRecentSearches;
 window.removeRecentSearch = removeRecentSearch;
 window.clearRecentSearches = clearRecentSearches;
 window.showRecentSkeletons = showRecentSkeletons;
+window.setupSearchSaving = setupSearchSaving;

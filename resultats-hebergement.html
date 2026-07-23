@@ -26,11 +26,288 @@
   .wrap{ max-width:1240px; margin:0 auto; padding:0 clamp(20px,4vw,48px); }
   :focus-visible{ outline:2px solid var(--blue); outline-offset:2px; border-radius:4px; }
 
-  header.results-header{
-    display:flex; align-items:center; gap:18px; padding:14px clamp(20px,4vw,48px);
-    border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(255,255,255,0.95);
-    backdrop-filter:blur(8px); z-index:100; flex-wrap:wrap;
-  }
+  /* ============================================
+   HEADER - CORRIGÉ
+   ============================================ */
+
+header.results-header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 14px clamp(20px, 4vw, 48px);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    flex-wrap: wrap;
+    min-height: 64px;
+}
+
+.rh-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.rh-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   ACCOUNT DROPDOWN
+   ============================================ */
+
+.account-dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.account-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 260px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    box-shadow: 0 12px 40px rgba(16, 24, 40, 0.18);
+    padding: 8px 0;
+    z-index: 1000;
+    display: none;
+    overflow: hidden;
+}
+
+.account-dropdown.active {
+    display: block;
+    animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.account-dropdown .user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px 16px;
+    border-bottom: 1px solid var(--line);
+}
+
+.account-dropdown .user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--blue-light);
+    color: var(--blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.account-dropdown .user-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.account-dropdown .user-details .name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.account-dropdown .user-details .email {
+    font-size: 12px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.account-dropdown .p-menu-list {
+    list-style: none;
+    padding: 4px 0;
+    margin: 0;
+}
+
+.account-dropdown .p-menuitem-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    transition: all 0.15s ease;
+    cursor: pointer;
+    text-decoration: none;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.account-dropdown .p-menuitem-link:hover {
+    background: var(--bg-soft);
+    color: var(--ink);
+}
+
+.account-dropdown .p-menuitem-link .menu-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--ink-soft);
+    transition: color 0.2s ease;
+}
+
+.account-dropdown .p-menuitem-link:hover .menu-icon {
+    color: var(--blue);
+}
+
+.account-dropdown .p-menuitem-link.logout-link {
+    color: var(--red);
+    border-top: 1px solid var(--line);
+    margin-top: 4px;
+    padding-top: 12px;
+}
+
+.account-dropdown .p-menuitem-link.logout-link:hover {
+    background: #FEF3F2;
+}
+
+.account-dropdown .p-menuitem-link.logout-link .menu-icon {
+    color: var(--red);
+}
+
+.account-dropdown .p-menuitem-link.logout-link:hover .menu-icon {
+    color: #B91C1C;
+}
+
+/* ============================================
+   ACCOUNT TRIGGER (AVATAR)
+   ============================================ */
+
+.account-trigger {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 12px 4px 6px;
+    border-radius: 100px;
+    border: 1.5px solid var(--line);
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+.account-trigger:hover {
+    border-color: var(--blue);
+    box-shadow: 0 2px 8px rgba(21, 94, 239, 0.1);
+}
+
+.account-trigger .avatar-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.account-trigger .avatar-initials {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.account-trigger .avatar-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Overlay */
+.account-dropdown-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    display: none;
+}
+
+.account-dropdown-overlay.active {
+    display: block;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .account-trigger {
+        padding: 4px 8px 4px 4px;
+    }
+    .account-trigger .avatar-text {
+        font-size: 12px;
+        max-width: 80px;
+    }
+    .account-trigger .avatar-initials {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+    
+    .account-dropdown {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        min-width: 100%;
+        border-radius: 16px 16px 0 0;
+        max-height: 70vh;
+    }
+    
+    .account-dropdown.active {
+        animation: slideUp 0.3s ease;
+    }
+    
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
   .logo-img{ height:34px; width:auto; flex-shrink:0; }
   .rh-left{ display:flex; align-items:center; gap:6px; flex-shrink:0; }
   .service-switcher{ position:relative; }
@@ -119,16 +396,13 @@
      ============================================ */
   .info-banner {
     display: flex;
-    color: #d33908;
     gap: 10px;
     background: #FFF6E5;
     border: 1px solid #FDE9BD;
     color: #d33908;
     border-radius: 12px;
     padding: 6px 14px;
-    font-size: .8rem
-9.6px
-;
+    font-size: 12px;
     line-height: 1.4;
     margin-bottom: 16px;
     align-items: center;
@@ -244,22 +518,89 @@
   .view-toggle button:hover:not(.active){ background:var(--bg-soft); }
   .view-toggle svg{ width:14px; height:14px; }
 
-  .hotel-result{
-    display:flex; gap:20px; border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px;
-    background:#fff; transition:box-shadow .2s ease, border-color .2s ease; cursor:pointer;
-  }
-  .hotel-result:hover{ box-shadow:0 4px 20px rgba(0,0,0,0.06); }
-  .hotel-result.active{ border-color:var(--blue); }
-  @media (max-width:700px){ .hotel-result{ flex-direction:column; padding:0; overflow:hidden; } }
-  .hotel-result .photo{ width:230px; height:180px; border-radius:12px; overflow:hidden; flex-shrink:0; position:relative; background:var(--bg-soft); }
-  @media (max-width:700px){ .hotel-result .photo{ width:100%; height:200px; border-radius:0; } }
-  .hotel-result .photo img{ width:100%; height:100%; object-fit:cover; transition:transform .3s ease; }
-  .hotel-result:hover .photo img{ transform:scale(1.03); }
+  .hotel-result {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    margin-bottom: 16px;
+    background: #fff;
+    transition: box-shadow .2s ease, border-color .2s ease;
+    cursor: pointer;
+    overflow: hidden;
+    min-height: 180px;
+}
+.hotel-result:hover{ box-shadow:0 4px 20px rgba(0,0,0,0.06); }
+.hotel-result.active{ border-color:var(--blue); }
+
+.hotel-result .photo {
+    width: 230px;
+    min-height: 180px;
+    flex-shrink: 0;
+    position: relative;
+    background: var(--bg-soft);
+    overflow: hidden;
+    align-self: stretch;
+}
+.hotel-result .photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .3s ease;
+}
+.hotel-result:hover .photo img{ transform:scale(1.03); }
+
+.hotel-result .info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 18px;
+    justify-content: center;
+}
+
+.hotel-result .side {
+    width: 220px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+    padding: 16px 18px;
+    justify-content: center;
+    gap: 8px;
+    border-left: 1px solid var(--line);
+}
+
+@media (max-width: 700px) {
+    .hotel-result {
+        flex-direction: column;
+        padding: 0;
+        overflow: hidden;
+        min-height: auto;
+    }
+    .hotel-result .photo {
+        width: 100%;
+        height: 200px;
+        min-height: 200px;
+        border-radius: 0;
+        align-self: auto;
+    }
+    .hotel-result .info {
+        padding: 14px 14px 0;
+    }
+    .hotel-result .side {
+        width: 100%;
+        align-items: flex-start;
+        text-align: left;
+        padding: 8px 14px 14px;
+        border-left: none;
+        border-top: 1px solid var(--line);
+    }
+}
   .wishlist-btn{ position:absolute; top:10px; left:10px; width:32px; height:32px; border-radius:100px; background:#fff; display:flex; align-items:center; justify-content:center; color:var(--ink); box-shadow:0 2px 6px rgba(0,0,0,0.15); border:none; cursor:pointer; transition:background .2s; }
   .wishlist-btn:hover{ background:var(--bg-soft); }
   .wishlist-btn svg{ width:15px; height:15px; }
-  .hotel-result .info{ flex:1; min-width:0; display:flex; flex-direction:column; }
-  @media (max-width:700px){ .hotel-result .info{ padding:14px 14px 0; } }
   .stars{ color:var(--amber); font-size:19px; margin-bottom:6px; }
   .hotel-result h3{ font-family:var(--font-head); font-weight:700; font-size:17px; margin-bottom:4px; }
   .addr-row{ display:flex; align-items:center; gap:6px; color:var(--ink-soft); font-size:13.5px; margin-bottom:4px; }
@@ -293,8 +634,6 @@
   .score-chip .sep{ opacity:0.7; color:var(--ink-soft); }
   .score-chip .review-count{ color:var(--ink-soft); font-weight:400; }
   
-  .hotel-result .side{ width:220px; flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; text-align:right; gap:8px; }
-  @media (max-width:700px){ .hotel-result .side{ width:100%; align-items:flex-start; text-align:left; padding:0 14px 14px; } }
   .savings-pill{ margin: 0;
     display: flex;
     padding: 6px 12px 6px 10px;
@@ -493,11 +832,91 @@
       border-radius:12px;
     }
   }
+  /* ============================================
+   HEADER SYNC AVEC L'INDEX
+   ============================================ */
+
+.rh-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.account-dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.account-trigger {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 12px 4px 6px;
+    border-radius: 100px;
+    border: 1.5px solid var(--line);
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+.account-trigger:hover {
+    border-color: var(--blue);
+    box-shadow: 0 2px 8px rgba(21,94,239,0.1);
+}
+
+.account-trigger .avatar-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.account-trigger .avatar-initials {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.account-trigger .avatar-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .account-trigger {
+        padding: 4px 8px 4px 4px;
+    }
+    .account-trigger .avatar-text {
+        font-size: 12px;
+        max-width: 80px;
+    }
+    .account-trigger .avatar-initials {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+}
 </style>
 </head>
 <body>
 
 <!-- ========== HEADER ========== -->
+<!-- ========== HEADER CORRIGÉ ========== -->
 <header class="results-header">
   <div class="rh-left">
     <img class="logo-img" src="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png" alt="LuviaPlace">
@@ -512,23 +931,113 @@
       </div>
     </div>
   </div>
+  
   <div class="search-condensed" id="searchSummary">
     <div class="seg" id="sumDest">—</div>
     <div class="seg" id="sumDates">—</div>
     <div class="seg" id="sumGuests">—</div>
     <button class="go-btn" id="condensedEditBtn" aria-label="Modifier la recherche">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-            <circle cx="11" cy="11" r="7"/>
-            <path d="M21 21l-4.3-4.3"/>
-        </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+        <circle cx="11" cy="11" r="7"/>
+        <path d="M21 21l-4.3-4.3"/>
+      </svg>
     </button>
-</div>
+  </div>
+  
   <div class="rh-right">
-    <button class="icon-btn" id="langToggleBtn" aria-label="Changer de langue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg></button>
-    <button class="icon-btn" aria-label="Favoris"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/></svg></button>
-    <button class="btn-primary" id="loginBtn" data-i18n="nav.login">Se connecter</button>
+    <button class="icon-btn" id="langToggleBtn" aria-label="Changer de langue">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/>
+      </svg>
+    </button>
+    <button class="icon-btn" aria-label="Favoris">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/>
+      </svg>
+    </button>
+    
+    <!-- ============================================
+         ACCOUNT DROPDOWN - MENU UTILISATEUR
+         ============================================ -->
+    <div class="account-dropdown-container">
+      <!-- Bouton "Se connecter" (visible quand déconnecté) -->
+      <button class="btn-primary" id="loginBtn" data-i18n="nav.login">Se connecter</button>
+      
+      <!-- Avatar utilisateur (visible quand connecté) -->
+      <div class="account-trigger" id="accountTrigger" style="display:none;">
+        <div class="avatar-section">
+          <div class="avatar-initials" id="avatarInitials">U</div>
+          <span class="avatar-text" id="avatarName">Utilisateur</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dropdown compte -->
+    <div class="account-dropdown" id="accountDropdown">
+      <div class="user-info">
+        <div class="user-avatar" id="accountAvatar">U</div>
+        <div class="user-details">
+          <div class="name" id="accountName">Utilisateur</div>
+          <div class="email" id="accountEmail">email@exemple.com</div>
+        </div>
+      </div>
+      <ul class="p-menu-list">
+        <li class="p-menuitem">
+          <a class="p-menuitem-link" href="index.html">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/>
+            </svg>
+            <span class="p-menuitem-text" data-i18n="nav.home">Accueil</span>
+          </a>
+        </li>
+        <li class="p-menuitem">
+          <a class="p-menuitem-link" href="favorites.html">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+            </svg>
+            <span class="p-menuitem-text" data-i18n="nav.favorites">Mes favoris</span>
+          </a>
+        </li>
+        <li class="p-menuitem">
+          <a class="p-menuitem-link" href="#">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+              <path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+            <span class="p-menuitem-text">Parrainages</span>
+          </a>
+        </li>
+        <li class="p-menuitem">
+          <a class="p-menuitem-link" href="bookings.html">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span class="p-menuitem-text" data-i18n="booking.my_bookings">Mes réservations</span>
+          </a>
+        </li>
+        <li class="p-menuitem">
+          <a class="p-menuitem-link logout-link" id="accountLogoutBtn">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            <span class="p-menuitem-text" data-i18n="auth.logout">Se déconnecter</span>
+          </a>
+        </li>
+      </ul>
+    </div>
   </div>
 </header>
+
+<!-- Overlay pour fermer le dropdown -->
+<div class="account-dropdown-overlay" id="accountDropdownOverlay"></div>
 
 <!-- ========== MOBILE : résumé de recherche + barre d'outils ========== -->
 <div class="mobile-search-summary" id="mobileSearchSummary" role="button" tabindex="0">
@@ -811,7 +1320,7 @@
         <button class="currency-option" data-currency="TZS"><span class="currency-symbol">TSh</span><span class="currency-name">Shilling Tanzanien</span><span class="currency-code">TZS</span><span class="lang-check">✓</span></button>
         <button class="currency-option" data-currency="UGX"><span class="currency-symbol">USh</span><span class="currency-name">Shilling Ougandais</span><span class="currency-code">UGX</span><span class="lang-check">✓</span></button>
         <button class="currency-option" data-currency="MAD"><span class="currency-symbol">DH</span><span class="currency-name">Dirham Marocain</span><span class="currency-code">MAD</span><span class="lang-check">✓</span></button>
-        <div class="currency-group-label" data-i18n="currency.international">International</div>
+        <div class="currency-group-label" data-i18n="currency.international"> International</div>
         <button class="currency-option" data-currency="USD"><span class="currency-symbol">$</span><span class="currency-name">US Dollar</span><span class="currency-code">USD</span><span class="lang-check">✓</span></button>
         <button class="currency-option" data-currency="EUR"><span class="currency-symbol">€</span><span class="currency-name">Euro</span><span class="currency-code">EUR</span><span class="lang-check">✓</span></button>
         <button class="currency-option" data-currency="GBP"><span class="currency-symbol">£</span><span class="currency-name">British Pound</span><span class="currency-code">GBP</span><span class="lang-check">✓</span></button>
@@ -828,17 +1337,13 @@
   </div>
 </div>
 
-<!-- 1. Feuilles de style -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-
-<!-- 2. Bibliothèques externes -->
+<!-- ========== BIBLIOTHÈQUES ET SCRIPTS ========== -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 
-<!-- 3. Vos scripts (dans l'ordre) -->
+<!-- Vos scripts -->
 <script src="js/i18n.js"></script>
 <script src="js/language.js"></script>
 <script src="js/translation.js"></script>

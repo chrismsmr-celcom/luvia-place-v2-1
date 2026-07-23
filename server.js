@@ -421,10 +421,10 @@ app.get("/search-places", async (req, res) => {
 });
 
 // ============================================
-// 2. RECHERCHE HÔTELS - STANDARD MULTILINGUE AVEC DEEPSEEK
+// 2. RECHERCHE HÔTELS - LISTING (beaucoup d'hôtels, 1 prix)
 // ============================================
 app.get("/search-hotels", async (req, res) => {
-  console.log("\n🔍 ===== SEARCH HOTELS ===== 🔍");
+  console.log("\n🔍 ===== SEARCH HOTELS (LISTING) ===== 🔍");
   const { checkin, checkout, adults, placeId, city, environment, limit = 500, language = 'fr' } = req.query;
   const apiKey = environment == "sandbox" ? sandbox_apiKey : prod_apiKey;
  
@@ -454,10 +454,8 @@ app.get("/search-hotels", async (req, res) => {
       return res.json({ success: true, hotels: [], total: 0, message: "Ville non reconnue" });
     }
  
-    // ✅ Appel unique recommandé par LiteAPI : POST /hotels/rates avec placeId
-    // maxRatesPerHotel:1 pour le listing (on veut beaucoup d'hôtels, pas beaucoup de chambres par hôtel)
-    // limit + timeout augmentés suite au retour du support LiteAPI
-    const requestedLimit = Math.min(parseInt(limit) || 500, 2000);
+    // ✅ LISTING: 1 tarif par hôtel, beaucoup d'hôtels
+    const requestedLimit = Math.min(parseInt(limit) || 500, 5000);
     const ratesBody = {
       placeId: finalPlaceId,
       occupancies: [{ adults: parseInt(adults, 10) || 2 }],
@@ -465,12 +463,11 @@ app.get("/search-hotels", async (req, res) => {
       guestNationality: guestNationality,
       checkin: checkin,
       checkout: checkout,
-      roomMapping: true,
-      maxRatesPerHotel: 20,
       includeHotelData: true,
-      timeout: 25,
-      limit: 2000,
-      radius: 50000
+      roomMapping: true,
+      maxRatesPerHotel: 1,        // ✅ 1 tarif par hôtel (fast, léger)
+      limit: requestedLimit,      // ✅ Plus d'hôtels
+      timeout: 25                 // ✅ Laisse le temps à l'agrégation live
     };
  
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);
@@ -478,7 +475,7 @@ app.get("/search-hotels", async (req, res) => {
     const rateEntries = Array.isArray(ratesResponse.data) ? ratesResponse.data : [];
     const hotelInfoList = Array.isArray(ratesResponse.hotels) ? ratesResponse.hotels : [];
  
-    // ---- Diagnostic : à surveiller dans les logs Render ----
+    // ---- Diagnostic ----
     const withRoomTypes = rateEntries.filter(e => Array.isArray(e.roomTypes) && e.roomTypes.length > 0).length;
     const withRates = rateEntries.filter(e => e.roomTypes?.[0]?.rates?.length > 0).length;
     console.log(`📊 Diagnostic /search-hotels :`);
@@ -486,9 +483,9 @@ app.get("/search-hotels", async (req, res) => {
     console.log(`   - hotels[] (infos hôtel) reçues : ${hotelInfoList.length}`);
     console.log(`   - avec roomTypes non vide : ${withRoomTypes}`);
     console.log(`   - avec au moins 1 rate : ${withRates}`);
-    // ---------------------------------------------------------
+    // ---------------------
  
-    // Indexer les infos hôtel (nom, photo, adresse...) par id
+    // Indexer les infos hôtel
     const hotelInfoMap = {};
     hotelInfoList.forEach(h => { hotelInfoMap[h.id || h.hotelId] = h; });
  
@@ -528,7 +525,7 @@ app.get("/search-hotels", async (req, res) => {
  
     const finalHotels = hotels.slice(0, Math.min(parseInt(limit) || 500, hotels.length));
  
-    // Traduction DeepSeek pour les langues non supportées par LiteAPI
+    // Traduction DeepSeek...
     const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
  
     if (!supportedLangs.includes(language) && language !== 'fr') {
@@ -569,7 +566,7 @@ app.get("/search-hotels", async (req, res) => {
 });
  
 // ============================================
-// 3. RECHERCHE HÔTELS - STREAMING (SSE) MULTILINGUE
+// 3. RECHERCHE HÔTELS - STREAMING (SSE)
 // ============================================
 app.get("/search-hotels-stream", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS (STREAMING) ===== 🔍");
@@ -616,9 +613,8 @@ app.get("/search-hotels-stream", async (req, res) => {
  
     sendEvent('status', { step: 'rates', message: '🔍 Recherche des hôtels disponibles...' });
  
-    // ✅ Appel unique recommandé par LiteAPI : POST /hotels/rates avec placeId
-    // maxRatesPerHotel:1 pour le listing, limit + timeout augmentés
-    const requestedLimit = Math.min(parseInt(limit) || 500, 2000);
+    // ✅ LISTING: 1 tarif par hôtel, beaucoup d'hôtels
+    const requestedLimit = Math.min(parseInt(limit) || 500, 5000);
     const ratesBody = {
       placeId: finalPlaceId,
       occupancies: [{ adults: parseInt(adults, 10) || 2 }],
@@ -626,12 +622,11 @@ app.get("/search-hotels-stream", async (req, res) => {
       guestNationality: guestNationality,
       checkin: checkin,
       checkout: checkout,
-      roomMapping: true,
-      maxRatesPerHotel: 20,
       includeHotelData: true,
-      timeout: 25,
-      limit:2000,
-      radius: 50000
+      roomMapping: true,
+      maxRatesPerHotel: 1,        // ✅ 1 tarif par hôtel
+      limit: requestedLimit,      // ✅ Plus d'hôtels
+      timeout: 25
     };
  
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);
@@ -686,7 +681,7 @@ app.get("/search-hotels-stream", async (req, res) => {
  
     sendEvent('status', { step: 'found', message: `✅ ${allHotels.length} hôtels disponibles trouvés` });
  
-    // Envoyer les résultats par paquets pour garder un rendu progressif côté UI
+    // Envoyer par paquets
     const CHUNK_SIZE = 20;
     const totalChunks = Math.ceil(allHotels.length / CHUNK_SIZE) || 1;
  
@@ -701,7 +696,7 @@ app.get("/search-hotels-stream", async (req, res) => {
       });
     }
  
-    // Traduction DeepSeek pour les langues non supportées
+    // Traduction DeepSeek...
     const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
     let finalHotels = allHotels;
  
@@ -727,35 +722,35 @@ app.get("/search-hotels-stream", async (req, res) => {
 });
 
 // ============================================
-// 4. TARIFS DÉTAILLÉS HÔTEL - MULTILINGUE
+// 4. TARIFS DÉTAILLÉS HÔTEL - DÉTAIL (beaucoup de chambres)
 // ============================================
 app.get("/search-rates", async (req, res) => {
-  console.log("\n💰 ===== SEARCH RATES ===== 💰");
-  const { checkin, checkout, adults, hotelId, environment, maxRates = 20, language = 'fr' } = req.query;
+  console.log("\n💰 ===== SEARCH RATES (DÉTAIL) ===== 💰");
+  const { checkin, checkout, adults, hotelId, environment, maxRates = 30, language = 'fr' } = req.query;
   
   if (!hotelId) {
     return res.status(400).json({ success: false, error: "hotelId is required" });
   }
 
-  // ✅ Récupérer la nationalité dynamiquement
   const guestNationality = await getGuestNationality(req);
   console.log(`🌍 Nationalité du client: ${guestNationality}`);
 
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
 
   try {
+    // ✅ DÉTAIL: beaucoup de chambres par hôtel
+    const max = Math.min(parseInt(maxRates) || 30, 100);
     const body = {
       hotelIds: [hotelId],
       occupancies: [{ adults: parseInt(adults, 10) || 2 }],
       currency: "USD",
-      guestNationality: guestNationality, // ✅ Plus en dur !
+      guestNationality: guestNationality,
       checkin: checkin,
       checkout: checkout,
-      maxRatesPerHotel: parseInt(maxRates) || 20,
-      roomMapping: true,
       includeHotelData: true,
-      timeout: 10,
-      language: language
+      roomMapping: true,
+      maxRatesPerHotel: max,      // ✅ Beaucoup de chambres
+      timeout: 15                 // ✅ Suffisant pour un seul hôtel
     };
 
     const data = await callLiteAPI('hotels/rates', 'POST', body, apiKey);
@@ -837,7 +832,6 @@ app.get("/search-rates", async (req, res) => {
     res.status(500).json({ success: false, error: "No availability found", message: error.message });
   }
 });
-
 // ============================================
 // 5. PRÉ-RÉSERVATION HÔTEL
 // ============================================

@@ -173,80 +173,96 @@
     var collectionSlug = params.get('slug') || 'nairobi-top-20';
 
     // ============================================
-    // DÉFINITION DES COLLECTIONS
-    // ============================================
-    var COLLECTIONS = {
-        'nairobi-top-20': {
-            id: 'nairobi-top-20',
-            title: 'Our Top 20 Hotels in Nairobi',
-            description: 'Une sélection des meilleurs hôtels de Nairobi, soigneusement choisis pour vous offrir le meilleur séjour.',
-            image: 'https://images.unsplash.com/photo-1574321018380-59c7be9c6b6f?w=1200&h=400&fit=crop',
-            hotelIds: [
-                // À remplacer par les vrais IDs
-                'lp_12345', 'lp_23456', 'lp_34567', 'lp_45678', 'lp_56789',
-                'lp_67890', 'lp_78901', 'lp_89012', 'lp_90123', 'lp_01234',
-                'lp_11223', 'lp_22334', 'lp_33445', 'lp_44556', 'lp_55667',
-                'lp_66778', 'lp_77889', 'lp_88990', 'lp_99001'
-            ]
-        },
-        'kinshasa-exception': {
-            id: 'kinshasa-exception',
-            title: 'Séjours d\'exception à Kinshasa',
-            description: 'Découvrez le meilleur de l\'hébergement à Kinshasa, pour un séjour inoubliable au cœur de la RDC.',
-            image: 'https://images.unsplash.com/photo-1585148785744-0e58d35e0a98?w=1200&h=400&fit=crop',
-            hotelIds: [
-                'lp_45678', 'lp_56789', 'lp_67890', 'lp_78901', 'lp_89012',
-                'lp_90123', 'lp_01234', 'lp_11223', 'lp_22334', 'lp_33445',
-                'lp_44556', 'lp_55667', 'lp_66778', 'lp_77889', 'lp_88990',
-                'lp_99001'
-            ]
-        },
-        'international-ideal': {
-            id: 'international-ideal',
-            title: 'Votre hébergement idéal pour l\'international',
-            description: 'Des hôtels sélectionnés aux quatre coins du monde pour vos voyages internationaux.',
-            image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&h=400&fit=crop',
-            hotelIds: [
-                'lp_10001', 'lp_10002', 'lp_10003', 'lp_10004', 'lp_10005',
-                'lp_10006', 'lp_10007', 'lp_10008', 'lp_10009', 'lp_10010',
-                'lp_10011'
-            ]
-        }
-    };
+// DÉFINITION DES COLLECTIONS AVEC NOMS
+// ============================================
+var COLLECTIONS = {
+    'nairobi-top-20': {
+        id: 'nairobi-top-20',
+        title: 'Our Top 20 Hotels in Nairobi',
+        description: 'Une sélection des meilleurs hôtels de Nairobi, soigneusement choisis pour vous offrir le meilleur séjour.',
+        image: 'https://images.unsplash.com/photo-1574321018380-59c7be9c6b6f?w=1200&h=400&fit=crop',
+        hotelNames: [
+            'Glee Nairobi, a Preferred LVX Hotel',
+            'Hyatt House Nairobi Westlands',
+            'Pan Pacific Serviced Suites Nairobi',
+            'Radisson Blu Hotel Nairobi Upper Hill',
+            'Fairview Hotel Nairobi, Vignette Collection by IHG',
+            'Hilton Garden Inn Nairobi Airport',
+            'Hemingways Nairobi',
+            'Villa Rosa Kempinski',
+            'The Sarova Stanley',
+            'Hilton Nairobi'
+        ]
+    },
+    'kinshasa-exception': {
+        id: 'kinshasa-exception',
+        title: 'Séjours d\'exception à Kinshasa',
+        description: 'Découvrez le meilleur de l\'hébergement à Kinshasa, pour un séjour inoubliable au cœur de la RDC.',
+        image: 'https://images.unsplash.com/photo-1585148785744-0e58d35e0a98?w=1200&h=400&fit=crop',
+        hotelNames: [
+            'Protea Hotel by Marriott Kinshasa',
+            'Hotel Finesse',
+            'Ixoras Hotel',
+            'Four Points By Sheraton Kinshasa',
+            'Hilton Kinshasa',
+            'Léon Hôtel Kinshasa',
+            'Golden Tulip Kin-Oasis Kinshasa'
+        ]
+    }
+};
 
-    // ============================================
-    // RÉCUPÉRATION DES INFOS HÔTELS DEPUIS L'API
-    // ============================================
-    async function fetchHotelsByIds(hotelIds) {
-        if (!hotelIds || hotelIds.length === 0) return [];
-        
+// ============================================
+// RÉCUPÉRATION DES HÔTELS PAR NOM
+// ============================================
+async function fetchHotelsByNames(hotelNames) {
+    if (!hotelNames || hotelNames.length === 0) return [];
+    
+    var allHotels = [];
+    var checkin = '2026-07-25';
+    var checkout = '2026-07-28';
+    
+    for (var i = 0; i < hotelNames.length; i++) {
         try {
-            // L'API /search-hotels accepte plusieurs hotelIds
             var queryParams = new URLSearchParams({
-                hotelIds: hotelIds.join(','),
+                aiSearch: hotelNames[i],
+                checkin: checkin,
+                checkout: checkout,
+                adults: 2,
                 environment: 'production',
-                limit: hotelIds.length
+                limit: 2
             });
 
             var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
-            console.log('📦 URL:', url);
-
-            const response = await fetch(url, {
+            console.log(`🔍 Recherche: ${hotelNames[i]}`);
+            
+            var response = await fetch(url, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' }
             });
 
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) continue;
 
-            const data = await response.json();
-            console.log('✅ Hôtels récupérés:', data);
-
-            return data.success && data.hotels ? data.hotels : [];
+            var data = await response.json();
+            
+            if (data.success && data.hotels && data.hotels.length > 0) {
+                // Trouver le meilleur match
+                var matched = data.hotels.find(function(h) {
+                    return h.name && h.name.toLowerCase().includes(hotelNames[i].toLowerCase());
+                }) || data.hotels[0];
+                
+                allHotels.push(matched);
+                console.log(`✅ ${hotelNames[i]} trouvé`);
+            } else {
+                console.warn(`⚠️ ${hotelNames[i]} non trouvé`);
+            }
         } catch (error) {
-            console.error('❌ Erreur fetch hotels:', error);
-            return [];
+            console.warn(`⚠️ Erreur pour ${hotelNames[i]}:`, error.message);
         }
     }
+    
+    console.log(`📊 ${allHotels.length}/${hotelNames.length} hôtels trouvés`);
+    return allHotels;
+}
 
     // ============================================
     // AFFICHAGE DE LA COLLECTION

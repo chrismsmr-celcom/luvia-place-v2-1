@@ -1013,66 +1013,77 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateUserUI(user) {
-        const loginBtn = document.getElementById('loginBtn');
-        const accountTrigger = document.getElementById('accountTrigger');
-        const avatarName = document.getElementById('avatarName');
-        const avatarInitials = document.getElementById('avatarInitials');
+    var loginBtnEl = document.getElementById('loginBtn');
+    var accountTrigger = document.getElementById('accountTrigger');
+    var avatarName = document.getElementById('avatarName');
+    var avatarInitials = document.getElementById('avatarInitials');
 
-        const authUserInfo = document.getElementById('authUserInfo');
-        const authLoginSection = document.getElementById('authLoginSection');
-        const userName = document.getElementById('userName');
-        const userEmail = document.getElementById('userEmail');
-        const userAvatar = document.getElementById('userAvatar');
+    var authUserInfoEl = document.getElementById('authUserInfo');
+    var authLoginSectionEl = document.getElementById('authLoginSection');
+    var userNameEl = document.getElementById('userName');
+    var userEmailEl = document.getElementById('userEmail');
+    var userAvatarEl = document.getElementById('userAvatar');
 
-        if (user) {
-            if (authUserInfo) authUserInfo.style.display = 'block';
-            if (authLoginSection) authLoginSection.style.display = 'none';
+    // ✅ ÉLÉMENTS DU DROPDOWN
+    var accountName = document.getElementById('accountName');
+    var accountEmail = document.getElementById('accountEmail');
+    var accountAvatar = document.getElementById('accountAvatar');
 
-            const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
-            const email = user.email || 'email@exemple.com';
+    if (user) {
+        if (authUserInfoEl) authUserInfoEl.style.display = 'block';
+        if (authLoginSectionEl) authLoginSectionEl.style.display = 'none';
 
-            if (userName) userName.textContent = name;
-            if (userEmail) userEmail.textContent = email;
+        var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+        var email = user.email || 'email@exemple.com';
 
-            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-            if (userAvatar) userAvatar.textContent = initials;
+        // Mettre à jour les infos dans la modale d'authentification
+        if (userNameEl) userNameEl.textContent = name;
+        if (userEmailEl) userEmailEl.textContent = email;
 
-            if (loginBtn) loginBtn.style.display = 'none';
-            if (accountTrigger) {
-                accountTrigger.style.display = 'flex';
-            }
-            if (avatarName) avatarName.textContent = name;
-            if (avatarInitials) avatarInitials.textContent = initials;
+        var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
+        if (userAvatarEl) userAvatarEl.textContent = initials;
 
-            const accountName = document.getElementById('accountName');
-            const accountEmail = document.getElementById('accountEmail');
-            const accountAvatar = document.getElementById('accountAvatar');
-            
-            if (accountName) accountName.textContent = name;
-            if (accountEmail) accountEmail.textContent = email;
-            if (accountAvatar) accountAvatar.textContent = initials;
-
-            // ✅ Émettre l'événement userLoggedIn
-            document.dispatchEvent(new CustomEvent('userLoggedIn', {
-                detail: { user: user }
-            }));
-
-            console.log('✅ Utilisateur connecté:', name, email);
-
-        } else {
-            if (authUserInfo) authUserInfo.style.display = 'none';
-            if (authLoginSection) authLoginSection.style.display = 'block';
-
-            if (loginBtn) loginBtn.style.display = 'block';
-            if (accountTrigger) accountTrigger.style.display = 'none';
-
-            // ✅ Émettre l'événement userLoggedOut
-            document.dispatchEvent(new CustomEvent('userLoggedOut'));
-            console.log('🔓 Utilisateur déconnecté');
+        // ✅ Mettre à jour le bouton login (le cacher)
+        if (loginBtnEl) {
+            loginBtnEl.style.display = 'none';
+            loginBtnEl.dataset.loggedIn = 'true';
         }
 
-        localStorage.setItem('luviaplace_user', JSON.stringify(user));
+        // ✅ Mettre à jour le trigger de l'avatar
+        if (accountTrigger) {
+            accountTrigger.style.display = 'flex';
+        }
+        if (avatarName) avatarName.textContent = name;
+        if (avatarInitials) avatarInitials.textContent = initials;
+
+        // ✅ Mettre à jour LE DROPDOWN
+        if (accountName) accountName.textContent = name;
+        if (accountEmail) accountEmail.textContent = email;
+        if (accountAvatar) accountAvatar.textContent = initials;
+
+        // ✅ Émettre l'événement
+        document.dispatchEvent(new CustomEvent('userLoggedIn', {
+            detail: { user: user }
+        }));
+
+        console.log('✅ Utilisateur connecté:', name, email);
+
+    } else {
+        if (authUserInfoEl) authUserInfoEl.style.display = 'none';
+        if (authLoginSectionEl) authLoginSectionEl.style.display = 'block';
+
+        if (loginBtnEl) {
+            loginBtnEl.style.display = 'block';
+            loginBtnEl.dataset.loggedIn = 'false';
+        }
+        if (accountTrigger) accountTrigger.style.display = 'none';
+
+        document.dispatchEvent(new CustomEvent('userLoggedOut'));
+        console.log('🔓 Utilisateur déconnecté');
     }
+
+    localStorage.setItem('luviaplace_user', JSON.stringify(user));
+}
 
     // ✅ ÉVÉNEMENT CLIC SUR L'AVATAR
     document.addEventListener('DOMContentLoaded', function() {
@@ -1284,6 +1295,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // INITIALISATION
     // ============================================
     document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🔐 Initialisation de l\'authentification...');
+    
+    // ✅ Récupérer l'utilisateur depuis le cache
+    var cachedUser = localStorage.getItem('luviaplace_user');
+    if (cachedUser) {
+        try {
+            var user = JSON.parse(cachedUser);
+            if (user && user.email) {
+                // ✅ Mettre à jour l'UI immédiatement
+                updateUserUI(user);
+                updateAccountUI(user);
+            }
+        } catch (e) {
+            console.warn('⚠️ Erreur lecture cache:', e);
+        }
+    }
+    
+    await getSession();
+    await handleAuthCallback();
+});
         console.log('🔐 Initialisation de l\'authentification...');
         await getSession();
         await handleAuthCallback();
@@ -1367,22 +1398,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateAccountUI(user) {
-        if (user) {
-            const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
-            const email = user.email || 'email@exemple.com';
+    if (user) {
+        var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+        var email = user.email || 'email@exemple.com';
 
-            if (accountName) accountName.textContent = name;
-            if (accountEmail) accountEmail.textContent = email;
+        if (accountName) accountName.textContent = name;
+        if (accountEmail) accountEmail.textContent = email;
 
-            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-            if (accountAvatar) accountAvatar.textContent = initials;
+        var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
+        if (accountAvatar) accountAvatar.textContent = initials;
 
-            closeAccountDropdown();
+        closeAccountDropdown();
 
-        } else {
-            closeAccountDropdown();
-        }
+    } else {
+        closeAccountDropdown();
     }
+}
 
     if (accountDropdownOverlay) {
         accountDropdownOverlay.addEventListener('click', closeAccountDropdown);

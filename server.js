@@ -1926,7 +1926,68 @@ app.get("/api/loyalty/coins", async (req, res) => {
     });
   }
 });
-
+// ============================================
+// HOTEL HIGHLIGHTS - PROXY
+// ============================================
+app.post("/api/hotel-highlights", async (req, res) => {
+  console.log("\n✨ ===== HOTEL HIGHLIGHTS ===== ✨");
+  
+  const { hotelId, language = 'fr', count = 3, tone, style, highlights } = req.body;
+  
+  if (!hotelId) {
+    return res.status(400).json({ success: false, error: "hotelId is required" });
+  }
+  
+  const apiKey = process.env.PROD_API_KEY;
+  
+  try {
+    const body = {
+      hotelId: hotelId,
+      language: language,
+      count: Math.min(Math.max(count, 1), 10)
+    };
+    
+    if (tone) body.tone = tone;
+    if (style) body.style = style;
+    if (highlights) body.highlights = highlights;
+    
+    const response = await fetch('https://api.liteapi.travel/v3.0/data/hotel/highlights', {
+      method: 'POST',
+      headers: {
+        'X-API-Key': apiKey,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    
+    if (!response.ok) {
+      if (response.status === 429) {
+        return res.status(429).json({ 
+          success: false, 
+          error: "Rate limit exceeded",
+          message: "Trop de requêtes, veuillez réessayer dans une minute."
+        });
+      }
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    res.json({
+      success: true,
+      data: data.data || data
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur highlights:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      fallback: true
+    });
+  }
+});
 // ============================================
 // ROUTES FRONTEND
 // ============================================

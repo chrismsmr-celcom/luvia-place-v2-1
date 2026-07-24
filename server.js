@@ -1989,6 +1989,86 @@ app.post("/api/hotel-highlights", async (req, res) => {
   }
 });
 // ============================================
+// ASK AI - POSER UNE QUESTION À L'IA
+// ============================================
+app.post("/api/ask-hotel", async (req, res) => {
+  console.log("\n🤖 ===== ASK AI ===== 🤖");
+  
+  const { hotelId, question, allowWebSearch = false, language = 'fr' } = req.body;
+  
+  if (!hotelId) {
+    return res.status(400).json({ 
+      success: false, 
+      error: { 
+        code: 4001,
+        message: "hotelId is required" 
+      } 
+    });
+  }
+  
+  if (!question || question.trim().length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      error: { 
+        code: 4002,
+        message: "question is required" 
+      } 
+    });
+  }
+  
+  const apiKey = process.env.PROD_API_KEY;
+  
+  try {
+    const url = new URL('https://api.liteapi.travel/v3.0/data/hotel/ask');
+    url.searchParams.append('hotelId', hotelId);
+    url.searchParams.append('query', question);
+    url.searchParams.append('allowWebSearch', String(allowWebSearch));
+    
+    console.log(`📡 Question: "${question}"`);
+    console.log(`🏨 Hôtel: ${hotelId}`);
+    console.log(`🔍 Web search: ${allowWebSearch}`);
+    
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'X-API-Key': apiKey,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      let errorMsg = `HTTP ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData.error?.message || errorData.message || errorMsg;
+      } catch (e) {}
+      throw new Error(errorMsg);
+    }
+    
+    const data = await response.json();
+    
+    // Journaliser la réponse
+    console.log(`✅ Réponse reçue (${data.data?.latency_ms || 0}ms)`);
+    console.log(`📝 Réponse: "${data.data?.answer?.substring(0, 100)}..."`);
+    
+    res.json({
+      success: true,
+      data: data.data || data
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur Ask AI:', error.message);
+    res.status(500).json({ 
+      success: false, 
+      error: {
+        code: 5001,
+        message: error.message || "Erreur lors de la requête à l'IA"
+      }
+    });
+  }
+});
+// ============================================
 // ROUTES FRONTEND
 // ============================================
 app.use(express.static(path.join(__dirname)));

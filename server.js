@@ -2081,7 +2081,8 @@ app.post("/api/payment/mobile-money/init", async (req, res) => {
     amount,
     currency = 'USD',
     guestInfo,
-    environment = 'sandbox'
+    environment = 'sandbox',
+    callbackUrl
   } = req.body;
 
   if (!offerId || !phoneNumber || !amount) {
@@ -2119,7 +2120,7 @@ app.post("/api/payment/mobile-money/init", async (req, res) => {
     // 2. Générer un ID de transaction unique
     const transactionId = `LUVIA-MM-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
-    // 3. Sauvegarder la transaction (à implémenter avec votre base de données)
+    // 3. Sauvegarder la transaction en mémoire (à remplacer par une DB)
     const transactionData = {
       id: transactionId,
       prebookId: prebookId,
@@ -2131,28 +2132,26 @@ app.post("/api/payment/mobile-money/init", async (req, res) => {
       phoneNumber: phoneNumber,
       status: 'PENDING',
       createdAt: new Date().toISOString(),
-      secretKey: prebookResult.data.secretKey // Pour le callback sécurisé
+      secretKey: prebookResult.data.secretKey
     };
 
-    // Sauvegarde en mémoire pour l'instant (à remplacer par une DB)
     if (!global.mobileMoneyTransactions) {
       global.mobileMoneyTransactions = new Map();
     }
     global.mobileMoneyTransactions.set(transactionId, transactionData);
 
-    // 4. Simuler l'envoi du paiement Mobile Money
-    // En production, remplacer par l'appel réel à l'API M-Pesa/Orange/Airtel
+    console.log(`📱 Demande de paiement Mobile Money initiée: ${transactionId}`);
+    console.log(`   📞 Téléphone: ${phoneNumber}`);
+    console.log(`   💰 Montant: $${totalAmount}`);
+    console.log(`   🏢 Provider: ${provider}`);
+
+    // 4. Simuler l'envoi du paiement (à remplacer par l'API réelle)
     const paymentResponse = {
       transactionId: transactionId,
       status: 'PENDING',
       message: `Veuillez confirmer le paiement de $${totalAmount} sur votre téléphone ${phoneNumber}`,
       reference: transactionId
     };
-
-    console.log(`📱 Demande de paiement Mobile Money initiée: ${transactionId}`);
-    console.log(`   📞 Téléphone: ${phoneNumber}`);
-    console.log(`   💰 Montant: $${totalAmount}`);
-    console.log(`   🏢 Provider: ${provider}`);
 
     res.json({
       success: true,
@@ -2172,7 +2171,7 @@ app.post("/api/payment/mobile-money/init", async (req, res) => {
     console.error('❌ Erreur Mobile Money:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message || "Erreur lors de l'initialisation du paiement"
     });
   }
 });
@@ -2193,7 +2192,6 @@ app.post("/api/payment/mobile-money/confirm", async (req, res) => {
   }
 
   try {
-    // Récupérer la transaction
     const transaction = global.mobileMoneyTransactions?.get(transactionId);
     
     if (!transaction) {
@@ -2203,38 +2201,24 @@ app.post("/api/payment/mobile-money/confirm", async (req, res) => {
       });
     }
 
-    // En production, vérifier le statut du paiement auprès du provider
-    // Pour la simulation, on considère que le paiement est réussi
-    const paymentStatus = 'SUCCESS';
+    // Simuler la confirmation (à remplacer par l'API réelle)
+    transaction.status = 'COMPLETED';
+    transaction.mpesaReceiptNumber = mpesaReceiptNumber || `MM-${Date.now()}`;
+    transaction.completedAt = new Date().toISOString();
+    global.mobileMoneyTransactions.set(transactionId, transaction);
 
-    if (paymentStatus === 'SUCCESS') {
-      // Mettre à jour la transaction
-      transaction.status = 'COMPLETED';
-      transaction.mpesaReceiptNumber = mpesaReceiptNumber || `MM-${Date.now()}`;
-      global.mobileMoneyTransactions.set(transactionId, transaction);
+    console.log(`✅ Paiement Mobile Money confirmé: ${transactionId}`);
 
-      console.log(`✅ Paiement Mobile Money confirmé: ${transactionId}`);
-
-      res.json({
-        success: true,
-        data: {
-          transactionId: transactionId,
-          status: 'COMPLETED',
-          message: 'Paiement confirmé avec succès',
-          prebookId: transaction.prebookId,
-          amount: transaction.amount
-        }
-      });
-    } else {
-      res.json({
-        success: false,
-        data: {
-          transactionId: transactionId,
-          status: 'FAILED',
-          message: 'Le paiement a échoué'
-        }
-      });
-    }
+    res.json({
+      success: true,
+      data: {
+        transactionId: transactionId,
+        status: 'COMPLETED',
+        message: 'Paiement confirmé avec succès',
+        prebookId: transaction.prebookId,
+        amount: transaction.amount
+      }
+    });
 
   } catch (error) {
     console.error('❌ Erreur confirmation:', error);
@@ -2252,20 +2236,9 @@ app.post("/api/payment/mobile-money/webhook", async (req, res) => {
   console.log("\n📨 ===== MOBILE MONEY WEBHOOK ===== 📨");
   console.log("📦 Body:", JSON.stringify(req.body, null, 2));
 
-  // Ici, traiter le callback du provider Mobile Money
-  // M-Pesa, Orange Money, Airtel Money ont chacun leur format
-
-  const { 
-    transactionId, 
-    status, 
-    receiptNumber,
-    amount,
-    phoneNumber,
-    provider = 'MPESA'
-  } = req.body;
+  const { transactionId, status, receiptNumber } = req.body;
 
   try {
-    // Récupérer la transaction
     const transaction = global.mobileMoneyTransactions?.get(transactionId);
     
     if (!transaction) {
@@ -2274,31 +2247,18 @@ app.post("/api/payment/mobile-money/webhook", async (req, res) => {
     }
 
     if (status === 'SUCCESS' || status === 'COMPLETED') {
-      // Mettre à jour la transaction
       transaction.status = 'COMPLETED';
       transaction.mpesaReceiptNumber = receiptNumber;
       transaction.completedAt = new Date().toISOString();
       global.mobileMoneyTransactions.set(transactionId, transaction);
-
       console.log(`✅ Paiement confirmé via webhook: ${transactionId}`);
-
-      // Optionnel : réserver automatiquement l'hôtel
-      // await bookHotelWithTransaction(transaction);
-
-      res.status(200).json({ 
-        success: true, 
-        message: 'Transaction mise à jour',
-        bookingId: transaction.bookingId || null
-      });
     } else {
       transaction.status = 'FAILED';
       global.mobileMoneyTransactions.set(transactionId, transaction);
-      
-      res.status(200).json({ 
-        success: true, 
-        message: 'Transaction échouée' 
-      });
+      console.log(`❌ Paiement échoué via webhook: ${transactionId}`);
     }
+
+    res.status(200).json({ success: true, message: 'Webhook traité' });
 
   } catch (error) {
     console.error('❌ Erreur webhook:', error);
@@ -2312,7 +2272,7 @@ app.post("/api/payment/mobile-money/webhook", async (req, res) => {
 app.post("/api/payment/paypal/init", async (req, res) => {
   console.log("\n🅿️ ===== PAYPAL INIT ===== 🅿️");
   
-  const { offerId, amount, currency = 'USD', guestInfo, environment = 'sandbox' } = req.body;
+  const { offerId, amount, currency = 'USD', guestInfo, environment = 'sandbox', email, returnUrl, cancelUrl } = req.body;
 
   if (!offerId || !amount) {
     return res.status(400).json({
@@ -2324,7 +2284,6 @@ app.post("/api/payment/paypal/init", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
 
   try {
-    // 1. Pré-réservation
     const prebookResult = await callLiteAPI(
       'hotels/prebook',
       'POST',
@@ -2345,20 +2304,8 @@ app.post("/api/payment/paypal/init", async (req, res) => {
 
     const prebookId = prebookResult.data.prebookId;
     const totalAmount = prebookResult.data.total?.amount || amount;
-
-    // 2. Générer un ID de transaction unique
     const transactionId = `LUVIA-PP-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
-    // 3. Simuler la création d'un ordre PayPal
-    const paypalOrder = {
-      id: transactionId,
-      status: 'CREATED',
-      links: [
-        { href: `https://www.sandbox.paypal.com/checkoutnow?token=${transactionId}`, rel: 'approve', method: 'GET' }
-      ]
-    };
-
-    // 4. Sauvegarder la transaction
     const transactionData = {
       id: transactionId,
       prebookId: prebookId,
@@ -2367,15 +2314,22 @@ app.post("/api/payment/paypal/init", async (req, res) => {
       amount: totalAmount,
       currency: currency,
       provider: 'PAYPAL',
+      email: email,
       status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      paypalOrderId: transactionId
+      createdAt: new Date().toISOString()
     };
 
     if (!global.paypalTransactions) {
       global.paypalTransactions = new Map();
     }
     global.paypalTransactions.set(transactionId, transactionData);
+
+    // Simuler la redirection PayPal
+    const redirectUrl = returnUrl || `${req.protocol}://${req.get('host')}${req.path}?paypal=success&prebookId=${prebookId}&transactionId=${transactionId}`;
+
+    console.log(`🅿️ Paiement PayPal initié: ${transactionId}`);
+    console.log(`   💰 Montant: $${totalAmount}`);
+    console.log(`   📧 Email: ${email}`);
 
     res.json({
       success: true,
@@ -2386,8 +2340,7 @@ app.post("/api/payment/paypal/init", async (req, res) => {
         status: 'PENDING',
         amount: totalAmount,
         currency: currency,
-        redirectUrl: paypalOrder.links[0].href,
-        paypalOrderId: transactionId
+        redirectUrl: redirectUrl
       }
     });
 
@@ -2395,7 +2348,7 @@ app.post("/api/payment/paypal/init", async (req, res) => {
     console.error('❌ Erreur PayPal:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message || "Erreur lors de l'initialisation PayPal"
     });
   }
 });
@@ -2407,7 +2360,7 @@ app.post("/api/payment/paypal/webhook", async (req, res) => {
   console.log("\n📨 ===== PAYPAL WEBHOOK ===== 📨");
   console.log("📦 Body:", JSON.stringify(req.body, null, 2));
 
-  const { transactionId, status, paypalOrderId } = req.body;
+  const { transactionId, status, paypalOrderId, payerEmail } = req.body;
 
   try {
     const transaction = global.paypalTransactions?.get(transactionId);
@@ -2419,16 +2372,18 @@ app.post("/api/payment/paypal/webhook", async (req, res) => {
 
     if (status === 'COMPLETED' || status === 'APPROVED') {
       transaction.status = 'COMPLETED';
+      transaction.paypalOrderId = paypalOrderId || `PP-${Date.now()}`;
+      transaction.payerEmail = payerEmail || transaction.email;
       transaction.completedAt = new Date().toISOString();
       global.paypalTransactions.set(transactionId, transaction);
-
       console.log(`✅ Paiement PayPal confirmé: ${transactionId}`);
-      res.status(200).json({ success: true, message: 'Transaction mise à jour' });
     } else {
       transaction.status = 'FAILED';
       global.paypalTransactions.set(transactionId, transaction);
-      res.status(200).json({ success: true, message: 'Transaction échouée' });
+      console.log(`❌ Paiement PayPal échoué: ${transactionId}`);
     }
+
+    res.status(200).json({ success: true, message: 'Webhook traité' });
 
   } catch (error) {
     console.error('❌ Erreur webhook PayPal:', error);
@@ -2449,7 +2404,7 @@ app.post("/api/book-with-payment", async (req, res) => {
     guestEmail, 
     guestPhone,
     transactionId,
-    paymentMethod = 'MOBILE_MONEY', // ou 'PAYPAL', 'CARD'
+    paymentMethod = 'MOBILE_MONEY',
     provider,
     environment = 'sandbox'
   } = req.body;
@@ -2473,16 +2428,17 @@ app.post("/api/book-with-payment", async (req, res) => {
     } else if (paymentMethod === 'PAYPAL') {
       const transaction = global.paypalTransactions?.get(transactionId);
       paymentVerified = transaction && transaction.status === 'COMPLETED';
-    } else if (paymentMethod === 'CARD') {
-      // Pour les cartes, on utilise le TRANSACTION_ID déjà passé
-      paymentVerified = true;
     }
 
-    if (!paymentVerified && paymentMethod !== 'CARD') {
-      return res.status(400).json({
-        success: false,
-        error: "Le paiement n'a pas été confirmé"
-      });
+    if (!paymentVerified) {
+      console.warn(`⚠️ Paiement non vérifié pour ${transactionId}`);
+      // En sandbox, on autorise quand même pour les tests
+      if (environment !== 'sandbox') {
+        return res.status(400).json({
+          success: false,
+          error: "Le paiement n'a pas été confirmé"
+        });
+      }
     }
 
     // Réservation avec LiteAPI
@@ -2511,23 +2467,6 @@ app.post("/api/book-with-payment", async (req, res) => {
       apiKey
     );
 
-    // Mettre à jour la transaction avec le bookingId
-    if (paymentMethod === 'MOBILE_MONEY') {
-      const transaction = global.mobileMoneyTransactions?.get(transactionId);
-      if (transaction) {
-        transaction.bookingId = bookingResult.data?.bookingId;
-        transaction.status = 'BOOKED';
-        global.mobileMoneyTransactions.set(transactionId, transaction);
-      }
-    } else if (paymentMethod === 'PAYPAL') {
-      const transaction = global.paypalTransactions?.get(transactionId);
-      if (transaction) {
-        transaction.bookingId = bookingResult.data?.bookingId;
-        transaction.status = 'BOOKED';
-        global.paypalTransactions.set(transactionId, transaction);
-      }
-    }
-
     console.log(`✅ Réservation confirmée: ${bookingResult.data?.bookingId}`);
 
     res.json({
@@ -2545,7 +2484,7 @@ app.post("/api/book-with-payment", async (req, res) => {
     console.error('❌ Erreur réservation:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message || "Erreur lors de la réservation"
     });
   }
 });

@@ -940,6 +940,40 @@
     });
 
 })();
+// ============================================
+// FONCTIONS GLOBALES - POPOVERS & DROPDOWNS
+// ============================================
+
+/**
+ * Ferme tous les popovers ouverts
+ */
+function closeAllPopovers() {
+    document.querySelectorAll('.popover.open').forEach(function(p) {
+        p.classList.remove('open');
+    });
+}
+
+/**
+ * Ferme tous les dropdowns de suggestion ouverts
+ */
+function closeAllDropdowns() {
+    document.querySelectorAll('.suggest-dropdown.open').forEach(function(d) {
+        d.classList.remove('open');
+    });
+}
+
+/**
+ * Ferme tous les popovers ET les dropdowns
+ */
+function closeAllPopoversAndDropdowns() {
+    closeAllPopovers();
+    closeAllDropdowns();
+}
+
+// Exposer les fonctions globalement
+window.closeAllPopovers = closeAllPopovers;
+window.closeAllDropdowns = closeAllDropdowns;
+window.closeAllPopoversAndDropdowns = closeAllPopoversAndDropdowns;
 
 // ============================================
 // AUTHENTIFICATION SUPABASE - GOOGLE (CORRIGÉ)

@@ -441,9 +441,13 @@
 
   <!-- Chatbot LiteAPI : à ne charger que via un endpoint serveur qui ne révèle jamais la clé au client -->
   <!-- Dans le <head> ou avant la fermeture du </body> -->
+    
     <script src="https://components.liteapi.travel/chatbot/v1.js?liteApiKey=prod_public_4f1ec201-76ab-4314-8a70-38916b18e161" async></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
+<!-- 1. Bibliothèques externes (Supabase en premier) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
     <script src="js/i18n.js"></script>
     <script src="js/language.js"></script>
     <script src="js/translation.js"></script>

@@ -2069,6 +2069,487 @@ app.post("/api/ask-hotel", async (req, res) => {
   }
 });
 // ============================================
+// MOBILE MONEY - INITIER LE PAIEMENT
+// ============================================
+app.post("/api/payment/mobile-money/init", async (req, res) => {
+  console.log("\n📱 ===== MOBILE MONEY INIT ===== 📱");
+  
+  const { 
+    offerId, 
+    phoneNumber, 
+    provider = 'MPESA',
+    amount,
+    currency = 'USD',
+    guestInfo,
+    environment = 'sandbox'
+  } = req.body;
+
+  if (!offerId || !phoneNumber || !amount) {
+    return res.status(400).json({
+      success: false,
+      error: "offerId, phoneNumber and amount are required"
+    });
+  }
+
+  const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
+
+  try {
+    // 1. Pré-réservation pour vérifier la disponibilité
+    const prebookResult = await callLiteAPI(
+      'hotels/prebook',
+      'POST',
+      { 
+        offerId: offerId, 
+        usePaymentSdk: true,
+        currency: currency
+      },
+      apiKey
+    );
+
+    if (!prebookResult.data) {
+      return res.status(400).json({
+        success: false,
+        error: "Offre non disponible"
+      });
+    }
+
+    const prebookId = prebookResult.data.prebookId;
+    const totalAmount = prebookResult.data.total?.amount || amount;
+
+    // 2. Générer un ID de transaction unique
+    const transactionId = `LUVIA-MM-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    // 3. Sauvegarder la transaction (à implémenter avec votre base de données)
+    const transactionData = {
+      id: transactionId,
+      prebookId: prebookId,
+      offerId: offerId,
+      guestInfo: guestInfo,
+      amount: totalAmount,
+      currency: currency,
+      provider: provider,
+      phoneNumber: phoneNumber,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+      secretKey: prebookResult.data.secretKey // Pour le callback sécurisé
+    };
+
+    // Sauvegarde en mémoire pour l'instant (à remplacer par une DB)
+    if (!global.mobileMoneyTransactions) {
+      global.mobileMoneyTransactions = new Map();
+    }
+    global.mobileMoneyTransactions.set(transactionId, transactionData);
+
+    // 4. Simuler l'envoi du paiement Mobile Money
+    // En production, remplacer par l'appel réel à l'API M-Pesa/Orange/Airtel
+    const paymentResponse = {
+      transactionId: transactionId,
+      status: 'PENDING',
+      message: `Veuillez confirmer le paiement de $${totalAmount} sur votre téléphone ${phoneNumber}`,
+      reference: transactionId
+    };
+
+    console.log(`📱 Demande de paiement Mobile Money initiée: ${transactionId}`);
+    console.log(`   📞 Téléphone: ${phoneNumber}`);
+    console.log(`   💰 Montant: $${totalAmount}`);
+    console.log(`   🏢 Provider: ${provider}`);
+
+    res.json({
+      success: true,
+      data: {
+        transactionId: transactionId,
+        prebookId: prebookId,
+        provider: provider,
+        status: 'PENDING',
+        amount: totalAmount,
+        currency: currency,
+        paymentDetails: paymentResponse,
+        message: paymentResponse.message
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur Mobile Money:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// MOBILE MONEY - CONFIRMER LE PAIEMENT
+// ============================================
+app.post("/api/payment/mobile-money/confirm", async (req, res) => {
+  console.log("\n📞 ===== MOBILE MONEY CONFIRM ===== 📞");
+  
+  const { transactionId, provider = 'MPESA', mpesaReceiptNumber } = req.body;
+
+  if (!transactionId) {
+    return res.status(400).json({
+      success: false,
+      error: "transactionId is required"
+    });
+  }
+
+  try {
+    // Récupérer la transaction
+    const transaction = global.mobileMoneyTransactions?.get(transactionId);
+    
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        error: "Transaction non trouvée"
+      });
+    }
+
+    // En production, vérifier le statut du paiement auprès du provider
+    // Pour la simulation, on considère que le paiement est réussi
+    const paymentStatus = 'SUCCESS';
+
+    if (paymentStatus === 'SUCCESS') {
+      // Mettre à jour la transaction
+      transaction.status = 'COMPLETED';
+      transaction.mpesaReceiptNumber = mpesaReceiptNumber || `MM-${Date.now()}`;
+      global.mobileMoneyTransactions.set(transactionId, transaction);
+
+      console.log(`✅ Paiement Mobile Money confirmé: ${transactionId}`);
+
+      res.json({
+        success: true,
+        data: {
+          transactionId: transactionId,
+          status: 'COMPLETED',
+          message: 'Paiement confirmé avec succès',
+          prebookId: transaction.prebookId,
+          amount: transaction.amount
+        }
+      });
+    } else {
+      res.json({
+        success: false,
+        data: {
+          transactionId: transactionId,
+          status: 'FAILED',
+          message: 'Le paiement a échoué'
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur confirmation:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// MOBILE MONEY - WEBHOOK CALLBACK
+// ============================================
+app.post("/api/payment/mobile-money/webhook", async (req, res) => {
+  console.log("\n📨 ===== MOBILE MONEY WEBHOOK ===== 📨");
+  console.log("📦 Body:", JSON.stringify(req.body, null, 2));
+
+  // Ici, traiter le callback du provider Mobile Money
+  // M-Pesa, Orange Money, Airtel Money ont chacun leur format
+
+  const { 
+    transactionId, 
+    status, 
+    receiptNumber,
+    amount,
+    phoneNumber,
+    provider = 'MPESA'
+  } = req.body;
+
+  try {
+    // Récupérer la transaction
+    const transaction = global.mobileMoneyTransactions?.get(transactionId);
+    
+    if (!transaction) {
+      console.warn(`⚠️ Transaction ${transactionId} non trouvée`);
+      return res.status(200).json({ success: true, message: 'Transaction non trouvée' });
+    }
+
+    if (status === 'SUCCESS' || status === 'COMPLETED') {
+      // Mettre à jour la transaction
+      transaction.status = 'COMPLETED';
+      transaction.mpesaReceiptNumber = receiptNumber;
+      transaction.completedAt = new Date().toISOString();
+      global.mobileMoneyTransactions.set(transactionId, transaction);
+
+      console.log(`✅ Paiement confirmé via webhook: ${transactionId}`);
+
+      // Optionnel : réserver automatiquement l'hôtel
+      // await bookHotelWithTransaction(transaction);
+
+      res.status(200).json({ 
+        success: true, 
+        message: 'Transaction mise à jour',
+        bookingId: transaction.bookingId || null
+      });
+    } else {
+      transaction.status = 'FAILED';
+      global.mobileMoneyTransactions.set(transactionId, transaction);
+      
+      res.status(200).json({ 
+        success: true, 
+        message: 'Transaction échouée' 
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur webhook:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// PAYPAL - INITIER LE PAIEMENT
+// ============================================
+app.post("/api/payment/paypal/init", async (req, res) => {
+  console.log("\n🅿️ ===== PAYPAL INIT ===== 🅿️");
+  
+  const { offerId, amount, currency = 'USD', guestInfo, environment = 'sandbox' } = req.body;
+
+  if (!offerId || !amount) {
+    return res.status(400).json({
+      success: false,
+      error: "offerId and amount are required"
+    });
+  }
+
+  const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
+
+  try {
+    // 1. Pré-réservation
+    const prebookResult = await callLiteAPI(
+      'hotels/prebook',
+      'POST',
+      { 
+        offerId: offerId, 
+        usePaymentSdk: true,
+        currency: currency
+      },
+      apiKey
+    );
+
+    if (!prebookResult.data) {
+      return res.status(400).json({
+        success: false,
+        error: "Offre non disponible"
+      });
+    }
+
+    const prebookId = prebookResult.data.prebookId;
+    const totalAmount = prebookResult.data.total?.amount || amount;
+
+    // 2. Générer un ID de transaction unique
+    const transactionId = `LUVIA-PP-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    // 3. Simuler la création d'un ordre PayPal
+    const paypalOrder = {
+      id: transactionId,
+      status: 'CREATED',
+      links: [
+        { href: `https://www.sandbox.paypal.com/checkoutnow?token=${transactionId}`, rel: 'approve', method: 'GET' }
+      ]
+    };
+
+    // 4. Sauvegarder la transaction
+    const transactionData = {
+      id: transactionId,
+      prebookId: prebookId,
+      offerId: offerId,
+      guestInfo: guestInfo,
+      amount: totalAmount,
+      currency: currency,
+      provider: 'PAYPAL',
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+      paypalOrderId: transactionId
+    };
+
+    if (!global.paypalTransactions) {
+      global.paypalTransactions = new Map();
+    }
+    global.paypalTransactions.set(transactionId, transactionData);
+
+    res.json({
+      success: true,
+      data: {
+        transactionId: transactionId,
+        prebookId: prebookId,
+        provider: 'PAYPAL',
+        status: 'PENDING',
+        amount: totalAmount,
+        currency: currency,
+        redirectUrl: paypalOrder.links[0].href,
+        paypalOrderId: transactionId
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur PayPal:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// PAYPAL - WEBHOOK CALLBACK
+// ============================================
+app.post("/api/payment/paypal/webhook", async (req, res) => {
+  console.log("\n📨 ===== PAYPAL WEBHOOK ===== 📨");
+  console.log("📦 Body:", JSON.stringify(req.body, null, 2));
+
+  const { transactionId, status, paypalOrderId } = req.body;
+
+  try {
+    const transaction = global.paypalTransactions?.get(transactionId);
+    
+    if (!transaction) {
+      console.warn(`⚠️ Transaction PayPal ${transactionId} non trouvée`);
+      return res.status(200).json({ success: true });
+    }
+
+    if (status === 'COMPLETED' || status === 'APPROVED') {
+      transaction.status = 'COMPLETED';
+      transaction.completedAt = new Date().toISOString();
+      global.paypalTransactions.set(transactionId, transaction);
+
+      console.log(`✅ Paiement PayPal confirmé: ${transactionId}`);
+      res.status(200).json({ success: true, message: 'Transaction mise à jour' });
+    } else {
+      transaction.status = 'FAILED';
+      global.paypalTransactions.set(transactionId, transaction);
+      res.status(200).json({ success: true, message: 'Transaction échouée' });
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur webhook PayPal:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// RÉSERVATION APRÈS PAIEMENT EXTERNE
+// ============================================
+app.post("/api/book-with-payment", async (req, res) => {
+  console.log("\n📝 ===== BOOK WITH PAYMENT ===== 📝");
+  
+  const { 
+    prebookId, 
+    guestFirstName, 
+    guestLastName, 
+    guestEmail, 
+    guestPhone,
+    transactionId,
+    paymentMethod = 'MOBILE_MONEY', // ou 'PAYPAL', 'CARD'
+    provider,
+    environment = 'sandbox'
+  } = req.body;
+
+  if (!prebookId || !guestFirstName || !guestLastName || !guestEmail || !transactionId) {
+    return res.status(400).json({
+      success: false,
+      error: "prebookId, guestFirstName, guestLastName, guestEmail, transactionId are required"
+    });
+  }
+
+  const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
+
+  try {
+    // Vérifier que le paiement a été effectué
+    let paymentVerified = false;
+    
+    if (paymentMethod === 'MOBILE_MONEY') {
+      const transaction = global.mobileMoneyTransactions?.get(transactionId);
+      paymentVerified = transaction && transaction.status === 'COMPLETED';
+    } else if (paymentMethod === 'PAYPAL') {
+      const transaction = global.paypalTransactions?.get(transactionId);
+      paymentVerified = transaction && transaction.status === 'COMPLETED';
+    } else if (paymentMethod === 'CARD') {
+      // Pour les cartes, on utilise le TRANSACTION_ID déjà passé
+      paymentVerified = true;
+    }
+
+    if (!paymentVerified && paymentMethod !== 'CARD') {
+      return res.status(400).json({
+        success: false,
+        error: "Le paiement n'a pas été confirmé"
+      });
+    }
+
+    // Réservation avec LiteAPI
+    const bookingResult = await callLiteAPI(
+      'hotels/book',
+      'POST',
+      {
+        prebookId: prebookId,
+        holder: {
+          firstName: guestFirstName,
+          lastName: guestLastName,
+          email: guestEmail,
+          phone: guestPhone || '+1234567890'
+        },
+        payment: {
+          method: "TRANSACTION_ID",
+          transactionId: transactionId
+        },
+        guests: [{
+          occupancyNumber: 1,
+          firstName: guestFirstName,
+          lastName: guestLastName,
+          email: guestEmail
+        }]
+      },
+      apiKey
+    );
+
+    // Mettre à jour la transaction avec le bookingId
+    if (paymentMethod === 'MOBILE_MONEY') {
+      const transaction = global.mobileMoneyTransactions?.get(transactionId);
+      if (transaction) {
+        transaction.bookingId = bookingResult.data?.bookingId;
+        transaction.status = 'BOOKED';
+        global.mobileMoneyTransactions.set(transactionId, transaction);
+      }
+    } else if (paymentMethod === 'PAYPAL') {
+      const transaction = global.paypalTransactions?.get(transactionId);
+      if (transaction) {
+        transaction.bookingId = bookingResult.data?.bookingId;
+        transaction.status = 'BOOKED';
+        global.paypalTransactions.set(transactionId, transaction);
+      }
+    }
+
+    console.log(`✅ Réservation confirmée: ${bookingResult.data?.bookingId}`);
+
+    res.json({
+      success: true,
+      data: {
+        bookingId: bookingResult.data?.bookingId,
+        hotelConfirmationCode: bookingResult.data?.hotelConfirmationCode,
+        status: 'CONFIRMED',
+        paymentMethod: paymentMethod,
+        transactionId: transactionId
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur réservation:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+// ============================================
 // ROUTES FRONTEND
 // ============================================
 app.use(express.static(path.join(__dirname)));

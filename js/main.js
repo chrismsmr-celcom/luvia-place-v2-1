@@ -414,406 +414,407 @@
     }
 
     // ============================================
-// INITIALISATION - DOMContentLoaded (CORRIGÉ)
-// ============================================
-document.addEventListener('DOMContentLoaded', function() {
-    var tomorrow = addDays(new Date(), 1);
-    var commonConfig = { dateFormat: 'Y-m-d', locale: 'fr', altInput: true, altFormat: 'd M Y', minDate: formatDate(tomorrow), animate: true, monthSelectorType: 'dropdown' };
+    // INITIALISATION - DOMContentLoaded (CORRIGÉ)
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        var tomorrow = addDays(new Date(), 1);
+        var commonConfig = { dateFormat: 'Y-m-d', locale: 'fr', altInput: true, altFormat: 'd M Y', minDate: formatDate(tomorrow), animate: true, monthSelectorType: 'dropdown' };
 
-    function setupDateRange(startId, endId, startOffset, endOffset, onNights) {
-        var startEl = document.getElementById(startId),
-            endEl = document.getElementById(endId);
-        if (!startEl || !endEl) return null;
-        var startDefault = formatDate(addDays(new Date(), startOffset)),
-            endDefault = formatDate(addDays(new Date(), endOffset));
-        startEl.value = startDefault;
-        endEl.value = endDefault;
-        var endPicker = flatpickr(endEl, Object.assign({}, commonConfig, { defaultDate: endDefault, minDate: startDefault, onChange: function(d, str) { if (onNights) onNights(startEl.value, str); } }));
-        var startPicker = flatpickr(startEl, Object.assign({}, commonConfig, { defaultDate: startDefault, onChange: function(d, str) { endPicker.set('minDate', str); if (onNights) onNights(str, endEl.value); } }));
-        if (onNights) onNights(startDefault, endDefault);
-        return { startPicker: startPicker, endPicker: endPicker };
-    }
-
-    function updateNightsNote(noteId, start, end) {
-        var note = document.getElementById(noteId);
-        if (!note) return;
-        var n = getNights(start, end);
-        note.textContent = n > 0 ? n + ' nuit' + (n > 1 ? 's' : '') : '';
-    }
-
-    // ✅ Vérifier que les éléments existent avant de les utiliser
-    var hotelCheckin = document.getElementById('hotelCheckin');
-    var hotelCheckout = document.getElementById('hotelCheckout');
-    if (hotelCheckin && hotelCheckout) {
-        setupDateRange('hotelCheckin', 'hotelCheckout', 1, 4, function(s, e) { updateNightsNote('hotelNightsNote', s, e); });
-    }
-
-    var flightDeparture = document.getElementById('flightDeparture');
-    var flightReturn = document.getElementById('flightReturn');
-    if (flightDeparture && flightReturn) {
-        setupDateRange('flightDeparture', 'flightReturn', 1, 8);
-    }
-
-    var pkgCheckin = document.getElementById('pkgCheckin');
-    var pkgCheckout = document.getElementById('pkgCheckout');
-    if (pkgCheckin && pkgCheckout) {
-        setupDateRange('pkgCheckin', 'pkgCheckout', 1, 8, function(s, e) { updateNightsNote('pkgNightsNote', s, e); });
-    }
-
-    // ✅ Vérifier que les dates de vol existent
-    var legDates = document.querySelectorAll('.leg-date');
-    if (legDates.length > 0) {
-        legDates.forEach(function(el, idx) {
-            flatpickr(el, Object.assign({}, commonConfig, { defaultDate: formatDate(addDays(new Date(), 1 + idx * 3)) }));
-        });
-    }
-
-    // --- Onglets ---
-    var serviceTabs = document.querySelectorAll('#serviceTabs .service-tab');
-    if (serviceTabs.length > 0) {
-        serviceTabs.forEach(function(tab) {
-            tab.addEventListener('click', function() {
-                document.querySelectorAll('#serviceTabs .service-tab').forEach(function(t) { t.setAttribute('aria-selected', 'false'); });
-                tab.setAttribute('aria-selected', 'true');
-                document.querySelectorAll('.search-panel').forEach(function(p) { p.hidden = true; });
-                var panel = document.querySelector('.search-panel[data-panel="' + tab.dataset.tab + '"]');
-                if (panel) {
-                    panel.hidden = false;
-                    panel.querySelectorAll('.shared-dest').forEach(function(el) {
-                        if (sharedState.dest) el.value = sharedState.dest;
-                    });
-                }
-            });
-        });
-        
-        var hotelTab = document.querySelector('#serviceTabs .service-tab[data-tab="hotel"]');
-        if (hotelTab) {
-            hotelTab.click();
-        } else {
-            console.warn('⚠️ Onglet hôtel non trouvé sur cette page');
-        }
-    }
-
-    // ✅ INITIALISATION DE L'ÉTAT DE CONNEXION
-    var cachedUser = localStorage.getItem('luviaplace_user');
-    if (cachedUser) {
-        try {
-            var user = JSON.parse(cachedUser);
-            if (user && user.email) {
-                var loginBtns = document.querySelectorAll('#loginBtn, .btn-primary[data-i18n="nav.login"]');
-                var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
-                loginBtns.forEach(function(btn) {
-                    btn.textContent = '👤 ' + name;
-                    btn.classList.add('logged-in');
-                    btn.dataset.loggedIn = 'true';
-                });
-                
-                var accountTrigger = document.getElementById('accountTrigger');
-                if (accountTrigger) {
-                    accountTrigger.style.display = 'flex';
-                    var avatarName = document.getElementById('avatarName');
-                    var avatarInitials = document.getElementById('avatarInitials');
-                    if (avatarName) avatarName.textContent = name;
-                    if (avatarInitials) {
-                        var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
-                        avatarInitials.textContent = initials;
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn('⚠️ Erreur lecture cache utilisateur:', e);
-        }
-    }
-
-    // --- Autocomplétion ---
-    var suggestDropdowns = document.querySelectorAll('.suggest-dropdown');
-    if (suggestDropdowns.length > 0) {
-        var recentSearches = ['Kinshasa, Gombe', 'Lubumbashi, Karavia', 'Goma, bord du lac'];
-
-        function buildSuggestDropdown(container, allowAllAirports) {
-            var html = '<div class="sd-label">Récents</div>' + recentSearches.map(function(s) { return '<div class="sd-item" data-value="' + s + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>' + s + '</div>'; }).join('');
-            html += '<div class="sd-item sd-geoloc" data-geoloc="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>Autour de moi</div>';
-            container.innerHTML = html;
+        function setupDateRange(startId, endId, startOffset, endOffset, onNights) {
+            var startEl = document.getElementById(startId),
+                endEl = document.getElementById(endId);
+            if (!startEl || !endEl) return null;
+            var startDefault = formatDate(addDays(new Date(), startOffset)),
+                endDefault = formatDate(addDays(new Date(), endOffset));
+            startEl.value = startDefault;
+            endEl.value = endDefault;
+            var endPicker = flatpickr(endEl, Object.assign({}, commonConfig, { defaultDate: endDefault, minDate: startDefault, onChange: function(d, str) { if (onNights) onNights(startEl.value, str); } }));
+            var startPicker = flatpickr(startEl, Object.assign({}, commonConfig, { defaultDate: startDefault, onChange: function(d, str) { endPicker.set('minDate', str); if (onNights) onNights(str, endEl.value); } }));
+            if (onNights) onNights(startDefault, endDefault);
+            return { startPicker: startPicker, endPicker: endPicker };
         }
 
-        function closeAllDropdowns() { document.querySelectorAll('.suggest-dropdown.open').forEach(function(d) { d.classList.remove('open'); }); }
-
-        function closeAllPopovers() { document.querySelectorAll('.popover.open').forEach(function(p) { p.classList.remove('open'); }); }
-
-        suggestDropdowns.forEach(function(dd) {
-            var isFlightField = !!dd.closest('#simpleFlightFields');
-            buildSuggestDropdown(dd);
-            var input = dd.closest('.field') ? dd.closest('.field').querySelector('input[type=text]') : null;
-            if (!input) return;
-            input.addEventListener('focus', function() { closeAllDropdowns();
-                closeAllPopovers();
-                buildSuggestDropdown(dd);
-                dd.classList.add('open'); });
-            dd.addEventListener('click', function(e) {
-                var item = e.target.closest('.sd-item');
-                if (!item) return;
-                if (item.dataset.geoloc) {
-                    input.value = 'Position actuelle';
-                    getUserLocation().then(function(loc) { if (loc && loc.city) { input.value = loc.city + ', ' + (loc.countryCode || loc.country || '');
-                            input.dispatchEvent(new Event('input')); } });
-                } else { input.value = item.dataset.value; }
-                input.dispatchEvent(new Event('input'));
-                dd.classList.remove('open');
-            });
-            var debounceTimer;
-            input.addEventListener('input', function(e) {
-                if (input.classList.contains('shared-dest')) sharedState.dest = e.target.value;
-                clearTimeout(debounceTimer);
-                var query = e.target.value.trim();
-                if (query.length < 2) { buildSuggestDropdown(dd); return; }
-                debounceTimer = setTimeout(function() {
-                    searchPlaces(query).then(function(places) {
-                        var extra = '';
-                        if (isFlightField) {
-                            var key = query.trim().toLowerCase();
-                            if (MULTI_AIRPORT_CITIES[key]) extra = '<div class="sd-item sd-all-airports" data-value="Tous les aéroports, ' + query + ' (' + MULTI_AIRPORT_CITIES[key] + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16l20-8-8 20-3-8-9-4z"/></svg>Tous les aéroports (' + MULTI_AIRPORT_CITIES[key] + ')</div>';
-                        }
-                        if (places.length === 0 && !extra) { dd.innerHTML = '<div class="sd-empty">Aucun résultat</div>'; return; }
-                        dd.innerHTML = extra + '<div class="sd-label">Suggestions</div>' + places.slice(0, 6).map(function(p) {
-                            var displayText = p.name + (p.address ? ', ' + p.address : '');
-                            return '<div class="sd-item" data-place-id="' + p.placeId + '" data-value="' + displayText.replace(/"/g, '&quot;') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>' + displayText + '</div>';
-                        }).join('');
-                        dd.classList.add('open');
-                    });
-                }, 300);
-            });
-        });
-        document.addEventListener('click', function(e) { if (!e.target.closest('.field') && !e.target.closest('.leg-row')) { closeAllDropdowns();
-                closeAllPopovers(); } });
-    }
-
-    // --- Compteurs ---
-    var counts = { rooms: 1, adults: 2, children: 0, fadults: 1, fchildren: 0, finfantslap: 0, finfantsseat: 0, krooms: 1, kadults: 2, kchildren: 0 };
-    var mins = { rooms: 1, adults: 1, fadults: 1, krooms: 1, kadults: 1 };
-
-    function renderChildAges(key, selector) {
-        var container = document.querySelector(selector);
-        if (!container) return;
-        var n = counts[key];
-        container.style.display = n > 0 ? 'flex' : 'none';
-        container.innerHTML = '';
-        for (var i = 0; i < n; i++) {
-            var sel = document.createElement('select');
-            sel.setAttribute('aria-label', "Âge de l'enfant " + (i + 1));
-            sel.innerHTML = '<option value="">Âge de l\'enfant ' + (i + 1) + '</option>' + Array.from({ length: 18 }, function(_, a) { return '<option value="' + a + '">' + a + ' an' + (a > 1 ? 's' : '') + '</option>'; }).join('');
-            container.appendChild(sel);
+        function updateNightsNote(noteId, start, end) {
+            var note = document.getElementById(noteId);
+            if (!note) return;
+            var n = getNights(start, end);
+            note.textContent = n > 0 ? n + ' nuit' + (n > 1 ? 's' : '') : '';
         }
-    }
 
-    function updateSummaries() {
-        var hotelBtn = document.querySelector('[data-panel=hotel] .guests-summary');
-        if (hotelBtn) hotelBtn.textContent = counts.rooms + ' chambre' + (counts.rooms > 1 ? 's' : '') + ', ' + counts.adults + ' adulte' + (counts.adults > 1 ? 's' : '') + (counts.children ? ', ' + counts.children + ' enfant' + (counts.children > 1 ? 's' : '') : '');
-        var flightBtn = document.querySelector('[data-panel=flight] .guests-summary');
-        var cabinSel = document.querySelector('.cabin-select');
-        var cabinLabel = cabinSel ? cabinSel.options[cabinSel.selectedIndex].text : 'Économie';
-        var totalInfants = counts.finfantslap + counts.finfantsseat;
-        if (flightBtn) flightBtn.textContent = counts.fadults + ' adulte' + (counts.fadults > 1 ? 's' : '') + (counts.fchildren ? ', ' + counts.fchildren + ' enf.' : '') + (totalInfants ? ', ' + totalInfants + ' bébé' + (totalInfants > 1 ? 's' : '') : '') + ', ' + cabinLabel;
-        var pkgBtn = document.querySelector('[data-panel=package] .guests-summary');
-        if (pkgBtn) pkgBtn.textContent = counts.krooms + ' chambre' + (counts.krooms > 1 ? 's' : '') + ', ' + counts.kadults + ' adulte' + (counts.kadults > 1 ? 's' : '') + (counts.kchildren ? ', ' + counts.kchildren + ' enfant' + (counts.kchildren > 1 ? 's' : '') : '');
-    }
+        // ✅ Vérifier que les éléments existent avant de les utiliser
+        var hotelCheckin = document.getElementById('hotelCheckin');
+        var hotelCheckout = document.getElementById('hotelCheckout');
+        if (hotelCheckin && hotelCheckout) {
+            setupDateRange('hotelCheckin', 'hotelCheckout', 1, 4, function(s, e) { updateNightsNote('hotelNightsNote', s, e); });
+        }
 
-    var stepBtns = document.querySelectorAll('.step-btn');
-    if (stepBtns.length > 0) {
-        stepBtns.forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var key = btn.dataset.step,
-                    dir = parseInt(btn.dataset.dir, 10),
-                    min = mins[key] || 0;
-                counts[key] = Math.max(min, counts[key] + dir);
-                document.querySelectorAll('.step-count[data-count="' + key + '"]').forEach(function(s) { s.textContent = counts[key]; });
-                if (key === 'children') renderChildAges('children', '[data-ages="hotel"]');
-                if (key === 'kchildren') renderChildAges('kchildren', '[data-ages="package"]');
-                updateSummaries();
-            });
-        });
-    }
+        var flightDeparture = document.getElementById('flightDeparture');
+        var flightReturn = document.getElementById('flightReturn');
+        if (flightDeparture && flightReturn) {
+            setupDateRange('flightDeparture', 'flightReturn', 1, 8);
+        }
 
-    var cabinSelect = document.querySelector('.cabin-select');
-    if (cabinSelect) cabinSelect.addEventListener('change', updateSummaries);
-    updateSummaries();
+        var pkgCheckin = document.getElementById('pkgCheckin');
+        var pkgCheckout = document.getElementById('pkgCheckout');
+        if (pkgCheckin && pkgCheckout) {
+            setupDateRange('pkgCheckin', 'pkgCheckout', 1, 8, function(s, e) { updateNightsNote('pkgNightsNote', s, e); });
+        }
 
-    var guestsSummary = document.querySelectorAll('.guests-summary');
-    if (guestsSummary.length > 0) {
-        guestsSummary.forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                var pop = btn.closest('.field').querySelector('.popover');
-                if (!pop) return;
-                var wasOpen = pop.classList.contains('open');
-                closeAllPopovers();
-                closeAllDropdowns();
-                if (!wasOpen) pop.classList.add('open');
-            });
-        });
-    }
-
-    var closePopoverBtns = document.querySelectorAll('[data-close-popover]');
-    if (closePopoverBtns.length > 0) {
-        closePopoverBtns.forEach(function(btn) { btn.addEventListener('click', closeAllPopovers); });
-    }
-
-    // --- Pills (trajet vol) ---
-    var pillGroups = document.querySelectorAll('.pill-toggle');
-    if (pillGroups.length > 0) {
-        pillGroups.forEach(function(group) {
-            group.querySelectorAll('.pill-btn').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    group.querySelectorAll('.pill-btn').forEach(function(b) { b.setAttribute('aria-pressed', 'false'); });
-                    btn.setAttribute('aria-pressed', 'true');
-                    if (group.dataset.toggle === 'tripType') {
-                        var simple = document.getElementById('simpleFlightFields');
-                        var legs = document.getElementById('legsContainer');
-                        var returnField = document.querySelector('[data-panel=flight] [data-role="return-date"]');
-                        if (btn.dataset.trip === 'multi') { simple.hidden = true;
-                            legs.hidden = false; } else {
-                            simple.hidden = false;
-                            legs.hidden = true;
-                            if (returnField) returnField.style.display = btn.dataset.trip === 'oneway' ? 'none' : '';
-                        }
-                    }
-                });
-            });
-        });
-    }
-
-    // --- Multi-destination ---
-    var legsContainer = document.getElementById('legsContainer');
-    var addLegBtn = document.getElementById('addLegBtn');
-    if (legsContainer && addLegBtn) {
-        addLegBtn.addEventListener('click', function() {
-            var rows = legsContainer.querySelectorAll('.leg-row');
-            if (rows.length >= 4) { showToast('Maximum 4 vols pour un itinéraire multi-destinations.'); return; }
-            var newRow = rows[rows.length - 1].cloneNode(true);
-            newRow.dataset.leg = rows.length;
-            newRow.querySelectorAll('input[type=text]:not(.leg-date)').forEach(function(i) { i.value = ''; });
-            var dateInput = newRow.querySelector('.leg-date');
-            dateInput.value = '';
-            dateInput.removeAttribute('data-fp');
-            if (dateInput._flatpickr) dateInput._flatpickr.destroy();
-            legsContainer.insertBefore(newRow, addLegBtn);
-            flatpickr(dateInput, Object.assign({}, commonConfig, { defaultDate: formatDate(addDays(new Date(), 1 + rows.length * 3)) }));
-            bindLegRemove(newRow);
-        });
-
-        function bindLegRemove(row) {
-            row.querySelector('.leg-remove').addEventListener('click', function() {
-                if (legsContainer.querySelectorAll('.leg-row').length <= 2) { showToast('Un itinéraire multi-destinations nécessite au moins 2 vols.'); return; }
-                row.remove();
+        // ✅ Vérifier que les dates de vol existent
+        var legDates = document.querySelectorAll('.leg-date');
+        if (legDates.length > 0) {
+            legDates.forEach(function(el, idx) {
+                flatpickr(el, Object.assign({}, commonConfig, { defaultDate: formatDate(addDays(new Date(), 1 + idx * 3)) }));
             });
         }
-        legsContainer.querySelectorAll('.leg-row').forEach(bindLegRemove);
-    }
 
-    // --- Recherche ---
-    function requireValue(id, message) {
-        var el = document.getElementById(id);
-        var value = el ? el.value.trim() : '';
-        if (!value) { flagFieldError(el);
-            showToast(message); }
-        return value;
-    }
-
-    var searchBtns = document.querySelectorAll('[data-search]');
-    if (searchBtns.length > 0) {
-        searchBtns.forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var type = btn.dataset.search,
-                    params;
-
-                if (type === 'hotel') {
-                    var destination = requireValue('hotelDestination', 'Veuillez indiquer une destination.');
-                    if (!destination) return;
-                    params = new URLSearchParams({ destination: destination, checkin: document.getElementById('hotelCheckin').value, checkout: document.getElementById('hotelCheckout').value, rooms: counts.rooms, adults: counts.adults, children: counts.children });
-                    window.location.href = 'resultats-hebergement.html?' + params.toString();
-
-                } else if (type === 'flight') {
-                    var tripType = document.querySelector('[data-toggle=tripType] .pill-btn[aria-pressed=true]').dataset.trip;
-                    var cabin = (document.querySelector('.cabin-select') || {}).value || 'ECONOMY';
-
-                    if (tripType === 'multi') {
-                        var legs = [];
-                        var valid = true;
-                        legsContainer.querySelectorAll('.leg-row').forEach(function(row) {
-                            var o = row.querySelector('.leg-origin').value.trim();
-                            var d = row.querySelector('.leg-destination').value.trim();
-                            var dt = row.querySelector('.leg-date').value;
-                            if (!o || !d || !dt) valid = false;
-                            legs.push({ origin: o, destination: d, date: dt });
+        // --- Onglets ---
+        var serviceTabs = document.querySelectorAll('#serviceTabs .service-tab');
+        if (serviceTabs.length > 0) {
+            serviceTabs.forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('#serviceTabs .service-tab').forEach(function(t) { t.setAttribute('aria-selected', 'false'); });
+                    tab.setAttribute('aria-selected', 'true');
+                    document.querySelectorAll('.search-panel').forEach(function(p) { p.hidden = true; });
+                    var panel = document.querySelector('.search-panel[data-panel="' + tab.dataset.tab + '"]');
+                    if (panel) {
+                        panel.hidden = false;
+                        panel.querySelectorAll('.shared-dest').forEach(function(el) {
+                            if (sharedState.dest) el.value = sharedState.dest;
                         });
-                        if (!valid) { showToast('Merci de compléter tous les vols de votre itinéraire.'); return; }
-                        params = new URLSearchParams({ tripType: 'multi', legs: JSON.stringify(legs), adults: counts.fadults, children: counts.fchildren, infantsLap: counts.finfantslap, infantsSeat: counts.finfantsseat, cabin: cabin });
-                        window.location.href = 'resultats-vols.html?' + params.toString();
-                    } else {
-                        var origin = requireValue('flightOrigin', "Veuillez indiquer une ville d'origine.");
-                        var dest = requireValue('flightDestination', 'Veuillez indiquer une destination.');
-                        if (!origin || !dest) return;
-                        params = new URLSearchParams({ tripType: tripType, origin: origin, destination: dest, departure: document.getElementById('flightDeparture').value, adults: counts.fadults, children: counts.fchildren, infantsLap: counts.finfantslap, infantsSeat: counts.finfantsseat, cabin: cabin });
-                        if (tripType === 'round') params.append('return', document.getElementById('flightReturn').value);
-                        window.location.href = 'resultats-vols.html?' + params.toString();
                     }
+                });
+            });
+            
+            var hotelTab = document.querySelector('#serviceTabs .service-tab[data-tab="hotel"]');
+            if (hotelTab) {
+                hotelTab.click();
+            } else {
+                console.warn('⚠️ Onglet hôtel non trouvé sur cette page');
+            }
+        }
 
-                } else if (type === 'package') {
-                    var pkgDest = requireValue('pkgDestination', 'Veuillez indiquer une destination.');
-                    if (!pkgDest) return;
-                    params = new URLSearchParams({
-                        origin: document.getElementById('pkgOrigin').value,
-                        destination: pkgDest,
-                        checkin: document.getElementById('pkgCheckin').value,
-                        checkout: document.getElementById('pkgCheckout').value,
-                        rooms: counts.krooms,
-                        adults: counts.kadults,
-                        children: counts.kchildren,
-                        activities: document.getElementById('pkgActivities').checked ? '1' : '0',
-                        type: document.getElementById('pkgType').value
+        // ✅ INITIALISATION DE L'ÉTAT DE CONNEXION
+        var cachedUser = localStorage.getItem('luviaplace_user');
+        if (cachedUser) {
+            try {
+                var user = JSON.parse(cachedUser);
+                if (user && user.email) {
+                    var loginBtns = document.querySelectorAll('#loginBtn, .btn-primary[data-i18n="nav.login"]');
+                    var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+                    loginBtns.forEach(function(btn) {
+                        btn.textContent = '👤 ' + name;
+                        btn.classList.add('logged-in');
+                        btn.dataset.loggedIn = 'true';
                     });
-                    window.location.href = 'resultats-package.html?' + params.toString();
+                    
+                    var accountTrigger = document.getElementById('accountTrigger');
+                    if (accountTrigger) {
+                        accountTrigger.style.display = 'flex';
+                        var avatarName = document.getElementById('avatarName');
+                        var avatarInitials = document.getElementById('avatarInitials');
+                        if (avatarName) avatarName.textContent = name;
+                        if (avatarInitials) {
+                            var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
+                            avatarInitials.textContent = initials;
+                        }
+                    }
                 }
+            } catch (e) {
+                console.warn('⚠️ Erreur lecture cache utilisateur:', e);
+            }
+        }
+
+        // --- Autocomplétion ---
+        var suggestDropdowns = document.querySelectorAll('.suggest-dropdown');
+        if (suggestDropdowns.length > 0) {
+            var recentSearches = ['Kinshasa, Gombe', 'Lubumbashi, Karavia', 'Goma, bord du lac'];
+
+            function buildSuggestDropdown(container, allowAllAirports) {
+                var html = '<div class="sd-label">Récents</div>' + recentSearches.map(function(s) { return '<div class="sd-item" data-value="' + s + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>' + s + '</div>'; }).join('');
+                html += '<div class="sd-item sd-geoloc" data-geoloc="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>Autour de moi</div>';
+                container.innerHTML = html;
+            }
+
+            function closeAllDropdowns() { document.querySelectorAll('.suggest-dropdown.open').forEach(function(d) { d.classList.remove('open'); }); }
+
+            function closeAllPopovers() { document.querySelectorAll('.popover.open').forEach(function(p) { p.classList.remove('open'); }); }
+
+            suggestDropdowns.forEach(function(dd) {
+                var isFlightField = !!dd.closest('#simpleFlightFields');
+                buildSuggestDropdown(dd);
+                var input = dd.closest('.field') ? dd.closest('.field').querySelector('input[type=text]') : null;
+                if (!input) return;
+                input.addEventListener('focus', function() { closeAllDropdowns();
+                    closeAllPopovers();
+                    buildSuggestDropdown(dd);
+                    dd.classList.add('open'); });
+                dd.addEventListener('click', function(e) {
+                    var item = e.target.closest('.sd-item');
+                    if (!item) return;
+                    if (item.dataset.geoloc) {
+                        input.value = 'Position actuelle';
+                        getUserLocation().then(function(loc) { if (loc && loc.city) { input.value = loc.city + ', ' + (loc.countryCode || loc.country || '');
+                                input.dispatchEvent(new Event('input')); } });
+                    } else { input.value = item.dataset.value; }
+                    input.dispatchEvent(new Event('input'));
+                    dd.classList.remove('open');
+                });
+                var debounceTimer;
+                input.addEventListener('input', function(e) {
+                    if (input.classList.contains('shared-dest')) sharedState.dest = e.target.value;
+                    clearTimeout(debounceTimer);
+                    var query = e.target.value.trim();
+                    if (query.length < 2) { buildSuggestDropdown(dd); return; }
+                    debounceTimer = setTimeout(function() {
+                        searchPlaces(query).then(function(places) {
+                            var extra = '';
+                            if (isFlightField) {
+                                var key = query.trim().toLowerCase();
+                                if (MULTI_AIRPORT_CITIES[key]) extra = '<div class="sd-item sd-all-airports" data-value="Tous les aéroports, ' + query + ' (' + MULTI_AIRPORT_CITIES[key] + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16l20-8-8 20-3-8-9-4z"/></svg>Tous les aéroports (' + MULTI_AIRPORT_CITIES[key] + ')</div>';
+                            }
+                            if (places.length === 0 && !extra) { dd.innerHTML = '<div class="sd-empty">Aucun résultat</div>'; return; }
+                            dd.innerHTML = extra + '<div class="sd-label">Suggestions</div>' + places.slice(0, 6).map(function(p) {
+                                var displayText = p.name + (p.address ? ', ' + p.address : '');
+                                return '<div class="sd-item" data-place-id="' + p.placeId + '" data-value="' + displayText.replace(/"/g, '&quot;') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>' + displayText + '</div>';
+                            }).join('');
+                            dd.classList.add('open');
+                        });
+                    }, 300);
+                });
             });
-        });
-    }
+            document.addEventListener('click', function(e) { if (!e.target.closest('.field') && !e.target.closest('.leg-row')) { closeAllDropdowns();
+                    closeAllPopovers(); } });
+        }
 
-    // --- Chargement des données ---
-    // ✅ Vérifier que les éléments existent avant de charger
-    if (document.getElementById('recommendedHotels')) {
-        loadRecommendations();
-    }
-    if (document.getElementById('nearbyHotels')) {
-        loadNearbyHotels();
-    }
-    if (document.getElementById('collectionsContainer')) {
-        loadAllCollections();
-    }
+        // --- Compteurs ---
+        var counts = { rooms: 1, adults: 2, children: 0, fadults: 1, fchildren: 0, finfantslap: 0, finfantsseat: 0, krooms: 1, kadults: 2, kchildren: 0 };
+        var mins = { rooms: 1, adults: 1, fadults: 1, krooms: 1, kadults: 1 };
 
-    // --- Recherches récentes ---
-    // ✅ Vérifier que la section existe avant de l'initialiser
-    if (document.getElementById('recentSearchesCarousel')) {
-        showRecentSkeletons(3);
-        setTimeout(function() {
-            displayRecentSearches();
-        }, 300);
-        setupSearchSaving();
-    }
+        function renderChildAges(key, selector) {
+            var container = document.querySelector(selector);
+            if (!container) return;
+            var n = counts[key];
+            container.style.display = n > 0 ? 'flex' : 'none';
+            container.innerHTML = '';
+            for (var i = 0; i < n; i++) {
+                var sel = document.createElement('select');
+                sel.setAttribute('aria-label', "Âge de l'enfant " + (i + 1));
+                sel.innerHTML = '<option value="">Âge de l\'enfant ' + (i + 1) + '</option>' + Array.from({ length: 18 }, function(_, a) { return '<option value="' + a + '">' + a + ' an' + (a > 1 ? 's' : '') + '</option>'; }).join('');
+                container.appendChild(sel);
+            }
+        }
 
-    // --- Intersection Observer pour les animations ---
-    var revealElements = document.querySelectorAll('.reveal');
-    if (revealElements.length > 0) {
-        var observer = new IntersectionObserver(function(entries) {
-            entries.forEach(function(e) {
-                if (e.isIntersecting) e.target.classList.add('in');
+        function updateSummaries() {
+            var hotelBtn = document.querySelector('[data-panel=hotel] .guests-summary');
+            if (hotelBtn) hotelBtn.textContent = counts.rooms + ' chambre' + (counts.rooms > 1 ? 's' : '') + ', ' + counts.adults + ' adulte' + (counts.adults > 1 ? 's' : '') + (counts.children ? ', ' + counts.children + ' enfant' + (counts.children > 1 ? 's' : '') : '');
+            var flightBtn = document.querySelector('[data-panel=flight] .guests-summary');
+            var cabinSel = document.querySelector('.cabin-select');
+            var cabinLabel = cabinSel ? cabinSel.options[cabinSel.selectedIndex].text : 'Économie';
+            var totalInfants = counts.finfantslap + counts.finfantsseat;
+            if (flightBtn) flightBtn.textContent = counts.fadults + ' adulte' + (counts.fadults > 1 ? 's' : '') + (counts.fchildren ? ', ' + counts.fchildren + ' enf.' : '') + (totalInfants ? ', ' + totalInfants + ' bébé' + (totalInfants > 1 ? 's' : '') : '') + ', ' + cabinLabel;
+            var pkgBtn = document.querySelector('[data-panel=package] .guests-summary');
+            if (pkgBtn) pkgBtn.textContent = counts.krooms + ' chambre' + (counts.krooms > 1 ? 's' : '') + ', ' + counts.kadults + ' adulte' + (counts.kadults > 1 ? 's' : '') + (counts.kchildren ? ', ' + counts.kchildren + ' enfant' + (counts.kchildren > 1 ? 's' : '') : '');
+        }
+
+        var stepBtns = document.querySelectorAll('.step-btn');
+        if (stepBtns.length > 0) {
+            stepBtns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var key = btn.dataset.step,
+                        dir = parseInt(btn.dataset.dir, 10),
+                        min = mins[key] || 0;
+                    counts[key] = Math.max(min, counts[key] + dir);
+                    document.querySelectorAll('.step-count[data-count="' + key + '"]').forEach(function(s) { s.textContent = counts[key]; });
+                    if (key === 'children') renderChildAges('children', '[data-ages="hotel"]');
+                    if (key === 'kchildren') renderChildAges('kchildren', '[data-ages="package"]');
+                    updateSummaries();
+                });
             });
-        }, { threshold: 0.12 });
-        revealElements.forEach(function(el) {
-            observer.observe(el);
-        });
-    }
+        }
 
-    console.log('LuviaPlace connecté au backend :', API_BASE_URL);
-});
+        var cabinSelect = document.querySelector('.cabin-select');
+        if (cabinSelect) cabinSelect.addEventListener('change', updateSummaries);
+        updateSummaries();
+
+        var guestsSummary = document.querySelectorAll('.guests-summary');
+        if (guestsSummary.length > 0) {
+            guestsSummary.forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var pop = btn.closest('.field').querySelector('.popover');
+                    if (!pop) return;
+                    var wasOpen = pop.classList.contains('open');
+                    closeAllPopovers();
+                    closeAllDropdowns();
+                    if (!wasOpen) pop.classList.add('open');
+                });
+            });
+        }
+
+        var closePopoverBtns = document.querySelectorAll('[data-close-popover]');
+        if (closePopoverBtns.length > 0) {
+            closePopoverBtns.forEach(function(btn) { btn.addEventListener('click', closeAllPopovers); });
+        }
+
+        // --- Pills (trajet vol) ---
+        var pillGroups = document.querySelectorAll('.pill-toggle');
+        if (pillGroups.length > 0) {
+            pillGroups.forEach(function(group) {
+                group.querySelectorAll('.pill-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        group.querySelectorAll('.pill-btn').forEach(function(b) { b.setAttribute('aria-pressed', 'false'); });
+                        btn.setAttribute('aria-pressed', 'true');
+                        if (group.dataset.toggle === 'tripType') {
+                            var simple = document.getElementById('simpleFlightFields');
+                            var legs = document.getElementById('legsContainer');
+                            var returnField = document.querySelector('[data-panel=flight] [data-role="return-date"]');
+                            if (btn.dataset.trip === 'multi') { simple.hidden = true;
+                                legs.hidden = false; } else {
+                                simple.hidden = false;
+                                legs.hidden = true;
+                                if (returnField) returnField.style.display = btn.dataset.trip === 'oneway' ? 'none' : '';
+                            }
+                        }
+                    });
+                });
+            });
+        }
+
+        // --- Multi-destination ---
+        var legsContainer = document.getElementById('legsContainer');
+        var addLegBtn = document.getElementById('addLegBtn');
+        if (legsContainer && addLegBtn) {
+            addLegBtn.addEventListener('click', function() {
+                var rows = legsContainer.querySelectorAll('.leg-row');
+                if (rows.length >= 4) { showToast('Maximum 4 vols pour un itinéraire multi-destinations.'); return; }
+                var newRow = rows[rows.length - 1].cloneNode(true);
+                newRow.dataset.leg = rows.length;
+                newRow.querySelectorAll('input[type=text]:not(.leg-date)').forEach(function(i) { i.value = ''; });
+                var dateInput = newRow.querySelector('.leg-date');
+                dateInput.value = '';
+                dateInput.removeAttribute('data-fp');
+                if (dateInput._flatpickr) dateInput._flatpickr.destroy();
+                legsContainer.insertBefore(newRow, addLegBtn);
+                flatpickr(dateInput, Object.assign({}, commonConfig, { defaultDate: formatDate(addDays(new Date(), 1 + rows.length * 3)) }));
+                bindLegRemove(newRow);
+            });
+
+            function bindLegRemove(row) {
+                row.querySelector('.leg-remove').addEventListener('click', function() {
+                    if (legsContainer.querySelectorAll('.leg-row').length <= 2) { showToast('Un itinéraire multi-destinations nécessite au moins 2 vols.'); return; }
+                    row.remove();
+                });
+            }
+            legsContainer.querySelectorAll('.leg-row').forEach(bindLegRemove);
+        }
+
+        // --- Recherche ---
+        function requireValue(id, message) {
+            var el = document.getElementById(id);
+            var value = el ? el.value.trim() : '';
+            if (!value) { flagFieldError(el);
+                showToast(message); }
+            return value;
+        }
+
+        var searchBtns = document.querySelectorAll('[data-search]');
+        if (searchBtns.length > 0) {
+            searchBtns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var type = btn.dataset.search,
+                        params;
+
+                    if (type === 'hotel') {
+                        var destination = requireValue('hotelDestination', 'Veuillez indiquer une destination.');
+                        if (!destination) return;
+                        params = new URLSearchParams({ destination: destination, checkin: document.getElementById('hotelCheckin').value, checkout: document.getElementById('hotelCheckout').value, rooms: counts.rooms, adults: counts.adults, children: counts.children });
+                        window.location.href = 'resultats-hebergement.html?' + params.toString();
+
+                    } else if (type === 'flight') {
+                        var tripType = document.querySelector('[data-toggle=tripType] .pill-btn[aria-pressed=true]').dataset.trip;
+                        var cabin = (document.querySelector('.cabin-select') || {}).value || 'ECONOMY';
+
+                        if (tripType === 'multi') {
+                            var legs = [];
+                            var valid = true;
+                            legsContainer.querySelectorAll('.leg-row').forEach(function(row) {
+                                var o = row.querySelector('.leg-origin').value.trim();
+                                var d = row.querySelector('.leg-destination').value.trim();
+                                var dt = row.querySelector('.leg-date').value;
+                                if (!o || !d || !dt) valid = false;
+                                legs.push({ origin: o, destination: d, date: dt });
+                            });
+                            if (!valid) { showToast('Merci de compléter tous les vols de votre itinéraire.'); return; }
+                            params = new URLSearchParams({ tripType: 'multi', legs: JSON.stringify(legs), adults: counts.fadults, children: counts.fchildren, infantsLap: counts.finfantslap, infantsSeat: counts.finfantsseat, cabin: cabin });
+                            window.location.href = 'resultats-vols.html?' + params.toString();
+                        } else {
+                            var origin = requireValue('flightOrigin', "Veuillez indiquer une ville d'origine.");
+                            var dest = requireValue('flightDestination', 'Veuillez indiquer une destination.');
+                            if (!origin || !dest) return;
+                            params = new URLSearchParams({ tripType: tripType, origin: origin, destination: dest, departure: document.getElementById('flightDeparture').value, adults: counts.fadults, children: counts.fchildren, infantsLap: counts.finfantslap, infantsSeat: counts.finfantsseat, cabin: cabin });
+                            if (tripType === 'round') params.append('return', document.getElementById('flightReturn').value);
+                            window.location.href = 'resultats-vols.html?' + params.toString();
+                        }
+
+                    } else if (type === 'package') {
+                        var pkgDest = requireValue('pkgDestination', 'Veuillez indiquer une destination.');
+                        if (!pkgDest) return;
+                        params = new URLSearchParams({
+                            origin: document.getElementById('pkgOrigin').value,
+                            destination: pkgDest,
+                            checkin: document.getElementById('pkgCheckin').value,
+                            checkout: document.getElementById('pkgCheckout').value,
+                            rooms: counts.krooms,
+                            adults: counts.kadults,
+                            children: counts.kchildren,
+                            activities: document.getElementById('pkgActivities').checked ? '1' : '0',
+                            type: document.getElementById('pkgType').value
+                        });
+                        window.location.href = 'resultats-package.html?' + params.toString();
+                    }
+                });
+            });
+        }
+
+        // --- Chargement des données ---
+        // ✅ Vérifier que les éléments existent avant de charger
+        if (document.getElementById('recommendedHotels')) {
+            loadRecommendations();
+        }
+        if (document.getElementById('nearbyHotels')) {
+            loadNearbyHotels();
+        }
+        if (document.getElementById('collectionsContainer')) {
+            loadAllCollections();
+        }
+
+        // --- Recherches récentes ---
+        // ✅ Vérifier que la section existe avant de l'initialiser
+        if (document.getElementById('recentSearchesCarousel')) {
+            showRecentSkeletons(3);
+            setTimeout(function() {
+                displayRecentSearches();
+            }, 300);
+            setupSearchSaving();
+        }
+
+        // --- Intersection Observer pour les animations ---
+        var revealElements = document.querySelectorAll('.reveal');
+        if (revealElements.length > 0) {
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(e) {
+                    if (e.isIntersecting) e.target.classList.add('in');
+                });
+            }, { threshold: 0.12 });
+            revealElements.forEach(function(el) {
+                observer.observe(el);
+            });
+        }
+
+        console.log('LuviaPlace connecté au backend :', API_BASE_URL);
+    });
+
     // ============================================
     // GESTIONNAIRE MODALE LANGUE + DEVISES
     // ============================================
@@ -941,22 +942,41 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 
 // ============================================
-// AUTHENTIFICATION SUPABASE - GOOGLE
+// AUTHENTIFICATION SUPABASE - GOOGLE (CORRIGÉ)
 // ============================================
 (function() {
     'use strict';
 
+    // ✅ Vérifier que Supabase est disponible
+    if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
+        console.warn('⚠️ Supabase non chargé, authentification désactivée');
+        return;
+    }
+
     const SUPABASE_URL = 'https://ukbekfcjfcjcqrpxfpmq.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrYmVrZmNqZmNqY3FycHhmcG1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDk2NzcsImV4cCI6MjA4OTkyNTY3N30.KK3nxQOLTi3IZjYoRtrNC6mS_ixSsrZMI3J4WfxJVYU';
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-            autoRefreshToken: true,
-            persistSession: true,
-            detectSessionInUrl: true,
-            flowType: 'pkce'
-        }
-    });
+    let supabase = null;
+    
+    try {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true,
+                flowType: 'pkce'
+            }
+        });
+        console.log('✅ Supabase client initialisé');
+    } catch (e) {
+        console.error('❌ Erreur initialisation Supabase:', e);
+        return;
+    }
+
+    if (!supabase) {
+        console.warn('⚠️ Supabase non disponible');
+        return;
+    }
 
     function getRedirectUrl() {
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -980,7 +1000,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let currentUser = null;
 
-    function showAuthToast(message, type = 'info') {
+    function showAuthToast(message, type) {
+        type = type || 'info';
         let toast = document.getElementById('authToast');
         if (!toast) {
             toast = document.createElement('div');
@@ -993,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (type === 'error') toast.classList.add('error');
         if (type === 'success') toast.classList.add('success');
         clearTimeout(toast._timer);
-        toast._timer = setTimeout(() => {
+        toast._timer = setTimeout(function() {
             toast.classList.remove('show');
         }, 3500);
     }
@@ -1013,81 +1034,81 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateUserUI(user) {
-    var loginBtnEl = document.getElementById('loginBtn');
-    var accountTrigger = document.getElementById('accountTrigger');
-    var avatarName = document.getElementById('avatarName');
-    var avatarInitials = document.getElementById('avatarInitials');
+        var loginBtnEl = document.getElementById('loginBtn');
+        var accountTrigger = document.getElementById('accountTrigger');
+        var avatarName = document.getElementById('avatarName');
+        var avatarInitials = document.getElementById('avatarInitials');
 
-    var authUserInfoEl = document.getElementById('authUserInfo');
-    var authLoginSectionEl = document.getElementById('authLoginSection');
-    var userNameEl = document.getElementById('userName');
-    var userEmailEl = document.getElementById('userEmail');
-    var userAvatarEl = document.getElementById('userAvatar');
+        var authUserInfoEl = document.getElementById('authUserInfo');
+        var authLoginSectionEl = document.getElementById('authLoginSection');
+        var userNameEl = document.getElementById('userName');
+        var userEmailEl = document.getElementById('userEmail');
+        var userAvatarEl = document.getElementById('userAvatar');
 
-    // ✅ ÉLÉMENTS DU DROPDOWN
-    var accountName = document.getElementById('accountName');
-    var accountEmail = document.getElementById('accountEmail');
-    var accountAvatar = document.getElementById('accountAvatar');
+        // ✅ ÉLÉMENTS DU DROPDOWN
+        var accountName = document.getElementById('accountName');
+        var accountEmail = document.getElementById('accountEmail');
+        var accountAvatar = document.getElementById('accountAvatar');
 
-    if (user) {
-        if (authUserInfoEl) authUserInfoEl.style.display = 'block';
-        if (authLoginSectionEl) authLoginSectionEl.style.display = 'none';
+        if (user) {
+            if (authUserInfoEl) authUserInfoEl.style.display = 'block';
+            if (authLoginSectionEl) authLoginSectionEl.style.display = 'none';
 
-        var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
-        var email = user.email || 'email@exemple.com';
+            var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+            var email = user.email || 'email@exemple.com';
 
-        // Mettre à jour les infos dans la modale d'authentification
-        if (userNameEl) userNameEl.textContent = name;
-        if (userEmailEl) userEmailEl.textContent = email;
+            // Mettre à jour les infos dans la modale d'authentification
+            if (userNameEl) userNameEl.textContent = name;
+            if (userEmailEl) userEmailEl.textContent = email;
 
-        var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
-        if (userAvatarEl) userAvatarEl.textContent = initials;
+            var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
+            if (userAvatarEl) userAvatarEl.textContent = initials;
 
-        // ✅ Mettre à jour le bouton login (le cacher)
-        if (loginBtnEl) {
-            loginBtnEl.style.display = 'none';
-            loginBtnEl.dataset.loggedIn = 'true';
+            // ✅ Mettre à jour le bouton login (le cacher)
+            if (loginBtnEl) {
+                loginBtnEl.style.display = 'none';
+                loginBtnEl.dataset.loggedIn = 'true';
+            }
+
+            // ✅ Mettre à jour le trigger de l'avatar
+            if (accountTrigger) {
+                accountTrigger.style.display = 'flex';
+            }
+            if (avatarName) avatarName.textContent = name;
+            if (avatarInitials) avatarInitials.textContent = initials;
+
+            // ✅ Mettre à jour LE DROPDOWN
+            if (accountName) accountName.textContent = name;
+            if (accountEmail) accountEmail.textContent = email;
+            if (accountAvatar) accountAvatar.textContent = initials;
+
+            // ✅ Émettre l'événement
+            document.dispatchEvent(new CustomEvent('userLoggedIn', {
+                detail: { user: user }
+            }));
+
+            console.log('✅ Utilisateur connecté:', name, email);
+
+        } else {
+            if (authUserInfoEl) authUserInfoEl.style.display = 'none';
+            if (authLoginSectionEl) authLoginSectionEl.style.display = 'block';
+
+            if (loginBtnEl) {
+                loginBtnEl.style.display = 'block';
+                loginBtnEl.dataset.loggedIn = 'false';
+            }
+            if (accountTrigger) accountTrigger.style.display = 'none';
+
+            document.dispatchEvent(new CustomEvent('userLoggedOut'));
+            console.log('🔓 Utilisateur déconnecté');
         }
 
-        // ✅ Mettre à jour le trigger de l'avatar
-        if (accountTrigger) {
-            accountTrigger.style.display = 'flex';
-        }
-        if (avatarName) avatarName.textContent = name;
-        if (avatarInitials) avatarInitials.textContent = initials;
-
-        // ✅ Mettre à jour LE DROPDOWN
-        if (accountName) accountName.textContent = name;
-        if (accountEmail) accountEmail.textContent = email;
-        if (accountAvatar) accountAvatar.textContent = initials;
-
-        // ✅ Émettre l'événement
-        document.dispatchEvent(new CustomEvent('userLoggedIn', {
-            detail: { user: user }
-        }));
-
-        console.log('✅ Utilisateur connecté:', name, email);
-
-    } else {
-        if (authUserInfoEl) authUserInfoEl.style.display = 'none';
-        if (authLoginSectionEl) authLoginSectionEl.style.display = 'block';
-
-        if (loginBtnEl) {
-            loginBtnEl.style.display = 'block';
-            loginBtnEl.dataset.loggedIn = 'false';
-        }
-        if (accountTrigger) accountTrigger.style.display = 'none';
-
-        document.dispatchEvent(new CustomEvent('userLoggedOut'));
-        console.log('🔓 Utilisateur déconnecté');
+        localStorage.setItem('luviaplace_user', JSON.stringify(user));
     }
-
-    localStorage.setItem('luviaplace_user', JSON.stringify(user));
-}
 
     // ✅ ÉVÉNEMENT CLIC SUR L'AVATAR
     document.addEventListener('DOMContentLoaded', function() {
-        const accountTrigger = document.getElementById('accountTrigger');
+        var accountTrigger = document.getElementById('accountTrigger');
         
         if (accountTrigger) {
             accountTrigger.addEventListener('click', function(e) {
@@ -1108,10 +1129,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 googleBtn.innerHTML = '<span>⏳ Connexion en cours...</span>';
             }
 
-            const redirectUrl = getRedirectUrl();
+            var redirectUrl = getRedirectUrl();
             console.log('🔗 URL de redirection:', redirectUrl);
 
-            const { data, error } = await supabase.auth.signInWithOAuth({
+            var result = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
                     redirectTo: redirectUrl,
@@ -1122,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            if (error) throw error;
+            if (result.error) throw result.error;
             console.log('✅ Redirection vers Google...');
 
         } catch (error) {
@@ -1146,8 +1167,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function signOut() {
         try {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
+            var result = await supabase.auth.signOut();
+            if (result.error) throw result.error;
             currentUser = null;
             updateUserUI(null);
             closeAuthModal();
@@ -1160,23 +1181,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function getSession() {
         try {
-            const { data: { session }, error } = await supabase.auth.getSession();
-            if (error) throw error;
+            var result = await supabase.auth.getSession();
+            if (result.error) throw result.error;
 
-            if (session?.user) {
-                currentUser = session.user;
-                updateUserUI(session.user);
-                return session.user;
+            if (result.data?.session?.user) {
+                currentUser = result.data.session.user;
+                updateUserUI(result.data.session.user);
+                return result.data.session.user;
             } else {
-                const cached = localStorage.getItem('luviaplace_user');
+                var cached = localStorage.getItem('luviaplace_user');
                 if (cached) {
                     try {
-                        const user = JSON.parse(cached);
+                        var user = JSON.parse(cached);
                         if (user?.email) {
-                            const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
-                            if (!userError && currentUser) {
-                                updateUserUI(currentUser);
-                                return currentUser;
+                            var userResult = await supabase.auth.getUser();
+                            if (!userResult.error && userResult.data?.user) {
+                                updateUserUI(userResult.data.user);
+                                return userResult.data.user;
                             }
                         }
                     } catch (e) {}
@@ -1193,24 +1214,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function handleAuthCallback() {
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            const accessToken = urlParams.get('access_token');
+            var urlParams = new URLSearchParams(window.location.search);
+            var code = urlParams.get('code');
+            var accessToken = urlParams.get('access_token');
 
             if (code || accessToken) {
                 console.log('✅ Token détecté, récupération de la session...');
-                const { data: { session }, error } = await supabase.auth.getSession();
+                var result = await supabase.auth.getSession();
 
-                if (error) {
-                    console.error('❌ Erreur récupération session:', error);
+                if (result.error) {
+                    console.error('❌ Erreur récupération session:', result.error);
                     return;
                 }
 
-                if (session?.user) {
-                    currentUser = session.user;
-                    updateUserUI(session.user);
+                if (result.data?.session?.user) {
+                    currentUser = result.data.session.user;
+                    updateUserUI(result.data.session.user);
                     closeAuthModal();
-                    showAuthToast('Bienvenue ' + (session.user.user_metadata?.full_name || session.user.email), 'success');
+                    showAuthToast('Bienvenue ' + (result.data.session.user.user_metadata?.full_name || result.data.session.user.email), 'success');
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
             }
@@ -1220,35 +1241,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ============================================
-    // ✅ ÉVÉNEMENTS - UN SEUL ÉVÉNEMENT SUR loginBtn
+    // ✅ ÉVÉNEMENTS
     // ============================================
 
     if (loginBtn) {
-        const newLoginBtn = loginBtn.cloneNode(true);
+        var newLoginBtn = loginBtn.cloneNode(true);
         loginBtn.parentNode.replaceChild(newLoginBtn, loginBtn);
         
-        const updatedLoginBtn = document.getElementById('loginBtn');
+        var updatedLoginBtn = document.getElementById('loginBtn');
         
         updatedLoginBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
 
-            console.log('🖱️ Clic loginBtn, loggedIn:', this.dataset.loggedIn);
-
-            const isLoggedIn = this.dataset.loggedIn === 'true' || currentUser !== null;
+            var isLoggedIn = this.dataset.loggedIn === 'true' || currentUser !== null;
 
             if (isLoggedIn) {
-                console.log('👤 Ouverture du dropdown');
                 if (window.accountDropdown && window.accountDropdown.toggle) {
                     window.accountDropdown.toggle();
                 } else {
-                    const dropdown = document.getElementById('accountDropdown');
-                    const overlay = document.getElementById('accountDropdownOverlay');
+                    var dropdown = document.getElementById('accountDropdown');
+                    var overlay = document.getElementById('accountDropdownOverlay');
                     if (dropdown) dropdown.classList.toggle('active');
                     if (overlay) overlay.classList.toggle('active');
                 }
             } else {
-                console.log('🔓 Ouverture de la modale');
                 openAuthModal();
             }
         });
@@ -1295,33 +1312,31 @@ document.addEventListener('DOMContentLoaded', function() {
     // INITIALISATION
     // ============================================
     document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🔐 Initialisation de l\'authentification...');
-    
-    // ✅ Récupérer l'utilisateur depuis le cache
-    var cachedUser = localStorage.getItem('luviaplace_user');
-    if (cachedUser) {
-        try {
-            var user = JSON.parse(cachedUser);
-            if (user && user.email) {
-                // ✅ Mettre à jour l'UI immédiatement
-                updateUserUI(user);
-                updateAccountUI(user);
-            }
-        } catch (e) {
-            console.warn('⚠️ Erreur lecture cache:', e);
-        }
-    }
-    
-    await getSession();
-    await handleAuthCallback();
-});
         console.log('🔐 Initialisation de l\'authentification...');
+        
+        // ✅ Récupérer l'utilisateur depuis le cache
+        var cachedUser = localStorage.getItem('luviaplace_user');
+        if (cachedUser) {
+            try {
+                var user = JSON.parse(cachedUser);
+                if (user && user.email) {
+                    // ✅ Mettre à jour l'UI immédiatement
+                    updateUserUI(user);
+                    if (typeof window.accountDropdown !== 'undefined' && window.accountDropdown.updateUI) {
+                        window.accountDropdown.updateUI(user);
+                    }
+                }
+            } catch (e) {
+                console.warn('⚠️ Erreur lecture cache:', e);
+            }
+        }
+        
         await getSession();
         await handleAuthCallback();
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const error = urlParams.get('error');
-        const errorDescription = urlParams.get('error_description');
+        var urlParams = new URLSearchParams(window.location.search);
+        var error = urlParams.get('error');
+        var errorDescription = urlParams.get('error_description');
 
         if (error) {
             console.error('❌ Erreur OAuth:', error, errorDescription);
@@ -1338,8 +1353,8 @@ document.addEventListener('DOMContentLoaded', function() {
         signInWithGoogle: signInWithGoogle,
         signOut: signOut,
         getSession: getSession,
-        getUser: () => currentUser,
-        isLoggedIn: () => !!currentUser,
+        getUser: function() { return currentUser; },
+        isLoggedIn: function() { return !!currentUser; },
         openModal: openAuthModal,
         closeModal: closeAuthModal,
         showToast: showAuthToast
@@ -1353,40 +1368,40 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 
 // ============================================
-// ACCOUNT DROPDOWN - GESTION DU MENU UTILISATEUR
+// ACCOUNT DROPDOWN - GESTION DU MENU UTILISATEUR (CORRIGÉ)
 // ============================================
 (function() {
     'use strict';
 
-    const accountDropdown = document.getElementById('accountDropdown');
-    const accountDropdownOverlay = document.getElementById('accountDropdownOverlay');
-    const accountName = document.getElementById('accountName');
-    const accountEmail = document.getElementById('accountEmail');
-    const accountAvatar = document.getElementById('accountAvatar');
-    const accountLogoutBtn = document.getElementById('accountLogoutBtn');
+    var accountDropdown = document.getElementById('accountDropdown');
+    var accountDropdownOverlay = document.getElementById('accountDropdownOverlay');
+    var accountName = document.getElementById('accountName');
+    var accountEmail = document.getElementById('accountEmail');
+    var accountAvatar = document.getElementById('accountAvatar');
+    var accountLogoutBtn = document.getElementById('accountLogoutBtn');
 
-    let isDropdownOpen = false;
+    // ✅ Vérifier que les éléments existent
+    if (!accountDropdown || !accountDropdownOverlay) {
+        console.warn('⚠️ Éléments dropdown manquants, désactivation');
+        return;
+    }
+
+    var isDropdownOpen = false;
 
     function openAccountDropdown() {
-        if (accountDropdown) {
-            accountDropdown.classList.add('active');
-            isDropdownOpen = true;
-            if (accountDropdownOverlay) {
-                accountDropdownOverlay.classList.add('active');
-            }
-            document.body.style.overflow = window.innerWidth <= 600 ? 'hidden' : '';
+        accountDropdown.classList.add('active');
+        isDropdownOpen = true;
+        accountDropdownOverlay.classList.add('active');
+        if (window.innerWidth <= 600) {
+            document.body.style.overflow = 'hidden';
         }
     }
 
     function closeAccountDropdown() {
-        if (accountDropdown) {
-            accountDropdown.classList.remove('active');
-            isDropdownOpen = false;
-            if (accountDropdownOverlay) {
-                accountDropdownOverlay.classList.remove('active');
-            }
-            document.body.style.overflow = '';
-        }
+        accountDropdown.classList.remove('active');
+        isDropdownOpen = false;
+        accountDropdownOverlay.classList.remove('active');
+        document.body.style.overflow = '';
     }
 
     function toggleAccountDropdown() {
@@ -1398,22 +1413,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateAccountUI(user) {
-    if (user) {
-        var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
-        var email = user.email || 'email@exemple.com';
+        if (user) {
+            var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+            var email = user.email || 'email@exemple.com';
 
-        if (accountName) accountName.textContent = name;
-        if (accountEmail) accountEmail.textContent = email;
+            if (accountName) accountName.textContent = name;
+            if (accountEmail) accountEmail.textContent = email;
 
-        var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
-        if (accountAvatar) accountAvatar.textContent = initials;
+            var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
+            if (accountAvatar) accountAvatar.textContent = initials;
 
-        closeAccountDropdown();
+            closeAccountDropdown();
 
-    } else {
-        closeAccountDropdown();
+        } else {
+            closeAccountDropdown();
+        }
     }
-}
 
     if (accountDropdownOverlay) {
         accountDropdownOverlay.addEventListener('click', closeAccountDropdown);
@@ -1426,8 +1441,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.addEventListener('click', function(e) {
-        const isLoginBtnClick = e.target.closest('#loginBtn');
-        const isDropdownContent = e.target.closest('.account-dropdown');
+        var isLoginBtnClick = e.target.closest('#loginBtn');
+        var isDropdownContent = e.target.closest('.account-dropdown');
 
         if (isLoginBtnClick) return;
         if (isDropdownContent) return;
@@ -1452,7 +1467,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.addEventListener('userLoggedIn', function(e) {
-        updateAccountUI(e.detail.user);
+        if (e.detail && e.detail.user) {
+            updateAccountUI(e.detail.user);
+        }
         closeAccountDropdown();
     });
 
@@ -1462,10 +1479,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.addEventListener('DOMContentLoaded', function() {
-        const cachedUser = localStorage.getItem('luviaplace_user');
+        var cachedUser = localStorage.getItem('luviaplace_user');
         if (cachedUser) {
             try {
-                const user = JSON.parse(cachedUser);
+                var user = JSON.parse(cachedUser);
                 if (user?.email) {
                     updateAccountUI(user);
                 }
@@ -1478,7 +1495,7 @@ document.addEventListener('DOMContentLoaded', function() {
         close: closeAccountDropdown,
         toggle: toggleAccountDropdown,
         updateUI: updateAccountUI,
-        isOpen: () => isDropdownOpen
+        isOpen: function() { return isDropdownOpen; }
     };
 
     console.log('👤 Account dropdown initialisé');
@@ -1489,19 +1506,21 @@ document.addEventListener('DOMContentLoaded', function() {
 // RÉCUPÉRATION LUVIA COINS
 // ============================================
 document.addEventListener('userLoggedIn', function(e) {
-    const user = e.detail.user;
+    var user = e.detail.user;
     console.log('🎉 Utilisateur connecté, bienvenue !');
-    fetchLuviaCoins(user.id);
+    if (user && user.id) {
+        fetchLuviaCoins(user.id);
+    }
 });
 
 async function fetchLuviaCoins(userId) {
     try {
-        const response = await fetch(`/api/loyalty/coins?userId=${userId}`);
-        const data = await response.json();
+        var response = await fetch('/api/loyalty/coins?userId=' + encodeURIComponent(userId));
+        var data = await response.json();
 
         if (data.success) {
             console.log('💰 LuviaCoins:', data.coins);
-            const coinsElement = document.getElementById('luviaCoins');
+            var coinsElement = document.getElementById('luviaCoins');
             if (coinsElement) {
                 coinsElement.textContent = data.coins + ' LuviaCoins';
             }
@@ -1515,16 +1534,23 @@ async function fetchLuviaCoins(userId) {
 // RECHERCHES RÉCENTES - CAROUSEL
 // ============================================
 
-const RECENT_SEARCHES_KEY = 'luviaplace_recent_searches';
-const MAX_RECENT_SEARCHES = 6;
-const RECENT_CAROUSEL_IMAGE = 'https://images.unsplash.com/photo-1717343824623-06293a62a70d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fG1hcHxlbnwwfHwwfHx8MA%3D%3D';
+var RECENT_SEARCHES_KEY = 'luviaplace_recent_searches';
+var MAX_RECENT_SEARCHES = 6;
+var RECENT_CAROUSEL_IMAGE = 'https://images.unsplash.com/photo-1717343824623-06293a62a70d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fG1hcHxlbnwwfHwwfHx8MA%3D%3D';
+
+function escapeHtml(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
 
 // ============================================
 // FORMATER UNE DATE POUR L'AFFICHAGE
 // ============================================
 function formatDisplayDate(dateStr) {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
+    var d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
     return d.toLocaleDateString('fr-FR', { 
         day: 'numeric',
@@ -1537,9 +1563,9 @@ function formatDisplayDate(dateStr) {
 // ============================================
 function saveRecentSearch(searchData) {
     try {
-        let searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+        var searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
         
-        const exists = searches.some(function(s) {
+        var exists = searches.some(function(s) {
             return s.destination === searchData.destination && 
                    s.checkin === searchData.checkin && 
                    s.checkout === searchData.checkout &&
@@ -1547,11 +1573,11 @@ function saveRecentSearch(searchData) {
         });
         
         if (!exists) {
-            searches.unshift({
-                ...searchData,
+            var newSearch = Object.assign({}, searchData, {
                 timestamp: new Date().toISOString(),
                 id: Date.now()
             });
+            searches.unshift(newSearch);
             
             if (searches.length > MAX_RECENT_SEARCHES) {
                 searches = searches.slice(0, MAX_RECENT_SEARCHES);
@@ -1585,7 +1611,7 @@ function getRecentSearches() {
 // ============================================
 function buildSearchUrl(search) {
     if (search.type === 'flight') {
-        const params = new URLSearchParams({
+        var params = new URLSearchParams({
             tripType: search.tripType || 'round',
             origin: search.origin || '',
             destination: search.destination || '',
@@ -1597,7 +1623,7 @@ function buildSearchUrl(search) {
         }
         return 'resultats-vols.html?' + params.toString();
     } else if (search.type === 'package') {
-        const params = new URLSearchParams({
+        var params = new URLSearchParams({
             destination: search.destination || '',
             checkin: search.checkin || '',
             checkout: search.checkout || '',
@@ -1607,7 +1633,7 @@ function buildSearchUrl(search) {
         });
         return 'resultats-package.html?' + params.toString();
     } else {
-        const params = new URLSearchParams({
+        var params = new URLSearchParams({
             destination: search.destination || '',
             checkin: search.checkin || '',
             checkout: search.checkout || '',
@@ -1623,7 +1649,7 @@ function buildSearchUrl(search) {
 // AFFICHER LES SKELETONS
 // ============================================
 function showRecentSkeletons(count) {
-    const container = document.getElementById('recentSearchesCarousel');
+    var container = document.getElementById('recentSearchesCarousel');
     if (!container) return;
     
     container.innerHTML = Array.from({ length: count || 3 }).map(function() {
@@ -1643,12 +1669,12 @@ function showRecentSkeletons(count) {
 // AFFICHER LES RECHERCHES RÉCENTES
 // ============================================
 function displayRecentSearches() {
-    const section = document.getElementById('recentSearchesSection');
-    const container = document.getElementById('recentSearchesCarousel');
+    var section = document.getElementById('recentSearchesSection');
+    var container = document.getElementById('recentSearchesCarousel');
     
     if (!section || !container) return;
     
-    const searches = getRecentSearches();
+    var searches = getRecentSearches();
     
     if (searches.length === 0) {
         section.classList.remove('visible');
@@ -1659,15 +1685,15 @@ function displayRecentSearches() {
     section.classList.add('visible');
     
     container.innerHTML = searches.map(function(search) {
-        let title = search.destination || 'Recherche';
+        var title = search.destination || 'Recherche';
         if (search.type === 'flight') {
             title = (search.origin || '') + ' → ' + (search.destination || '');
         } else if (search.type === 'package') {
             title = 'Package ' + (search.destination || '');
         }
         
-        let dates = '';
-        let guests = '';
+        var dates = '';
+        var guests = '';
         
         if (search.type === 'flight') {
             dates = formatDisplayDate(search.departure);
@@ -1677,11 +1703,11 @@ function displayRecentSearches() {
             guests = (search.adults || 1) + ' passager' + (search.adults > 1 ? 's' : '');
         } else {
             dates = formatDisplayDate(search.checkin) + ' → ' + formatDisplayDate(search.checkout);
-            const totalGuests = (search.adults || 2) + (search.children || 0);
+            var totalGuests = (search.adults || 2) + (search.children || 0);
             guests = totalGuests + ' client' + (totalGuests > 1 ? 's' : '');
         }
         
-        const url = buildSearchUrl(search);
+        var url = buildSearchUrl(search);
         
         return `
             <a href="${url}" class="recent-search-card" data-search-id="${search.id}" data-search-type="${search.type || 'hotel'}">
@@ -1706,8 +1732,8 @@ function displayRecentSearches() {
 // ============================================
 function removeRecentSearch(searchId) {
     try {
-        let searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
-        searches = searches.filter(s => s.id !== searchId);
+        var searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+        searches = searches.filter(function(s) { return s.id !== searchId; });
         localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
         displayRecentSearches();
     } catch (error) {
@@ -1729,12 +1755,12 @@ function clearRecentSearches() {
 // INTERCEPTEUR DE RECHERCHE
 // ============================================
 function setupSearchSaving() {
-    const hotelSearchBtn = document.querySelector('[data-search="hotel"]');
+    var hotelSearchBtn = document.querySelector('[data-search="hotel"]');
     if (hotelSearchBtn) {
         hotelSearchBtn.addEventListener('click', function() {
-            const destination = document.getElementById('hotelDestination')?.value || '';
-            const checkin = document.getElementById('hotelCheckin')?.value || '';
-            const checkout = document.getElementById('hotelCheckout')?.value || '';
+            var destination = document.getElementById('hotelDestination')?.value || '';
+            var checkin = document.getElementById('hotelCheckin')?.value || '';
+            var checkout = document.getElementById('hotelCheckout')?.value || '';
             
             if (destination) {
                 saveRecentSearch({
@@ -1750,14 +1776,14 @@ function setupSearchSaving() {
         });
     }
     
-    const flightSearchBtn = document.querySelector('[data-search="flight"]');
+    var flightSearchBtn = document.querySelector('[data-search="flight"]');
     if (flightSearchBtn) {
         flightSearchBtn.addEventListener('click', function() {
-            const origin = document.getElementById('flightOrigin')?.value || '';
-            const destination = document.getElementById('flightDestination')?.value || '';
-            const departure = document.getElementById('flightDeparture')?.value || '';
-            const returnDate = document.getElementById('flightReturn')?.value || '';
-            const tripType = document.querySelector('[data-toggle=tripType] .pill-btn[aria-pressed="true"]')?.dataset?.trip || 'round';
+            var origin = document.getElementById('flightOrigin')?.value || '';
+            var destination = document.getElementById('flightDestination')?.value || '';
+            var departure = document.getElementById('flightDeparture')?.value || '';
+            var returnDate = document.getElementById('flightReturn')?.value || '';
+            var tripType = document.querySelector('[data-toggle=tripType] .pill-btn[aria-pressed="true"]')?.dataset?.trip || 'round';
             
             if (origin && destination) {
                 saveRecentSearch({
@@ -1773,12 +1799,12 @@ function setupSearchSaving() {
         });
     }
     
-    const pkgSearchBtn = document.querySelector('[data-search="package"]');
+    var pkgSearchBtn = document.querySelector('[data-search="package"]');
     if (pkgSearchBtn) {
         pkgSearchBtn.addEventListener('click', function() {
-            const destination = document.getElementById('pkgDestination')?.value || '';
-            const checkin = document.getElementById('pkgCheckin')?.value || '';
-            const checkout = document.getElementById('pkgCheckout')?.value || '';
+            var destination = document.getElementById('pkgDestination')?.value || '';
+            var checkin = document.getElementById('pkgCheckin')?.value || '';
+            var checkout = document.getElementById('pkgCheckout')?.value || '';
             
             if (destination) {
                 saveRecentSearch({

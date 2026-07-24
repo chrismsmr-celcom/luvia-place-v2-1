@@ -1101,7 +1101,7 @@ app.get("/hotel-reviews", async (req, res) => {
       return {
         reviewerName: rv.reviewerName || rv.name || rv.author || 'Voyageur',
         comment: rv.comment || rv.text || rv.reviewComments || rv.review || '',
-        rating: rv.rating || rv.score || rv.overallRating || 0,
+        rating: rv.averageScore || rv.rating || rv.score || rv.overallRating || 0,
         date: rv.date || rv.reviewDate || '',
         pros: rv.pros || '',
         cons: rv.cons || '',

@@ -1,4 +1,4 @@
-// ============================================
+corrige l'entier et rends moi stp:  // ============================================
 // main.js - Fichier principal LuviaPlace (CORRIGÉ)
 // ============================================
 
@@ -414,43 +414,64 @@
     }
 
     // ============================================
-    // INITIALISATION - DOMContentLoaded
-    // ============================================
-    document.addEventListener('DOMContentLoaded', function() {
-        var tomorrow = addDays(new Date(), 1);
-        var commonConfig = { dateFormat: 'Y-m-d', locale: 'fr', altInput: true, altFormat: 'd M Y', minDate: formatDate(tomorrow), animate: true, monthSelectorType: 'dropdown' };
+// INITIALISATION - DOMContentLoaded (CORRIGÉ)
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    var tomorrow = addDays(new Date(), 1);
+    var commonConfig = { dateFormat: 'Y-m-d', locale: 'fr', altInput: true, altFormat: 'd M Y', minDate: formatDate(tomorrow), animate: true, monthSelectorType: 'dropdown' };
 
-        function setupDateRange(startId, endId, startOffset, endOffset, onNights) {
-            var startEl = document.getElementById(startId),
-                endEl = document.getElementById(endId);
-            if (!startEl || !endEl) return null;
-            var startDefault = formatDate(addDays(new Date(), startOffset)),
-                endDefault = formatDate(addDays(new Date(), endOffset));
-            startEl.value = startDefault;
-            endEl.value = endDefault;
-            var endPicker = flatpickr(endEl, Object.assign({}, commonConfig, { defaultDate: endDefault, minDate: startDefault, onChange: function(d, str) { if (onNights) onNights(startEl.value, str); } }));
-            var startPicker = flatpickr(startEl, Object.assign({}, commonConfig, { defaultDate: startDefault, onChange: function(d, str) { endPicker.set('minDate', str); if (onNights) onNights(str, endEl.value); } }));
-            if (onNights) onNights(startDefault, endDefault);
-            return { startPicker: startPicker, endPicker: endPicker };
-        }
+    function setupDateRange(startId, endId, startOffset, endOffset, onNights) {
+        var startEl = document.getElementById(startId),
+            endEl = document.getElementById(endId);
+        if (!startEl || !endEl) return null;
+        var startDefault = formatDate(addDays(new Date(), startOffset)),
+            endDefault = formatDate(addDays(new Date(), endOffset));
+        startEl.value = startDefault;
+        endEl.value = endDefault;
+        var endPicker = flatpickr(endEl, Object.assign({}, commonConfig, { defaultDate: endDefault, minDate: startDefault, onChange: function(d, str) { if (onNights) onNights(startEl.value, str); } }));
+        var startPicker = flatpickr(startEl, Object.assign({}, commonConfig, { defaultDate: startDefault, onChange: function(d, str) { endPicker.set('minDate', str); if (onNights) onNights(str, endEl.value); } }));
+        if (onNights) onNights(startDefault, endDefault);
+        return { startPicker: startPicker, endPicker: endPicker };
+    }
 
-        function updateNightsNote(noteId, start, end) {
-            var note = document.getElementById(noteId);
-            if (!note) return;
-            var n = getNights(start, end);
-            note.textContent = n > 0 ? n + ' nuit' + (n > 1 ? 's' : '') : '';
-        }
+    function updateNightsNote(noteId, start, end) {
+        var note = document.getElementById(noteId);
+        if (!note) return;
+        var n = getNights(start, end);
+        note.textContent = n > 0 ? n + ' nuit' + (n > 1 ? 's' : '') : '';
+    }
 
+    // ✅ Vérifier que les éléments existent avant de les utiliser
+    var hotelCheckin = document.getElementById('hotelCheckin');
+    var hotelCheckout = document.getElementById('hotelCheckout');
+    if (hotelCheckin && hotelCheckout) {
         setupDateRange('hotelCheckin', 'hotelCheckout', 1, 4, function(s, e) { updateNightsNote('hotelNightsNote', s, e); });
-        setupDateRange('flightDeparture', 'flightReturn', 1, 8);
-        setupDateRange('pkgCheckin', 'pkgCheckout', 1, 8, function(s, e) { updateNightsNote('pkgNightsNote', s, e); });
+    }
 
-        document.querySelectorAll('.leg-date').forEach(function(el, idx) {
+    var flightDeparture = document.getElementById('flightDeparture');
+    var flightReturn = document.getElementById('flightReturn');
+    if (flightDeparture && flightReturn) {
+        setupDateRange('flightDeparture', 'flightReturn', 1, 8);
+    }
+
+    var pkgCheckin = document.getElementById('pkgCheckin');
+    var pkgCheckout = document.getElementById('pkgCheckout');
+    if (pkgCheckin && pkgCheckout) {
+        setupDateRange('pkgCheckin', 'pkgCheckout', 1, 8, function(s, e) { updateNightsNote('pkgNightsNote', s, e); });
+    }
+
+    // ✅ Vérifier que les dates de vol existent
+    var legDates = document.querySelectorAll('.leg-date');
+    if (legDates.length > 0) {
+        legDates.forEach(function(el, idx) {
             flatpickr(el, Object.assign({}, commonConfig, { defaultDate: formatDate(addDays(new Date(), 1 + idx * 3)) }));
         });
+    }
 
-        // --- Onglets ---
-        document.querySelectorAll('#serviceTabs .service-tab').forEach(function(tab) {
+    // --- Onglets ---
+    var serviceTabs = document.querySelectorAll('#serviceTabs .service-tab');
+    if (serviceTabs.length > 0) {
+        serviceTabs.forEach(function(tab) {
             tab.addEventListener('click', function() {
                 document.querySelectorAll('#serviceTabs .service-tab').forEach(function(t) { t.setAttribute('aria-selected', 'false'); });
                 tab.setAttribute('aria-selected', 'true');
@@ -471,8 +492,42 @@
         } else {
             console.warn('⚠️ Onglet hôtel non trouvé sur cette page');
         }
+    }
 
-        // --- Autocomplétion ---
+    // ✅ INITIALISATION DE L'ÉTAT DE CONNEXION
+    var cachedUser = localStorage.getItem('luviaplace_user');
+    if (cachedUser) {
+        try {
+            var user = JSON.parse(cachedUser);
+            if (user && user.email) {
+                var loginBtns = document.querySelectorAll('#loginBtn, .btn-primary[data-i18n="nav.login"]');
+                var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+                loginBtns.forEach(function(btn) {
+                    btn.textContent = '👤 ' + name;
+                    btn.classList.add('logged-in');
+                    btn.dataset.loggedIn = 'true';
+                });
+                
+                var accountTrigger = document.getElementById('accountTrigger');
+                if (accountTrigger) {
+                    accountTrigger.style.display = 'flex';
+                    var avatarName = document.getElementById('avatarName');
+                    var avatarInitials = document.getElementById('avatarInitials');
+                    if (avatarName) avatarName.textContent = name;
+                    if (avatarInitials) {
+                        var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
+                        avatarInitials.textContent = initials;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ Erreur lecture cache utilisateur:', e);
+        }
+    }
+
+    // --- Autocomplétion ---
+    var suggestDropdowns = document.querySelectorAll('.suggest-dropdown');
+    if (suggestDropdowns.length > 0) {
         var recentSearches = ['Kinshasa, Gombe', 'Lubumbashi, Karavia', 'Goma, bord du lac'];
 
         function buildSuggestDropdown(container, allowAllAirports) {
@@ -485,7 +540,7 @@
 
         function closeAllPopovers() { document.querySelectorAll('.popover.open').forEach(function(p) { p.classList.remove('open'); }); }
 
-        document.querySelectorAll('.suggest-dropdown').forEach(function(dd) {
+        suggestDropdowns.forEach(function(dd) {
             var isFlightField = !!dd.closest('#simpleFlightFields');
             buildSuggestDropdown(dd);
             var input = dd.closest('.field') ? dd.closest('.field').querySelector('input[type=text]') : null;
@@ -530,38 +585,41 @@
         });
         document.addEventListener('click', function(e) { if (!e.target.closest('.field') && !e.target.closest('.leg-row')) { closeAllDropdowns();
                 closeAllPopovers(); } });
+    }
 
-        // --- Compteurs ---
-        var counts = { rooms: 1, adults: 2, children: 0, fadults: 1, fchildren: 0, finfantslap: 0, finfantsseat: 0, krooms: 1, kadults: 2, kchildren: 0 };
-        var mins = { rooms: 1, adults: 1, fadults: 1, krooms: 1, kadults: 1 };
+    // --- Compteurs ---
+    var counts = { rooms: 1, adults: 2, children: 0, fadults: 1, fchildren: 0, finfantslap: 0, finfantsseat: 0, krooms: 1, kadults: 2, kchildren: 0 };
+    var mins = { rooms: 1, adults: 1, fadults: 1, krooms: 1, kadults: 1 };
 
-        function renderChildAges(key, selector) {
-            var container = document.querySelector(selector);
-            if (!container) return;
-            var n = counts[key];
-            container.style.display = n > 0 ? 'flex' : 'none';
-            container.innerHTML = '';
-            for (var i = 0; i < n; i++) {
-                var sel = document.createElement('select');
-                sel.setAttribute('aria-label', "Âge de l'enfant " + (i + 1));
-                sel.innerHTML = '<option value="">Âge de l\'enfant ' + (i + 1) + '</option>' + Array.from({ length: 18 }, function(_, a) { return '<option value="' + a + '">' + a + ' an' + (a > 1 ? 's' : '') + '</option>'; }).join('');
-                container.appendChild(sel);
-            }
+    function renderChildAges(key, selector) {
+        var container = document.querySelector(selector);
+        if (!container) return;
+        var n = counts[key];
+        container.style.display = n > 0 ? 'flex' : 'none';
+        container.innerHTML = '';
+        for (var i = 0; i < n; i++) {
+            var sel = document.createElement('select');
+            sel.setAttribute('aria-label', "Âge de l'enfant " + (i + 1));
+            sel.innerHTML = '<option value="">Âge de l\'enfant ' + (i + 1) + '</option>' + Array.from({ length: 18 }, function(_, a) { return '<option value="' + a + '">' + a + ' an' + (a > 1 ? 's' : '') + '</option>'; }).join('');
+            container.appendChild(sel);
         }
+    }
 
-        function updateSummaries() {
-            var hotelBtn = document.querySelector('[data-panel=hotel] .guests-summary');
-            if (hotelBtn) hotelBtn.textContent = counts.rooms + ' chambre' + (counts.rooms > 1 ? 's' : '') + ', ' + counts.adults + ' adulte' + (counts.adults > 1 ? 's' : '') + (counts.children ? ', ' + counts.children + ' enfant' + (counts.children > 1 ? 's' : '') : '');
-            var flightBtn = document.querySelector('[data-panel=flight] .guests-summary');
-            var cabinSel = document.querySelector('.cabin-select');
-            var cabinLabel = cabinSel ? cabinSel.options[cabinSel.selectedIndex].text : 'Économie';
-            var totalInfants = counts.finfantslap + counts.finfantsseat;
-            if (flightBtn) flightBtn.textContent = counts.fadults + ' adulte' + (counts.fadults > 1 ? 's' : '') + (counts.fchildren ? ', ' + counts.fchildren + ' enf.' : '') + (totalInfants ? ', ' + totalInfants + ' bébé' + (totalInfants > 1 ? 's' : '') : '') + ', ' + cabinLabel;
-            var pkgBtn = document.querySelector('[data-panel=package] .guests-summary');
-            if (pkgBtn) pkgBtn.textContent = counts.krooms + ' chambre' + (counts.krooms > 1 ? 's' : '') + ', ' + counts.kadults + ' adulte' + (counts.kadults > 1 ? 's' : '') + (counts.kchildren ? ', ' + counts.kchildren + ' enfant' + (counts.kchildren > 1 ? 's' : '') : '');
-        }
+    function updateSummaries() {
+        var hotelBtn = document.querySelector('[data-panel=hotel] .guests-summary');
+        if (hotelBtn) hotelBtn.textContent = counts.rooms + ' chambre' + (counts.rooms > 1 ? 's' : '') + ', ' + counts.adults + ' adulte' + (counts.adults > 1 ? 's' : '') + (counts.children ? ', ' + counts.children + ' enfant' + (counts.children > 1 ? 's' : '') : '');
+        var flightBtn = document.querySelector('[data-panel=flight] .guests-summary');
+        var cabinSel = document.querySelector('.cabin-select');
+        var cabinLabel = cabinSel ? cabinSel.options[cabinSel.selectedIndex].text : 'Économie';
+        var totalInfants = counts.finfantslap + counts.finfantsseat;
+        if (flightBtn) flightBtn.textContent = counts.fadults + ' adulte' + (counts.fadults > 1 ? 's' : '') + (counts.fchildren ? ', ' + counts.fchildren + ' enf.' : '') + (totalInfants ? ', ' + totalInfants + ' bébé' + (totalInfants > 1 ? 's' : '') : '') + ', ' + cabinLabel;
+        var pkgBtn = document.querySelector('[data-panel=package] .guests-summary');
+        if (pkgBtn) pkgBtn.textContent = counts.krooms + ' chambre' + (counts.krooms > 1 ? 's' : '') + ', ' + counts.kadults + ' adulte' + (counts.kadults > 1 ? 's' : '') + (counts.kchildren ? ', ' + counts.kchildren + ' enfant' + (counts.kchildren > 1 ? 's' : '') : '');
+    }
 
-        document.querySelectorAll('.step-btn').forEach(function(btn) {
+    var stepBtns = document.querySelectorAll('.step-btn');
+    if (stepBtns.length > 0) {
+        stepBtns.forEach(function(btn) {
             btn.addEventListener('click', function() {
                 var key = btn.dataset.step,
                     dir = parseInt(btn.dataset.dir, 10),
@@ -573,11 +631,15 @@
                 updateSummaries();
             });
         });
-        var cabinSelect = document.querySelector('.cabin-select');
-        if (cabinSelect) cabinSelect.addEventListener('change', updateSummaries);
-        updateSummaries();
+    }
 
-        document.querySelectorAll('.guests-summary').forEach(function(btn) {
+    var cabinSelect = document.querySelector('.cabin-select');
+    if (cabinSelect) cabinSelect.addEventListener('change', updateSummaries);
+    updateSummaries();
+
+    var guestsSummary = document.querySelectorAll('.guests-summary');
+    if (guestsSummary.length > 0) {
+        guestsSummary.forEach(function(btn) {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 var pop = btn.closest('.field').querySelector('.popover');
@@ -588,10 +650,17 @@
                 if (!wasOpen) pop.classList.add('open');
             });
         });
-        document.querySelectorAll('[data-close-popover]').forEach(function(btn) { btn.addEventListener('click', closeAllPopovers); });
+    }
 
-        // --- Pills (trajet vol) ---
-        document.querySelectorAll('.pill-toggle').forEach(function(group) {
+    var closePopoverBtns = document.querySelectorAll('[data-close-popover]');
+    if (closePopoverBtns.length > 0) {
+        closePopoverBtns.forEach(function(btn) { btn.addEventListener('click', closeAllPopovers); });
+    }
+
+    // --- Pills (trajet vol) ---
+    var pillGroups = document.querySelectorAll('.pill-toggle');
+    if (pillGroups.length > 0) {
+        pillGroups.forEach(function(group) {
             group.querySelectorAll('.pill-btn').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     group.querySelectorAll('.pill-btn').forEach(function(b) { b.setAttribute('aria-pressed', 'false'); });
@@ -610,10 +679,13 @@
                 });
             });
         });
+    }
 
-        // --- Multi-destination : ajout/suppression d'étapes ---
-        var legsContainer = document.getElementById('legsContainer');
-        document.getElementById('addLegBtn').addEventListener('click', function() {
+    // --- Multi-destination ---
+    var legsContainer = document.getElementById('legsContainer');
+    var addLegBtn = document.getElementById('addLegBtn');
+    if (legsContainer && addLegBtn) {
+        addLegBtn.addEventListener('click', function() {
             var rows = legsContainer.querySelectorAll('.leg-row');
             if (rows.length >= 4) { showToast('Maximum 4 vols pour un itinéraire multi-destinations.'); return; }
             var newRow = rows[rows.length - 1].cloneNode(true);
@@ -623,7 +695,7 @@
             dateInput.value = '';
             dateInput.removeAttribute('data-fp');
             if (dateInput._flatpickr) dateInput._flatpickr.destroy();
-            legsContainer.insertBefore(newRow, document.getElementById('addLegBtn'));
+            legsContainer.insertBefore(newRow, addLegBtn);
             flatpickr(dateInput, Object.assign({}, commonConfig, { defaultDate: formatDate(addDays(new Date(), 1 + rows.length * 3)) }));
             bindLegRemove(newRow);
         });
@@ -635,17 +707,20 @@
             });
         }
         legsContainer.querySelectorAll('.leg-row').forEach(bindLegRemove);
+    }
 
-        // --- Recherche ---
-        function requireValue(id, message) {
-            var el = document.getElementById(id);
-            var value = el ? el.value.trim() : '';
-            if (!value) { flagFieldError(el);
-                showToast(message); }
-            return value;
-        }
+    // --- Recherche ---
+    function requireValue(id, message) {
+        var el = document.getElementById(id);
+        var value = el ? el.value.trim() : '';
+        if (!value) { flagFieldError(el);
+            showToast(message); }
+        return value;
+    }
 
-        document.querySelectorAll('[data-search]').forEach(function(btn) {
+    var searchBtns = document.querySelectorAll('[data-search]');
+    if (searchBtns.length > 0) {
+        searchBtns.forEach(function(btn) {
             btn.addEventListener('click', function() {
                 var type = btn.dataset.search,
                     params;
@@ -700,25 +775,45 @@
                 }
             });
         });
+    }
 
-        // --- Chargement des données ---
+    // --- Chargement des données ---
+    // ✅ Vérifier que les éléments existent avant de charger
+    if (document.getElementById('recommendedHotels')) {
         loadRecommendations();
+    }
+    if (document.getElementById('nearbyHotels')) {
         loadNearbyHotels();
+    }
+    if (document.getElementById('collectionsContainer')) {
         loadAllCollections();
+    }
 
-        // --- Intersection Observer pour les animations ---
+    // --- Recherches récentes ---
+    // ✅ Vérifier que la section existe avant de l'initialiser
+    if (document.getElementById('recentSearchesCarousel')) {
+        showRecentSkeletons(3);
+        setTimeout(function() {
+            displayRecentSearches();
+        }, 300);
+        setupSearchSaving();
+    }
+
+    // --- Intersection Observer pour les animations ---
+    var revealElements = document.querySelectorAll('.reveal');
+    if (revealElements.length > 0) {
         var observer = new IntersectionObserver(function(entries) {
             entries.forEach(function(e) {
                 if (e.isIntersecting) e.target.classList.add('in');
             });
         }, { threshold: 0.12 });
-        document.querySelectorAll('.reveal').forEach(function(el) {
+        revealElements.forEach(function(el) {
             observer.observe(el);
         });
+    }
 
-        console.log('LuviaPlace connecté au backend :', API_BASE_URL);
-    });
-
+    console.log('LuviaPlace connecté au backend :', API_BASE_URL);
+});
     // ============================================
     // GESTIONNAIRE MODALE LANGUE + DEVISES
     // ============================================
@@ -846,41 +941,22 @@
 })();
 
 // ============================================
-// AUTHENTIFICATION SUPABASE - GOOGLE (CORRIGÉ)
+// AUTHENTIFICATION SUPABASE - GOOGLE
 // ============================================
 (function() {
     'use strict';
 
-    // ✅ Vérifier que Supabase est disponible
-    if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
-        console.warn('⚠️ Supabase non chargé, authentification désactivée');
-        return;
-    }
-
     const SUPABASE_URL = 'https://ukbekfcjfcjcqrpxfpmq.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrYmVrZmNqZmNqY3FycHhmcG1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDk2NzcsImV4cCI6MjA4OTkyNTY3N30.KK3nxQOLTi3IZjYoRtrNC6mS_ixSsrZMI3J4WfxJVYU';
 
-    let supabase = null;
-    
-    try {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            auth: {
-                autoRefreshToken: true,
-                persistSession: true,
-                detectSessionInUrl: true,
-                flowType: 'pkce'
-            }
-        });
-        console.log('✅ Supabase client initialisé');
-    } catch (e) {
-        console.error('❌ Erreur initialisation Supabase:', e);
-        return;
-    }
-
-    if (!supabase) {
-        console.warn('⚠️ Supabase non disponible');
-        return;
-    }
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: true,
+            flowType: 'pkce'
+        }
+    });
 
     function getRedirectUrl() {
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -904,8 +980,7 @@
 
     let currentUser = null;
 
-    function showAuthToast(message, type) {
-        type = type || 'info';
+    function showAuthToast(message, type = 'info') {
         let toast = document.getElementById('authToast');
         if (!toast) {
             toast = document.createElement('div');
@@ -918,7 +993,7 @@
         if (type === 'error') toast.classList.add('error');
         if (type === 'success') toast.classList.add('success');
         clearTimeout(toast._timer);
-        toast._timer = setTimeout(function() {
+        toast._timer = setTimeout(() => {
             toast.classList.remove('show');
         }, 3500);
     }
@@ -938,45 +1013,46 @@
     }
 
     function updateUserUI(user) {
-        var loginBtnEl = document.getElementById('loginBtn');
-        var accountTrigger = document.getElementById('accountTrigger');
-        var avatarName = document.getElementById('avatarName');
-        var avatarInitials = document.getElementById('avatarInitials');
+        const loginBtn = document.getElementById('loginBtn');
+        const accountTrigger = document.getElementById('accountTrigger');
+        const avatarName = document.getElementById('avatarName');
+        const avatarInitials = document.getElementById('avatarInitials');
 
-        var authUserInfoEl = document.getElementById('authUserInfo');
-        var authLoginSectionEl = document.getElementById('authLoginSection');
-        var userNameEl = document.getElementById('userName');
-        var userEmailEl = document.getElementById('userEmail');
-        var userAvatarEl = document.getElementById('userAvatar');
+        const authUserInfo = document.getElementById('authUserInfo');
+        const authLoginSection = document.getElementById('authLoginSection');
+        const userName = document.getElementById('userName');
+        const userEmail = document.getElementById('userEmail');
+        const userAvatar = document.getElementById('userAvatar');
 
         if (user) {
-            if (authUserInfoEl) authUserInfoEl.style.display = 'block';
-            if (authLoginSectionEl) authLoginSectionEl.style.display = 'none';
+            if (authUserInfo) authUserInfo.style.display = 'block';
+            if (authLoginSection) authLoginSection.style.display = 'none';
 
-            var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
-            var email = user.email || 'email@exemple.com';
+            const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+            const email = user.email || 'email@exemple.com';
 
-            if (userNameEl) userNameEl.textContent = name;
-            if (userEmailEl) userEmailEl.textContent = email;
+            if (userName) userName.textContent = name;
+            if (userEmail) userEmail.textContent = email;
 
-            var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
-            if (userAvatarEl) userAvatarEl.textContent = initials;
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            if (userAvatar) userAvatar.textContent = initials;
 
-            if (loginBtnEl) loginBtnEl.style.display = 'none';
+            if (loginBtn) loginBtn.style.display = 'none';
             if (accountTrigger) {
                 accountTrigger.style.display = 'flex';
             }
             if (avatarName) avatarName.textContent = name;
             if (avatarInitials) avatarInitials.textContent = initials;
 
-            var accountName = document.getElementById('accountName');
-            var accountEmail = document.getElementById('accountEmail');
-            var accountAvatar = document.getElementById('accountAvatar');
+            const accountName = document.getElementById('accountName');
+            const accountEmail = document.getElementById('accountEmail');
+            const accountAvatar = document.getElementById('accountAvatar');
             
             if (accountName) accountName.textContent = name;
             if (accountEmail) accountEmail.textContent = email;
             if (accountAvatar) accountAvatar.textContent = initials;
 
+            // ✅ Émettre l'événement userLoggedIn
             document.dispatchEvent(new CustomEvent('userLoggedIn', {
                 detail: { user: user }
             }));
@@ -984,18 +1060,35 @@
             console.log('✅ Utilisateur connecté:', name, email);
 
         } else {
-            if (authUserInfoEl) authUserInfoEl.style.display = 'none';
-            if (authLoginSectionEl) authLoginSectionEl.style.display = 'block';
+            if (authUserInfo) authUserInfo.style.display = 'none';
+            if (authLoginSection) authLoginSection.style.display = 'block';
 
-            if (loginBtnEl) loginBtnEl.style.display = 'block';
+            if (loginBtn) loginBtn.style.display = 'block';
             if (accountTrigger) accountTrigger.style.display = 'none';
 
+            // ✅ Émettre l'événement userLoggedOut
             document.dispatchEvent(new CustomEvent('userLoggedOut'));
             console.log('🔓 Utilisateur déconnecté');
         }
 
         localStorage.setItem('luviaplace_user', JSON.stringify(user));
     }
+
+    // ✅ ÉVÉNEMENT CLIC SUR L'AVATAR
+    document.addEventListener('DOMContentLoaded', function() {
+        const accountTrigger = document.getElementById('accountTrigger');
+        
+        if (accountTrigger) {
+            accountTrigger.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (window.accountDropdown && window.accountDropdown.toggle) {
+                    window.accountDropdown.toggle();
+                }
+            });
+        }
+    });
 
     async function signInWithGoogle() {
         try {
@@ -1004,10 +1097,10 @@
                 googleBtn.innerHTML = '<span>⏳ Connexion en cours...</span>';
             }
 
-            var redirectUrl = getRedirectUrl();
+            const redirectUrl = getRedirectUrl();
             console.log('🔗 URL de redirection:', redirectUrl);
 
-            var result = await supabase.auth.signInWithOAuth({
+            const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
                     redirectTo: redirectUrl,
@@ -1018,7 +1111,7 @@
                 }
             });
 
-            if (result.error) throw result.error;
+            if (error) throw error;
             console.log('✅ Redirection vers Google...');
 
         } catch (error) {
@@ -1042,8 +1135,8 @@
 
     async function signOut() {
         try {
-            var result = await supabase.auth.signOut();
-            if (result.error) throw result.error;
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
             currentUser = null;
             updateUserUI(null);
             closeAuthModal();
@@ -1056,23 +1149,23 @@
 
     async function getSession() {
         try {
-            var result = await supabase.auth.getSession();
-            if (result.error) throw result.error;
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error) throw error;
 
-            if (result.data?.session?.user) {
-                currentUser = result.data.session.user;
-                updateUserUI(result.data.session.user);
-                return result.data.session.user;
+            if (session?.user) {
+                currentUser = session.user;
+                updateUserUI(session.user);
+                return session.user;
             } else {
-                var cached = localStorage.getItem('luviaplace_user');
+                const cached = localStorage.getItem('luviaplace_user');
                 if (cached) {
                     try {
-                        var user = JSON.parse(cached);
+                        const user = JSON.parse(cached);
                         if (user?.email) {
-                            var userResult = await supabase.auth.getUser();
-                            if (!userResult.error && userResult.data?.user) {
-                                updateUserUI(userResult.data.user);
-                                return userResult.data.user;
+                            const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+                            if (!userError && currentUser) {
+                                updateUserUI(currentUser);
+                                return currentUser;
                             }
                         }
                     } catch (e) {}
@@ -1089,24 +1182,24 @@
 
     async function handleAuthCallback() {
         try {
-            var urlParams = new URLSearchParams(window.location.search);
-            var code = urlParams.get('code');
-            var accessToken = urlParams.get('access_token');
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const accessToken = urlParams.get('access_token');
 
             if (code || accessToken) {
                 console.log('✅ Token détecté, récupération de la session...');
-                var result = await supabase.auth.getSession();
+                const { data: { session }, error } = await supabase.auth.getSession();
 
-                if (result.error) {
-                    console.error('❌ Erreur récupération session:', result.error);
+                if (error) {
+                    console.error('❌ Erreur récupération session:', error);
                     return;
                 }
 
-                if (result.data?.session?.user) {
-                    currentUser = result.data.session.user;
-                    updateUserUI(result.data.session.user);
+                if (session?.user) {
+                    currentUser = session.user;
+                    updateUserUI(session.user);
                     closeAuthModal();
-                    showAuthToast('Bienvenue ' + (result.data.session.user.user_metadata?.full_name || result.data.session.user.email), 'success');
+                    showAuthToast('Bienvenue ' + (session.user.user_metadata?.full_name || session.user.email), 'success');
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
             }
@@ -1116,31 +1209,35 @@
     }
 
     // ============================================
-    // ✅ ÉVÉNEMENTS
+    // ✅ ÉVÉNEMENTS - UN SEUL ÉVÉNEMENT SUR loginBtn
     // ============================================
 
     if (loginBtn) {
-        var newLoginBtn = loginBtn.cloneNode(true);
+        const newLoginBtn = loginBtn.cloneNode(true);
         loginBtn.parentNode.replaceChild(newLoginBtn, loginBtn);
         
-        var updatedLoginBtn = document.getElementById('loginBtn');
+        const updatedLoginBtn = document.getElementById('loginBtn');
         
         updatedLoginBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
 
-            var isLoggedIn = this.dataset.loggedIn === 'true' || currentUser !== null;
+            console.log('🖱️ Clic loginBtn, loggedIn:', this.dataset.loggedIn);
+
+            const isLoggedIn = this.dataset.loggedIn === 'true' || currentUser !== null;
 
             if (isLoggedIn) {
+                console.log('👤 Ouverture du dropdown');
                 if (window.accountDropdown && window.accountDropdown.toggle) {
                     window.accountDropdown.toggle();
                 } else {
-                    var dropdown = document.getElementById('accountDropdown');
-                    var overlay = document.getElementById('accountDropdownOverlay');
+                    const dropdown = document.getElementById('accountDropdown');
+                    const overlay = document.getElementById('accountDropdownOverlay');
                     if (dropdown) dropdown.classList.toggle('active');
                     if (overlay) overlay.classList.toggle('active');
                 }
             } else {
+                console.log('🔓 Ouverture de la modale');
                 openAuthModal();
             }
         });
@@ -1191,9 +1288,9 @@
         await getSession();
         await handleAuthCallback();
 
-        var urlParams = new URLSearchParams(window.location.search);
-        var error = urlParams.get('error');
-        var errorDescription = urlParams.get('error_description');
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
 
         if (error) {
             console.error('❌ Erreur OAuth:', error, errorDescription);
@@ -1210,8 +1307,8 @@
         signInWithGoogle: signInWithGoogle,
         signOut: signOut,
         getSession: getSession,
-        getUser: function() { return currentUser; },
-        isLoggedIn: function() { return !!currentUser; },
+        getUser: () => currentUser,
+        isLoggedIn: () => !!currentUser,
         openModal: openAuthModal,
         closeModal: closeAuthModal,
         showToast: showAuthToast
@@ -1225,40 +1322,40 @@
 })();
 
 // ============================================
-// ACCOUNT DROPDOWN - GESTION DU MENU UTILISATEUR (CORRIGÉ)
+// ACCOUNT DROPDOWN - GESTION DU MENU UTILISATEUR
 // ============================================
 (function() {
     'use strict';
 
-    var accountDropdown = document.getElementById('accountDropdown');
-    var accountDropdownOverlay = document.getElementById('accountDropdownOverlay');
-    var accountName = document.getElementById('accountName');
-    var accountEmail = document.getElementById('accountEmail');
-    var accountAvatar = document.getElementById('accountAvatar');
-    var accountLogoutBtn = document.getElementById('accountLogoutBtn');
+    const accountDropdown = document.getElementById('accountDropdown');
+    const accountDropdownOverlay = document.getElementById('accountDropdownOverlay');
+    const accountName = document.getElementById('accountName');
+    const accountEmail = document.getElementById('accountEmail');
+    const accountAvatar = document.getElementById('accountAvatar');
+    const accountLogoutBtn = document.getElementById('accountLogoutBtn');
 
-    // ✅ Vérifier que les éléments existent
-    if (!accountDropdown || !accountDropdownOverlay) {
-        console.warn('⚠️ Éléments dropdown manquants, désactivation');
-        return;
-    }
-
-    var isDropdownOpen = false;
+    let isDropdownOpen = false;
 
     function openAccountDropdown() {
-        accountDropdown.classList.add('active');
-        isDropdownOpen = true;
-        accountDropdownOverlay.classList.add('active');
-        if (window.innerWidth <= 600) {
-            document.body.style.overflow = 'hidden';
+        if (accountDropdown) {
+            accountDropdown.classList.add('active');
+            isDropdownOpen = true;
+            if (accountDropdownOverlay) {
+                accountDropdownOverlay.classList.add('active');
+            }
+            document.body.style.overflow = window.innerWidth <= 600 ? 'hidden' : '';
         }
     }
 
     function closeAccountDropdown() {
-        accountDropdown.classList.remove('active');
-        isDropdownOpen = false;
-        accountDropdownOverlay.classList.remove('active');
-        document.body.style.overflow = '';
+        if (accountDropdown) {
+            accountDropdown.classList.remove('active');
+            isDropdownOpen = false;
+            if (accountDropdownOverlay) {
+                accountDropdownOverlay.classList.remove('active');
+            }
+            document.body.style.overflow = '';
+        }
     }
 
     function toggleAccountDropdown() {
@@ -1271,13 +1368,13 @@
 
     function updateAccountUI(user) {
         if (user) {
-            var name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
-            var email = user.email || 'email@exemple.com';
+            const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur';
+            const email = user.email || 'email@exemple.com';
 
             if (accountName) accountName.textContent = name;
             if (accountEmail) accountEmail.textContent = email;
 
-            var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
             if (accountAvatar) accountAvatar.textContent = initials;
 
             closeAccountDropdown();
@@ -1298,8 +1395,8 @@
     });
 
     document.addEventListener('click', function(e) {
-        var isLoginBtnClick = e.target.closest('#loginBtn');
-        var isDropdownContent = e.target.closest('.account-dropdown');
+        const isLoginBtnClick = e.target.closest('#loginBtn');
+        const isDropdownContent = e.target.closest('.account-dropdown');
 
         if (isLoginBtnClick) return;
         if (isDropdownContent) return;
@@ -1324,9 +1421,7 @@
     }
 
     document.addEventListener('userLoggedIn', function(e) {
-        if (e.detail && e.detail.user) {
-            updateAccountUI(e.detail.user);
-        }
+        updateAccountUI(e.detail.user);
         closeAccountDropdown();
     });
 
@@ -1336,10 +1431,10 @@
     });
 
     document.addEventListener('DOMContentLoaded', function() {
-        var cachedUser = localStorage.getItem('luviaplace_user');
+        const cachedUser = localStorage.getItem('luviaplace_user');
         if (cachedUser) {
             try {
-                var user = JSON.parse(cachedUser);
+                const user = JSON.parse(cachedUser);
                 if (user?.email) {
                     updateAccountUI(user);
                 }
@@ -1352,7 +1447,7 @@
         close: closeAccountDropdown,
         toggle: toggleAccountDropdown,
         updateUI: updateAccountUI,
-        isOpen: function() { return isDropdownOpen; }
+        isOpen: () => isDropdownOpen
     };
 
     console.log('👤 Account dropdown initialisé');
@@ -1363,21 +1458,19 @@
 // RÉCUPÉRATION LUVIA COINS
 // ============================================
 document.addEventListener('userLoggedIn', function(e) {
-    var user = e.detail.user;
+    const user = e.detail.user;
     console.log('🎉 Utilisateur connecté, bienvenue !');
-    if (user && user.id) {
-        fetchLuviaCoins(user.id);
-    }
+    fetchLuviaCoins(user.id);
 });
 
 async function fetchLuviaCoins(userId) {
     try {
-        var response = await fetch('/api/loyalty/coins?userId=' + encodeURIComponent(userId));
-        var data = await response.json();
+        const response = await fetch(`/api/loyalty/coins?userId=${userId}`);
+        const data = await response.json();
 
         if (data.success) {
             console.log('💰 LuviaCoins:', data.coins);
-            var coinsElement = document.getElementById('luviaCoins');
+            const coinsElement = document.getElementById('luviaCoins');
             if (coinsElement) {
                 coinsElement.textContent = data.coins + ' LuviaCoins';
             }
@@ -1391,23 +1484,16 @@ async function fetchLuviaCoins(userId) {
 // RECHERCHES RÉCENTES - CAROUSEL
 // ============================================
 
-var RECENT_SEARCHES_KEY = 'luviaplace_recent_searches';
-var MAX_RECENT_SEARCHES = 6;
-var RECENT_CAROUSEL_IMAGE = 'https://images.unsplash.com/photo-1717343824623-06293a62a70d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fG1hcHxlbnwwfHwwfHx8MA%3D%3D';
-
-function escapeHtml(str) {
-    if (!str) return '';
-    var div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
+const RECENT_SEARCHES_KEY = 'luviaplace_recent_searches';
+const MAX_RECENT_SEARCHES = 6;
+const RECENT_CAROUSEL_IMAGE = 'https://images.unsplash.com/photo-1717343824623-06293a62a70d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fG1hcHxlbnwwfHwwfHx8MA%3D%3D';
 
 // ============================================
 // FORMATER UNE DATE POUR L'AFFICHAGE
 // ============================================
 function formatDisplayDate(dateStr) {
     if (!dateStr) return '';
-    var d = new Date(dateStr);
+    const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
     return d.toLocaleDateString('fr-FR', { 
         day: 'numeric',
@@ -1420,9 +1506,9 @@ function formatDisplayDate(dateStr) {
 // ============================================
 function saveRecentSearch(searchData) {
     try {
-        var searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+        let searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
         
-        var exists = searches.some(function(s) {
+        const exists = searches.some(function(s) {
             return s.destination === searchData.destination && 
                    s.checkin === searchData.checkin && 
                    s.checkout === searchData.checkout &&
@@ -1430,11 +1516,11 @@ function saveRecentSearch(searchData) {
         });
         
         if (!exists) {
-            var newSearch = Object.assign({}, searchData, {
+            searches.unshift({
+                ...searchData,
                 timestamp: new Date().toISOString(),
                 id: Date.now()
             });
-            searches.unshift(newSearch);
             
             if (searches.length > MAX_RECENT_SEARCHES) {
                 searches = searches.slice(0, MAX_RECENT_SEARCHES);
@@ -1468,7 +1554,7 @@ function getRecentSearches() {
 // ============================================
 function buildSearchUrl(search) {
     if (search.type === 'flight') {
-        var params = new URLSearchParams({
+        const params = new URLSearchParams({
             tripType: search.tripType || 'round',
             origin: search.origin || '',
             destination: search.destination || '',
@@ -1480,7 +1566,7 @@ function buildSearchUrl(search) {
         }
         return 'resultats-vols.html?' + params.toString();
     } else if (search.type === 'package') {
-        var params = new URLSearchParams({
+        const params = new URLSearchParams({
             destination: search.destination || '',
             checkin: search.checkin || '',
             checkout: search.checkout || '',
@@ -1490,7 +1576,7 @@ function buildSearchUrl(search) {
         });
         return 'resultats-package.html?' + params.toString();
     } else {
-        var params = new URLSearchParams({
+        const params = new URLSearchParams({
             destination: search.destination || '',
             checkin: search.checkin || '',
             checkout: search.checkout || '',
@@ -1506,7 +1592,7 @@ function buildSearchUrl(search) {
 // AFFICHER LES SKELETONS
 // ============================================
 function showRecentSkeletons(count) {
-    var container = document.getElementById('recentSearchesCarousel');
+    const container = document.getElementById('recentSearchesCarousel');
     if (!container) return;
     
     container.innerHTML = Array.from({ length: count || 3 }).map(function() {
@@ -1526,12 +1612,12 @@ function showRecentSkeletons(count) {
 // AFFICHER LES RECHERCHES RÉCENTES
 // ============================================
 function displayRecentSearches() {
-    var section = document.getElementById('recentSearchesSection');
-    var container = document.getElementById('recentSearchesCarousel');
+    const section = document.getElementById('recentSearchesSection');
+    const container = document.getElementById('recentSearchesCarousel');
     
     if (!section || !container) return;
     
-    var searches = getRecentSearches();
+    const searches = getRecentSearches();
     
     if (searches.length === 0) {
         section.classList.remove('visible');
@@ -1542,15 +1628,15 @@ function displayRecentSearches() {
     section.classList.add('visible');
     
     container.innerHTML = searches.map(function(search) {
-        var title = search.destination || 'Recherche';
+        let title = search.destination || 'Recherche';
         if (search.type === 'flight') {
             title = (search.origin || '') + ' → ' + (search.destination || '');
         } else if (search.type === 'package') {
             title = 'Package ' + (search.destination || '');
         }
         
-        var dates = '';
-        var guests = '';
+        let dates = '';
+        let guests = '';
         
         if (search.type === 'flight') {
             dates = formatDisplayDate(search.departure);
@@ -1560,11 +1646,11 @@ function displayRecentSearches() {
             guests = (search.adults || 1) + ' passager' + (search.adults > 1 ? 's' : '');
         } else {
             dates = formatDisplayDate(search.checkin) + ' → ' + formatDisplayDate(search.checkout);
-            var totalGuests = (search.adults || 2) + (search.children || 0);
+            const totalGuests = (search.adults || 2) + (search.children || 0);
             guests = totalGuests + ' client' + (totalGuests > 1 ? 's' : '');
         }
         
-        var url = buildSearchUrl(search);
+        const url = buildSearchUrl(search);
         
         return `
             <a href="${url}" class="recent-search-card" data-search-id="${search.id}" data-search-type="${search.type || 'hotel'}">
@@ -1589,8 +1675,8 @@ function displayRecentSearches() {
 // ============================================
 function removeRecentSearch(searchId) {
     try {
-        var searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
-        searches = searches.filter(function(s) { return s.id !== searchId; });
+        let searches = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+        searches = searches.filter(s => s.id !== searchId);
         localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
         displayRecentSearches();
     } catch (error) {
@@ -1612,12 +1698,12 @@ function clearRecentSearches() {
 // INTERCEPTEUR DE RECHERCHE
 // ============================================
 function setupSearchSaving() {
-    var hotelSearchBtn = document.querySelector('[data-search="hotel"]');
+    const hotelSearchBtn = document.querySelector('[data-search="hotel"]');
     if (hotelSearchBtn) {
         hotelSearchBtn.addEventListener('click', function() {
-            var destination = document.getElementById('hotelDestination')?.value || '';
-            var checkin = document.getElementById('hotelCheckin')?.value || '';
-            var checkout = document.getElementById('hotelCheckout')?.value || '';
+            const destination = document.getElementById('hotelDestination')?.value || '';
+            const checkin = document.getElementById('hotelCheckin')?.value || '';
+            const checkout = document.getElementById('hotelCheckout')?.value || '';
             
             if (destination) {
                 saveRecentSearch({
@@ -1633,14 +1719,14 @@ function setupSearchSaving() {
         });
     }
     
-    var flightSearchBtn = document.querySelector('[data-search="flight"]');
+    const flightSearchBtn = document.querySelector('[data-search="flight"]');
     if (flightSearchBtn) {
         flightSearchBtn.addEventListener('click', function() {
-            var origin = document.getElementById('flightOrigin')?.value || '';
-            var destination = document.getElementById('flightDestination')?.value || '';
-            var departure = document.getElementById('flightDeparture')?.value || '';
-            var returnDate = document.getElementById('flightReturn')?.value || '';
-            var tripType = document.querySelector('[data-toggle=tripType] .pill-btn[aria-pressed="true"]')?.dataset?.trip || 'round';
+            const origin = document.getElementById('flightOrigin')?.value || '';
+            const destination = document.getElementById('flightDestination')?.value || '';
+            const departure = document.getElementById('flightDeparture')?.value || '';
+            const returnDate = document.getElementById('flightReturn')?.value || '';
+            const tripType = document.querySelector('[data-toggle=tripType] .pill-btn[aria-pressed="true"]')?.dataset?.trip || 'round';
             
             if (origin && destination) {
                 saveRecentSearch({
@@ -1656,12 +1742,12 @@ function setupSearchSaving() {
         });
     }
     
-    var pkgSearchBtn = document.querySelector('[data-search="package"]');
+    const pkgSearchBtn = document.querySelector('[data-search="package"]');
     if (pkgSearchBtn) {
         pkgSearchBtn.addEventListener('click', function() {
-            var destination = document.getElementById('pkgDestination')?.value || '';
-            var checkin = document.getElementById('pkgCheckin')?.value || '';
-            var checkout = document.getElementById('pkgCheckout')?.value || '';
+            const destination = document.getElementById('pkgDestination')?.value || '';
+            const checkin = document.getElementById('pkgCheckin')?.value || '';
+            const checkout = document.getElementById('pkgCheckout')?.value || '';
             
             if (destination) {
                 saveRecentSearch({

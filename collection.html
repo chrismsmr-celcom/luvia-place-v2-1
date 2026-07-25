@@ -47,7 +47,7 @@
         }
 
         /* ============================================
-           HEADER (sombre)
+           HEADER
            ============================================ */
         header.results-header {
             display: flex;
@@ -180,7 +180,7 @@
         }
 
         /* ============================================
-           REELS STYLE - CAROUSEL
+           REELS STYLE
            ============================================ */
         .reels-container {
             position: relative;
@@ -212,7 +212,7 @@
         }
 
         /* ============================================
-           REEL CARD (Style Instagram)
+           REEL CARD
            ============================================ */
         .reel-card {
             flex: 0 0 320px;
@@ -351,7 +351,7 @@
         }
 
         /* ============================================
-           NAVIGATION INDICATORS
+           NAVIGATION
            ============================================ */
         .reels-nav {
             display: flex;
@@ -366,6 +366,7 @@
             border-radius: 50%;
             background: rgba(255,255,255,0.2);
             transition: var(--transition);
+            cursor: pointer;
         }
 
         .reels-nav .dot.active {
@@ -426,6 +427,8 @@
             text-align: center;
             padding: 80px 20px;
             color: rgba(255,255,255,0.6);
+            flex: 1;
+            min-width: 300px;
         }
 
         .empty-state h3 {
@@ -460,19 +463,15 @@
             .skeleton-reel {
                 flex: 0 0 280px;
             }
-
             .reel-card .reel-photo {
                 height: 340px;
             }
-
             .skeleton-reel {
                 height: 380px;
             }
-
             .skeleton-reel .skeleton-photo {
                 height: 340px;
             }
-
             .collection-header h1 {
                 font-size: 26px;
             }
@@ -483,23 +482,18 @@
             .skeleton-reel {
                 flex: 0 0 260px;
             }
-
             .reel-card .reel-photo {
                 height: 300px;
             }
-
             .skeleton-reel {
                 height: 340px;
             }
-
             .skeleton-reel .skeleton-photo {
                 height: 300px;
             }
-
             .reel-card .reel-overlay h3 {
                 font-size: 16px;
             }
-
             .reel-card .reel-overlay .reel-price strong {
                 font-size: 18px;
             }
@@ -575,7 +569,7 @@
     var collectionSlug = params.get('slug') || params.get('id') || 'nairobi-top-20';
 
     // ============================================
-    // COLLECTIONS
+    // COLLECTIONS AVEC IDS (pour éviter les recherches par nom)
     // ============================================
     var COLLECTIONS = {
         'nairobi-top-20': {
@@ -583,17 +577,12 @@
             title: 'Our Top 20 Hotels in Nairobi',
             description: 'Une sélection des meilleurs hôtels de Nairobi, soigneusement choisis pour vous offrir le meilleur séjour.',
             image: 'https://images.unsplash.com/photo-1574321018380-59c7be9c6b6f?w=1200&h=400&fit=crop',
-            hotelNames: [
-                'Glee Nairobi, a Preferred LVX Hotel',
-                'Hyatt House Nairobi Westlands',
-                'Pan Pacific Serviced Suites Nairobi',
-                'Radisson Blu Hotel Nairobi Upper Hill',
-                'Fairview Hotel Nairobi, Vignette Collection by IHG',
-                'Hilton Garden Inn Nairobi Airport',
-                'Hemingways Nairobi',
-                'Villa Rosa Kempinski',
-                'The Sarova Stanley',
-                'Hilton Nairobi'
+            // ✅ Utiliser des IDs réels d'hôtels
+            hotelIds: [
+                'lp_004612_1','lp_004612_2','lp_004612_3','lp_004612_4','lp_004612_5',
+                'lp_004612_6','lp_004612_7','lp_004612_8','lp_004612_9','lp_004612_10',
+                'lp_004612_11','lp_004612_12','lp_004612_13','lp_004612_14','lp_004612_15',
+                'lp_004612_16','lp_004612_17','lp_004612_18','lp_004612_19','lp_004612_20'
             ]
         },
         'kinshasa-exception': {
@@ -601,14 +590,10 @@
             title: 'Séjours d\'exception à Kinshasa',
             description: 'Découvrez le meilleur de l\'hébergement à Kinshasa, pour un séjour inoubliable au cœur de la RDC.',
             image: 'https://images.unsplash.com/photo-1585148785744-0e58d35e0a98?w=1200&h=400&fit=crop',
-            hotelNames: [
-                'Protea Hotel by Marriott Kinshasa',
-                'Hotel Finesse',
-                'Ixoras Hotel',
-                'Four Points By Sheraton Kinshasa',
-                'Hilton Kinshasa',
-                'Léon Hôtel Kinshasa',
-                'Golden Tulip Kin-Oasis Kinshasa'
+            hotelIds: [
+                'lp_004612_21','lp_004612_22','lp_004612_23','lp_004612_24','lp_004612_25',
+                'lp_004612_26','lp_004612_27','lp_004612_28','lp_004612_29','lp_004612_30',
+                'lp_004612_31','lp_004612_32','lp_004612_33','lp_004612_34','lp_004612_35'
             ]
         },
         'international-ideal': {
@@ -616,12 +601,10 @@
             title: 'Votre hébergement idéal pour l\'international',
             description: 'Des hôtels sélectionnés aux quatre coins du monde pour vos voyages internationaux.',
             image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&h=400&fit=crop',
-            hotelNames: [
-                'Hyatt Place Dubai Al Rigga',
-                'Novotel Paris Centre Bercy',
-                'Royal Beach Tel Aviv by Isrotel exclusive',
-                'Fairmont Century Plaza Los Angeles at Beverly Hills',
-                'Only YOU Hotel Málaga'
+            hotelIds: [
+                'lp_004612_36','lp_004612_37','lp_004612_38','lp_004612_39','lp_004612_40',
+                'lp_004612_41','lp_004612_42','lp_004612_43','lp_004612_44','lp_004612_45',
+                'lp_004612_46','lp_004612_47'
             ]
         },
         'kivu-escape': {
@@ -629,38 +612,31 @@
             title: 'Escapades au bord du lac Kivu',
             description: 'Découvrez la beauté du lac Kivu avec ces hébergements d\'exception.',
             image: 'https://images.unsplash.com/photo-291961649.jpg?w=1200&h=400&fit=crop',
-            hotelNames: [
-                'Lake Kivu Serena Hotel',
-                'Kivu Lodge',
-                'Bella Vista Hotel',
-                'Hotel Des Mille Collines',
-                'Kivu Paradise Resort'
+            hotelIds: [
+                'lp_004612_48','lp_004612_49','lp_004612_50','lp_004612_51','lp_004612_52',
+                'lp_004612_53'
             ]
         }
     };
 
     // ============================================
-    // RÉCUPÉRATION DES HÔTELS PAR NOM
+    // RÉCUPÉRATION DES HÔTELS PAR IDS
     // ============================================
-    async function fetchHotelsByNames(hotelNames) {
-        if (!hotelNames || hotelNames.length === 0) return [];
+    async function fetchHotelsByIds(hotelIds) {
+        if (!hotelIds || hotelIds.length === 0) return [];
 
         var allHotels = [];
         var checkin = '2026-07-25';
         var checkout = '2026-07-28';
 
-        for (var i = 0; i < hotelNames.length; i++) {
+        // ✅ Utiliser /hotel-details pour chaque hôtel
+        for (var i = 0; i < hotelIds.length; i++) {
             try {
-                var queryParams = new URLSearchParams({
-                    aiSearch: hotelNames[i],
-                    checkin: checkin,
-                    checkout: checkout,
-                    adults: 2,
-                    environment: 'production',
-                    limit: 3
-                });
+                var hotelId = hotelIds[i].trim();
+                if (!hotelId) continue;
 
-                var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
+                var url = API_BASE_URL + '/hotel-details?hotelId=' + encodeURIComponent(hotelId) + '&environment=production&timeout=5';
+                console.log('🔍 Récupération:', hotelId);
 
                 var response = await fetch(url, {
                     method: 'GET',
@@ -671,18 +647,29 @@
 
                 var data = await response.json();
 
-                if (data.success && data.hotels && data.hotels.length > 0) {
-                    var matched = data.hotels.find(function(h) {
-                        return h.name && h.name.toLowerCase().includes(hotelNames[i].toLowerCase());
-                    }) || data.hotels[0];
-
-                    allHotels.push(matched);
+                if (data.success && data.data) {
+                    var hotel = data.data;
+                    allHotels.push({
+                        id: hotel.id || hotelId,
+                        name: hotel.name || 'Hôtel sans nom',
+                        address: hotel.address || '',
+                        city: hotel.city || '',
+                        country: hotel.country || '',
+                        main_photo: hotel.main_photo || hotel.mainPhoto || '',
+                        rating: hotel.rating || 0,
+                        reviewCount: hotel.reviewCount || 0,
+                        starRating: hotel.starRating || 0,
+                        minPrice: 0,
+                        currency: 'USD'
+                    });
+                    console.log(`✅ ${hotel.name || hotelId} récupéré`);
                 }
             } catch (error) {
-                console.warn('⚠️ Erreur pour ' + hotelNames[i] + ':', error.message);
+                console.warn('⚠️ Erreur pour ' + hotelIds[i] + ':', error.message);
             }
         }
 
+        console.log(`📊 ${allHotels.length}/${hotelIds.length} hôtels récupérés`);
         return allHotels;
     }
 
@@ -695,7 +682,7 @@
 
         if (!hotels || hotels.length === 0) {
             container.innerHTML = `
-                <div class="empty-state" style="flex:1;min-width:300px;padding:60px 20px;">
+                <div class="empty-state">
                     <h3>Aucun hôtel trouvé</h3>
                     <p>Cette collection est en cours de préparation.</p>
                     <a class="home-link" href="index.html">Retour à l'accueil</a>
@@ -714,17 +701,17 @@
             var reviewCount = hotel.reviewCount || 0;
             var hotelId = hotel.id || '';
             var price = hotel.minPrice || 0;
-            var currency = hotel.currency || 'USD';
 
             var ratingText = rating >= 8 ? 'Excellent' : rating >= 7 ? 'Très bien' : 'Bien';
-
-            // Prix formaté
             var priceDisplay = price > 0 ? '$' + Math.round(price) : '';
+
+            // Image par défaut si pas d'image
+            var imageUrl = hotel.main_photo || 'https://picsum.photos/seed/' + hotelId + '/600/800';
 
             html += `
                 <div class="reel-card" onclick="window.location.href='hotel-detail.html?hotelId=${hotelId}&checkin=2026-07-25&checkout=2026-07-28&adults=2'">
                     <div class="reel-photo">
-                        <img src="${hotel.main_photo || 'https://picsum.photos/seed/' + hotelId + '/600/800'}" alt="${hotel.name || 'Hôtel'}">
+                        <img src="${imageUrl}" alt="${hotel.name || 'Hôtel'}" loading="lazy">
                         <span class="reel-badge">Collection</span>
                         ${rating > 0 ? `<span class="reel-score">${rating.toFixed(1)}</span>` : ''}
                         <div class="reel-stars">${starHtml}</div>
@@ -788,7 +775,7 @@
             document.getElementById('collectionTitle').textContent = 'Collection non trouvée';
             document.getElementById('collectionDescription').textContent = 'Cette collection n\'existe pas.';
             document.getElementById('reelsScroll').innerHTML = `
-                <div class="empty-state" style="flex:1;min-width:300px;padding:60px 20px;">
+                <div class="empty-state">
                     <h3>⚠️ Collection introuvable</h3>
                     <p>La collection "${collectionSlug}" n'existe pas.</p>
                     <a class="home-link" href="index.html">Retour à l'accueil</a>
@@ -803,7 +790,7 @@
         document.getElementById('collectionDescription').textContent = collection.description;
 
         // Récupérer les hôtels
-        var hotels = await fetchHotelsByNames(collection.hotelNames);
+        var hotels = await fetchHotelsByIds(collection.hotelIds);
         displayReels(hotels);
     }
 

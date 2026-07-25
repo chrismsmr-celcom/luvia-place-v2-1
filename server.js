@@ -2763,6 +2763,654 @@ app.get("/booking/:id", async (req, res) => {
     }
 });
 // ============================================
+// GÉNÉRER LE BON DE CONFIRMATION (HTML)
+// ============================================
+function generateVoucherHtml(bookingData) {
+    // Extraire les données
+    const booking = bookingData.booking || {};
+    const hotel = bookingData.hotel || {};
+    const guest = bookingData.guest || {};
+    const payment = bookingData.payment || {};
+
+    // Dates
+    const checkinDate = new Date(booking.checkin || Date.now());
+    const checkoutDate = new Date(booking.checkout || Date.now());
+    const nights = Math.max(1, Math.ceil((checkoutDate - checkinDate) / 86400000));
+
+    // Formatage des dates
+    const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+
+    const checkinDay = checkinDate.getDate();
+    const checkinMonth = months[checkinDate.getMonth()];
+    const checkinYear = checkinDate.getFullYear();
+    const checkinDayName = days[checkinDate.getDay()];
+
+    const checkoutDay = checkoutDate.getDate();
+    const checkoutMonth = months[checkoutDate.getMonth()];
+    const checkoutYear = checkoutDate.getFullYear();
+    const checkoutDayName = days[checkoutDate.getDay()];
+
+    // Extraire le nom de la chambre
+    let roomName = 'Chambre standard';
+    if (booking.items && booking.items.length > 0) {
+        roomName = booking.items[0].roomName || booking.items[0].name || roomName;
+    } else if (booking.roomTypes && booking.roomTypes.length > 0) {
+        roomName = booking.roomTypes[0].name || roomName;
+    }
+
+    // Extraire la pension
+    let boardType = 'Chambre seule';
+    if (booking.items && booking.items.length > 0) {
+        const item = booking.items[0];
+        if (item.boardType === 'BB') boardType = 'Petit-déjeuner inclus';
+        else if (item.boardType === 'HB') boardType = 'Demi-pension';
+        else if (item.boardType === 'FB') boardType = 'Pension complète';
+        else if (item.boardType === 'AI') boardType = 'All Inclusive';
+    }
+
+    // Extraire le nombre de voyageurs
+    let adults = 1;
+    let children = 0;
+    if (booking.guests && booking.guests.length > 0) {
+        adults = booking.guests.reduce((sum, g) => sum + (g.adults || 1), 0);
+        children = booking.guests.reduce((sum, g) => sum + (g.children || 0), 0);
+    } else if (booking.occupancies && booking.occupancies.length > 0) {
+        adults = booking.occupancies[0].adults || 1;
+        children = booking.occupancies[0].children || 0;
+    }
+
+    // Politique d'annulation
+    let freeCancellationDeadline = 'Non remboursable';
+    let cancellationFee = '100% du montant total';
+
+    if (booking.items && booking.items.length > 0) {
+        const item = booking.items[0];
+        if (item.cancellationPolicies) {
+            const policies = item.cancellationPolicies;
+            if (policies.refundableTag === 'RFN' && policies.deadline) {
+                const deadline = new Date(policies.deadline);
+                freeCancellationDeadline = `${days[deadline.getDay()]} ${deadline.getDate()} ${months[deadline.getMonth()]} ${deadline.getFullYear()}`;
+                cancellationFee = 'Aucun frais d\'annulation';
+            } else if (policies.penalties && policies.penalties.length > 0) {
+                const penalty = policies.penalties[0];
+                if (penalty.percentage === 100) {
+                    freeCancellationDeadline = 'Non remboursable';
+                    cancellationFee = '100% du montant total';
+                } else {
+                    cancellationFee = `${penalty.percentage}% du montant total`;
+                }
+            }
+        }
+    }
+
+    // Prix
+    const totalAmount = booking.total?.amount || 0;
+    const currency = booking.total?.currency || 'USD';
+    const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'CDF' ? 'FC' : currency;
+
+    // Template HTML
+    return `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bon de Confirmation - LuviaPlace</title>
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --primary-dark: #0a58ca;
+            --secondary-color: #059669;
+            --text-dark: #1f2937;
+            --text-muted: #6b7280;
+            --bg-light: #f8fafc;
+            --border-color: #e5e7eb;
+            --card-bg: #ffffff;
+            --warning-bg: #fffbeb;
+            --warning-border: #fef3c7;
+            --warning-text: #b45309;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f3f4f6;
+            color: var(--text-dark);
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        .voucher-container {
+            max-width: 850px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            padding: 32px;
+        }
+
+        .voucher-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary-color);
+            letter-spacing: -0.5px;
+            text-transform: lowercase;
+        }
+
+        .brand-logo span { color: var(--text-dark); }
+
+        .voucher-title-box { text-align: right; }
+
+        .voucher-title {
+            font-size: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .booking-id {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .booking-id strong { color: var(--text-dark); }
+
+        .status-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            background-color: var(--bg-light);
+            padding: 12px 16px;
+            border-radius: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge.confirmed {
+            background-color: #d1fae5;
+            color: #059669;
+        }
+
+        .status-badge.paid {
+            background-color: #dbeafe;
+            color: #2563eb;
+        }
+
+        .hotel-info-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+            background: var(--bg-light);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .hotel-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .hotel-address, .hotel-phone {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .hotel-media-placeholders {
+            display: flex;
+            gap: 10px;
+        }
+
+        .img-placeholder {
+            width: 100%;
+            height: 100px;
+            background-color: #e2e8f0;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .dates-container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 16px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 20px;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .date-box .label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #3b82f6;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .date-box .day-num {
+            font-size: 32px;
+            font-weight: 800;
+            color: #1e3a8a;
+            line-height: 1.1;
+        }
+
+        .date-box .month-year {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e40af;
+            text-transform: uppercase;
+        }
+
+        .date-box .subtext {
+            font-size: 12px;
+            color: #60a5fa;
+            margin-top: 4px;
+        }
+
+        .stay-duration {
+            background: #ffffff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e40af;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+
+        .section-box {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 18px;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dark);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-list {
+            list-style: none;
+        }
+
+        .info-list li {
+            font-size: 13.5px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .info-list li span.label { color: var(--text-muted); }
+        .info-list li span.value { font-weight: 600; text-align: right; }
+
+        .price-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .price-table td {
+            padding: 8px 0;
+            font-size: 14px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .price-table tr:last-child td { border-bottom: none; }
+
+        .price-table .total-row td {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--primary-color);
+            border-top: 2px solid var(--border-color);
+            padding-top: 12px;
+        }
+
+        .pay-at-hotel {
+            background-color: var(--warning-bg);
+            border: 1px solid var(--warning-border);
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--warning-text);
+        }
+
+        .pay-at-hotel strong { color: var(--warning-text); }
+
+        .policy-box {
+            background-color: #f9fafb;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .policy-box h3 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .policy-text {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .policy-text strong { color: var(--text-dark); }
+
+        .voucher-footer {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            border-top: 2px solid var(--border-color);
+            padding-top: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .footer-column h4 {
+            font-size: 13px;
+            color: var(--text-dark);
+            margin-bottom: 6px;
+        }
+
+        .footer-column p { margin-bottom: 4px; }
+
+        .provider-tag {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 12px;
+            color: #9ca3af;
+            font-weight: 500;
+        }
+
+        @media print {
+            body { background: #fff; padding: 0; }
+            .voucher-container { box-shadow: none; padding: 0; }
+        }
+
+        @media (max-width: 640px) {
+            .hotel-info-grid, .details-grid, .dates-container, .voucher-footer {
+                grid-template-columns: 1fr;
+            }
+            .voucher-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .voucher-title-box { text-align: left; }
+            .hotel-media-placeholders { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="voucher-container">
+
+    <header class="voucher-header">
+        <div class="brand-logo">Luvia<span>Place</span></div>
+        <div class="voucher-title-box">
+            <div class="voucher-title">Bon de Confirmation</div>
+            <div class="booking-id">ID Réservation: <strong>${booking.bookingId || '---'}</strong></div>
+        </div>
+    </header>
+
+    <div class="status-bar">
+        <span>Statut de la réservation :</span>
+        <span class="status-badge confirmed">Confirmée</span>
+        <span class="status-badge paid">Paiement : ${payment.status || 'Confirmé'}</span>
+    </div>
+
+    <section class="hotel-info-grid">
+        <div>
+            <h1 class="hotel-name">${hotel.name || 'Hôtel'}</h1>
+            <p class="hotel-address">📍 ${hotel.address || 'Adresse non disponible'}</p>
+            <p class="hotel-phone">📞 Téléphone : ${hotel.phone || 'Non disponible'}</p>
+        </div>
+        <div class="hotel-media-placeholders">
+            <div class="img-placeholder">Image Hôtel</div>
+            <div class="img-placeholder">Carte Lieu</div>
+        </div>
+    </section>
+
+    <section class="dates-container">
+        <div class="date-box">
+            <div class="label">Arrivée</div>
+            <div class="day-num">${String(checkinDay).padStart(2, '0')}</div>
+            <div class="month-year">${checkinMonth} ${checkinYear}</div>
+            <div class="subtext">${checkinDayName} à partir de 15:00</div>
+        </div>
+
+        <div class="stay-duration">
+            ⏱️ ${nights} Nuit(s) | 1 Chambre(s) | ${adults + children} Client(s)
+        </div>
+
+        <div class="date-box">
+            <div class="label">Départ</div>
+            <div class="day-num">${String(checkoutDay).padStart(2, '0')}</div>
+            <div class="month-year">${checkoutMonth} ${checkoutYear}</div>
+            <div class="subtext">${checkoutDayName} jusqu'à 12:00</div>
+        </div>
+    </section>
+
+    <div class="details-grid">
+        <div class="section-box">
+            <h2 class="section-title">Détails de la Réservation</h2>
+            <ul class="info-list">
+                <li>
+                    <span class="label">Titulaire :</span>
+                    <span class="value">${guest.firstName || ''} ${guest.lastName || ''}</span>
+                </li>
+                <li>
+                    <span class="label">Nombre de clients :</span>
+                    <span class="value">${adults} adulte(s)${children > 0 ? `, ${children} enfant(s)` : ''}</span>
+                </li>
+                <li>
+                    <span class="label">Type de chambre :</span>
+                    <span class="value">${roomName}</span>
+                </li>
+                <li>
+                    <span class="label">Type de pension :</span>
+                    <span class="value">${boardType}</span>
+                </li>
+                <li>
+                    <span class="label">Nombre d'unités :</span>
+                    <span class="value">1</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="section-box">
+            <h2 class="section-title">Détail du Paiement</h2>
+            <table class="price-table">
+                <tr>
+                    <td>1 chambre x ${nights} nuits</td>
+                    <td style="text-align: right;">${currencySymbol} ${(totalAmount / nights).toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td>Taxes et frais inclus</td>
+                    <td style="text-align: right;">${currencySymbol} 0.00</td>
+                </tr>
+                <tr class="total-row">
+                    <td>Total Réglé</td>
+                    <td style="text-align: right;">${currencySymbol} ${totalAmount.toFixed(2)}</td>
+                </tr>
+            </table>
+
+            <div class="pay-at-hotel">
+                <strong>Frais à payer sur place :</strong> ${currencySymbol} 0.00
+                <br><small style="font-size: 11px; opacity: 0.9;">Taxes locales estimées variables selon les taux de change.</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="policy-box">
+        <h3>Politique d'annulation</h3>
+        <p class="policy-text">
+            • Annulation gratuite avant le : <strong>${freeCancellationDeadline}</strong><br>
+            • Frais applicables après cette date : <strong>${cancellationFee}</strong><br>
+            <em>Tous les horaires sont indiqués en heure locale. Vous pouvez gérer votre réservation sur : https://luviaplace.com</em>
+        </p>
+    </div>
+
+    <footer class="voucher-footer">
+        <div class="footer-column">
+            <h4>Notes au client</h4>
+            <p>Les établissements peuvent facturer des frais obligatoires supplémentaires payables sur place (ex: taxe de séjour, frais d'infrastructure). Une carte de crédit ou caution peut être demandée à l'arrivée. Veuillez prévenir l'hôtel en cas d'arrivée tardive (après 20h00).</p>
+        </div>
+        <div class="footer-column">
+            <h4>Service Client</h4>
+            <p>En cas de question ou de besoin d'assistance :</p>
+            <p>📧 Email : <strong>support@luviaplace.com</strong></p>
+            <p>📞 Téléphone : <strong>+243 85 444 2103</strong></p>
+        </div>
+    </footer>
+
+    <div class="provider-tag">
+        Powered by LiteAPI
+    </div>
+
+</div>
+
+</body>
+</html>
+    `;
+}
+
+// ============================================
+// ENVOYER LE BON DE CONFIRMATION PAR EMAIL
+// ============================================
+async function sendConfirmationEmail(confirmationData) {
+    console.log("\n📧 ===== ENVOI EMAIL CONFIRMATION ===== 📧");
+
+    const htmlContent = generateVoucherHtml(confirmationData);
+
+    // En développement, on simule
+    if (process.env.NODE_ENV !== 'production') {
+        console.log('📧 EMAIL SIMULÉ:');
+        console.log(`   À: ${confirmationData.guest?.email || 'client@email.com'}`);
+        console.log(`   Sujet: Bon de confirmation #${confirmationData.booking?.bookingId || '---'}`);
+        console.log('   HTML généré (extrait):', htmlContent.substring(0, 200) + '...');
+        return;
+    }
+
+    // En production, utiliser SendGrid
+    try {
+        const sgMail = require('@sendgrid/mail');
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+        const msg = {
+            to: confirmationData.guest?.email || '',
+            from: 'reservations@luviaplace.com',
+            subject: `Bon de confirmation #${confirmationData.booking?.bookingId || ''} - LuviaPlace`,
+            html: htmlContent,
+            text: `Confirmation de réservation #${confirmationData.booking?.bookingId || ''}`
+        };
+
+        await sgMail.send(msg);
+        console.log(`✅ Email envoyé à ${confirmationData.guest?.email}`);
+    } catch (error) {
+        console.error('❌ Erreur envoi email:', error.message);
+    }
+}
+
+// ============================================
+// ENDPOINT - RÉCUPÉRER LE BON DE CONFIRMATION
+// ============================================
+app.get("/booking/:id/voucher", async (req, res) => {
+    console.log("\n📋 ===== GET VOUCHER ===== 📋");
+    const { id } = req.params;
+    const { environment = 'sandbox' } = req.query;
+
+    if (!id) {
+        return res.status(400).json({ success: false, error: "Booking ID is required" });
+    }
+
+    const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
+
+    try {
+        // 1. Récupérer la réservation
+        const bookingData = await callLiteAPI(`bookings/${id}`, 'GET', null, apiKey);
+
+        if (!bookingData.data) {
+            return res.status(404).json({ success: false, error: "Booking not found" });
+        }
+
+        const booking = bookingData.data;
+
+        // 2. Récupérer les détails de l'hôtel
+        const hotelData = await callLiteAPI(`data/hotel?hotelId=${booking.hotelId}&language=fr`, 'GET', null, apiKey);
+
+        // 3. Construire les données
+        const confirmationData = {
+            booking: booking,
+            hotel: hotelData.data || {},
+            guest: booking.holder || {},
+            payment: booking.payment || { status: 'Confirmé' }
+        };
+
+        // 4. Générer le HTML
+        const html = generateVoucherHtml(confirmationData);
+
+        res.send(html);
+
+    } catch (error) {
+        console.error('❌ Erreur:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+// ============================================
 // ROUTES FRONTEND
 // ============================================
 app.use(express.static(path.join(__dirname)));

@@ -859,14 +859,25 @@ app.post("/prebook", async (req, res) => {
 });
 
 // ============================================
-// 6. RÉSERVATION FINALE HÔTEL
+// 6. BOOK - Réservation finale (CORRIGÉ)
 // ============================================
 app.post("/book", async (req, res) => {
   console.log("\n📝 ===== BOOK ===== 📝");
-  const { prebookId, guestFirstName, guestLastName, guestEmail, guestPhone, transactionId, environment } = req.body;
+  const { 
+    prebookId, 
+    guestFirstName, 
+    guestLastName, 
+    guestEmail, 
+    guestPhone, 
+    transactionId, 
+    environment 
+  } = req.body;
 
   if (!prebookId || !guestFirstName || !guestLastName || !guestEmail || !transactionId) {
-    return res.status(400).json({ success: false, error: "Missing required fields" });
+    return res.status(400).json({ 
+      success: false, 
+      error: "Missing required fields" 
+    });
   }
 
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
@@ -880,19 +891,223 @@ app.post("/book", async (req, res) => {
       email: guestEmail,
       phone: guestPhone || '+1234567890'
     },
-    payment: { method: "TRANSACTION_ID", transactionId },
-    guests: [{ occupancyNumber: 1, remarks: "", firstName: guestFirstName, lastName: guestLastName, email: guestEmail }]
+    payment: { 
+      method: "TRANSACTION_ID", 
+      transactionId 
+    },
+    guests: [{
+      occupancyNumber: 1,
+      firstName: guestFirstName,
+      lastName: guestLastName,
+      email: guestEmail
+    }]
   };
 
   try {
+    // 1. Réservation avec LiteAPI
     const response = await sdk.book(bodyData);
-    res.json({ success: true, data: response.data });
+    const bookingData = response.data;
+
+    console.log('✅ Réservation réussie:', bookingData.bookingId);
+
+    // 2. Récupérer les détails complets de la réservation
+    const bookingDetails = await getBookingDetails(bookingData.bookingId, apiKey);
+
+    // 3. Récupérer les détails de l'hôtel
+    const hotelDetails = await getHotelDetails(bookingData.hotelId, apiKey);
+
+    // 4. Construire les données pour l'email et la page de confirmation
+    const confirmationData = buildConfirmationData(bookingData, bookingDetails, hotelDetails, {
+      firstName: guestFirstName,
+      lastName: guestLastName,
+      email: guestEmail,
+      phone: guestPhone
+    });
+
+    // 5. Envoyer l'email de confirmation
+    await sendConfirmationEmail(confirmationData);
+
+    // 6. Retourner les données au frontend
+    res.json({ 
+      success: true, 
+      data: confirmationData 
+    });
+
   } catch (err) {
     console.error("❌ Error during booking:", err);
-    res.status(500).json({ success: false, error: "Booking failed", message: err.message });
+    res.status(500).json({ 
+      success: false, 
+      error: "Booking failed", 
+      message: err.message 
+    });
   }
 });
 
+// ============================================
+// RÉCUPÉRER LES DÉTAILS DE LA RÉSERVATION
+// ============================================
+async function getBookingDetails(bookingId, apiKey) {
+  try {
+    const data = await callLiteAPI(
+      `bookings/${bookingId}`,
+      'GET',
+      null,
+      apiKey
+    );
+    return data.data || {};
+  } catch (error) {
+    console.warn('⚠️ Erreur récupération détails réservation:', error.message);
+    return {};
+  }
+}
+
+// ============================================
+// RÉCUPÉRER LES DÉTAILS DE L'HÔTEL
+// ============================================
+async function getHotelDetails(hotelId, apiKey) {
+  try {
+    const data = await callLiteAPI(
+      `data/hotel?hotelId=${hotelId}&language=fr`,
+      'GET',
+      null,
+      apiKey
+    );
+    return data.data || {};
+  } catch (error) {
+    console.warn('⚠️ Erreur récupération détails hôtel:', error.message);
+    return {};
+  }
+}
+
+// ============================================
+// CONSTRUIRE LES DONNÉES DE CONFIRMATION
+// ============================================
+function buildConfirmationData(booking, details, hotel, guest) {
+  // Extraire le nom de la chambre
+  let roomName = 'Chambre standard';
+  if (booking.items && booking.items.length > 0) {
+    roomName = booking.items[0].roomName || booking.items[0].name || roomName;
+  } else if (booking.roomTypes && booking.roomTypes.length > 0) {
+    roomName = booking.roomTypes[0].name || roomName;
+  }
+
+  // Extraire le nombre d'adultes
+  let adults = 1;
+  if (booking.guests && booking.guests.length > 0) {
+    adults = booking.guests.reduce((sum, g) => sum + (g.adults || 1), 0);
+  } else if (booking.occupancies && booking.occupancies.length > 0) {
+    adults = booking.occupancies[0].adults || 1;
+  }
+
+  // Extraire la politique d'annulation
+  let cancellationPolicy = 'Non remboursable';
+  let cancellationDeadline = null;
+  
+  if (booking.items && booking.items.length > 0) {
+    const item = booking.items[0];
+    if (item.cancellationPolicies) {
+      const policies = item.cancellationPolicies;
+      
+      // Vérifier si c'est remboursable
+      if (policies.refundableTag === 'RFN') {
+        cancellationPolicy = 'Annulation gratuite';
+        if (policies.deadline) {
+          cancellationDeadline = new Date(policies.deadline);
+        }
+      } else if (policies.penalties && policies.penalties.length > 0) {
+        const penalty = policies.penalties[0];
+        if (penalty.percentage === 100) {
+          cancellationPolicy = 'Non remboursable';
+        } else {
+          cancellationPolicy = `Frais d'annulation: ${penalty.percentage}%`;
+        }
+      }
+    }
+  }
+
+  // Extraire le prix total
+  let totalAmount = booking.total?.amount || 0;
+  let currency = booking.total?.currency || 'USD';
+  
+  // Extraire les dates
+  let checkin = booking.checkin || '';
+  let checkout = booking.checkout || '';
+
+  // Extraire le code de confirmation
+  let hotelConfirmationCode = booking.hotelConfirmationCode || booking.confirmationCode || '';
+
+  return {
+    bookingId: booking.bookingId || '',
+    hotelId: booking.hotelId || hotel.hotelId || '',
+    hotelName: hotel.name || booking.hotelName || 'Hôtel',
+    hotelAddress: hotel.address || booking.hotelAddress || '',
+    hotelCity: hotel.city || booking.hotelCity || '',
+    hotelCountry: hotel.country || booking.hotelCountry || '',
+    hotelPhone: hotel.phone || booking.hotelPhone || '',
+    hotelEmail: hotel.email || booking.hotelEmail || '',
+    roomName: roomName,
+    adults: adults,
+    checkin: checkin,
+    checkout: checkout,
+    totalAmount: totalAmount,
+    currency: currency,
+    hotelConfirmationCode: hotelConfirmationCode,
+    cancellationPolicy: cancellationPolicy,
+    cancellationDeadline: cancellationDeadline,
+    guest: guest
+  };
+}
+
+// ============================================
+// ENVOYER L'EMAIL DE CONFIRMATION
+// ============================================
+async function sendConfirmationEmail(data) {
+  console.log("\n📧 ===== ENVOI EMAIL CONFIRMATION ===== 📧");
+  
+  // En développement, on simule l'envoi
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('📧 SIMULATION EMAIL:');
+    console.log(`   À: ${data.guest.email}`);
+    console.log(`   Sujet: Confirmation de réservation #${data.bookingId}`);
+    console.log('   Contenu:', JSON.stringify(data, null, 2));
+    return;
+  }
+
+  // En production, utiliser un service comme SendGrid, Mailgun, etc.
+  // Exemple avec SendGrid (à installer: npm install @sendgrid/mail)
+  try {
+    const sgMail = require('@sendgrid/mail');
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+    const msg = {
+      to: data.guest.email,
+      from: 'reservations@luviaplace.com',
+      subject: `Confirmation de réservation #${data.bookingId} - LuviaPlace`,
+      templateId: 'd-xxxxxxxxxxxxxxxx', // Template SendGrid
+      dynamicTemplateData: {
+        bookingId: data.bookingId,
+        hotelName: data.hotelName,
+        hotelAddress: data.hotelAddress,
+        hotelCity: data.hotelCity,
+        roomName: data.roomName,
+        adults: data.adults,
+        checkin: data.checkin,
+        checkout: data.checkout,
+        totalAmount: data.totalAmount,
+        currency: data.currency,
+        hotelConfirmationCode: data.hotelConfirmationCode,
+        cancellationPolicy: data.cancellationPolicy,
+        guestFirstName: data.guest.firstName,
+        guestLastName: data.guest.lastName
+      }
+    };
+
+    await sgMail.send(msg);
+    console.log(`✅ Email envoyé à ${data.guest.email}`);
+  } catch (error) {
+    console.error('❌ Erreur envoi email:', error.message);
+  }
+}
 // ============================================
 // 7. RECHERCHE VOLS
 // ============================================

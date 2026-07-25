@@ -2078,17 +2078,18 @@ document.querySelectorAll('.pay-tab').forEach(function(tab) {
         // CONFIRMATION
         // ============================================
         function showConfirmation(booking) {
-            showStep('stepConfirmation');
-            document.getElementById('confirmCode').textContent = booking.hotelConfirmationCode || booking.bookingId ||
-            '---';
-            var hName = (booking.hotel && booking.hotel.name) || hotelName || '';
-            var dates = '';
-            if (booking.checkin || booking.checkout || checkin || checkout) {
-                dates = fmtDate(booking.checkin || checkin) + ' - ' + fmtDate(booking.checkout || checkout);
-            }
-            document.getElementById('confirmDetails').textContent = [hName, dates].filter(Boolean).join(' \u00b7 ');
-            showToast('Reservation confirmee ! Un email a ete envoye.', 'success');
-        }
+    showStep('stepConfirmation');
+    
+    if (booking && booking.bookingId) {
+        // ✅ Rediriger vers le bon de confirmation
+        window.location.href = '/booking/' + encodeURIComponent(booking.bookingId) + '/voucher';
+    } else {
+        // Fallback
+        document.getElementById('confirmCode').textContent = booking.hotelConfirmationCode || booking.bookingId || '---';
+        var hName = (booking.hotel && booking.hotel.name) || hotelName || '';
+        document.getElementById('confirmDetails').textContent = [hName, fmtDate(booking.checkin || checkin) + ' - ' + fmtDate(booking.checkout || checkout)].filter(Boolean).join(' \u00b7 ');
+    }
+}
 
         // ============================================
         // ERREUR

@@ -1,15 +1,12 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Réservation confirmée - LuviaPlace</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmation - LuviaPlace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* ============================================
-           STYLES
-           ============================================ */
         :root {
             --blue: #155EEF;
             --blue-dark: #0E3FB0;
@@ -19,13 +16,10 @@
             --bg: #FFFFFF;
             --bg-soft: #F7F9FC;
             --green: #12805C;
-            --green-bg: #E7F6EF;
             --font-head: 'Manrope', sans-serif;
             --font-body: 'Inter', sans-serif;
             --radius-lg: 20px;
             --radius-md: 14px;
-            --radius-sm: 10px;
-            --shadow: 0 8px 32px rgba(16, 24, 40, 0.12);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -42,7 +36,6 @@
 
         .wrap { max-width: 700px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); }
 
-        /* ===== HEADER ===== */
         header {
             display: flex;
             align-items: center;
@@ -60,15 +53,15 @@
             font-weight: 700;
             font-size: 14px;
             padding: 10px 20px;
-            border-radius: var(--radius-sm);
+            border-radius: 10px;
             border: none;
             cursor: pointer;
             transition: all 0.2s;
+            text-decoration: none;
         }
 
         .btn-primary:hover { background: var(--blue-dark); }
 
-        /* ===== CONFIRMATION ===== */
         .confirmation-card {
             background: var(--bg);
             border: 1px solid var(--line);
@@ -82,7 +75,7 @@
             width: 72px;
             height: 72px;
             border-radius: 50%;
-            background: var(--green-bg);
+            background: #E7F6EF;
             color: var(--green);
             display: flex;
             align-items: center;
@@ -102,117 +95,8 @@
         .confirmation-card .subtitle {
             color: var(--ink-soft);
             font-size: 15px;
-            margin-bottom: 4px;
         }
 
-        .confirmation-card .booking-ref {
-            display: inline-block;
-            background: var(--bg-soft);
-            padding: 6px 16px;
-            border-radius: var(--radius-sm);
-            font-family: var(--font-head);
-            font-weight: 700;
-            font-size: 14px;
-            color: var(--blue);
-            margin: 8px 0 16px;
-        }
-
-        /* ===== DETAILS ===== */
-        .details-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            text-align: left;
-            margin: 24px 0;
-            padding: 20px 0;
-            border-top: 1px solid var(--line);
-            border-bottom: 1px solid var(--line);
-        }
-
-        .detail-item .label {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            color: var(--ink-soft);
-        }
-
-        .detail-item .value {
-            font-weight: 600;
-            font-size: 15px;
-            margin-top: 2px;
-        }
-
-        .detail-item .value .highlight {
-            color: var(--blue);
-        }
-
-        /* ===== CANCELLATION ===== */
-        .cancel-box {
-            padding: 14px 18px;
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            margin: 16px 0 8px;
-            text-align: left;
-        }
-
-        .cancel-box.rfn {
-            background: var(--green-bg);
-            color: var(--green);
-            border: 1px solid var(--green);
-        }
-
-        .cancel-box.nrfn {
-            background: #FEF3E8;
-            color: #9A4B12;
-            border: 1px solid #FCE0BD;
-        }
-
-        .cancel-box strong { display: block; font-size: 14px; margin-bottom: 2px; }
-
-        /* ===== ACTIONS ===== */
-        .actions {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            margin-top: 24px;
-            flex-wrap: wrap;
-        }
-
-        .btn-secondary {
-            padding: 12px 24px;
-            border: 1px solid var(--line);
-            border-radius: var(--radius-sm);
-            background: var(--bg);
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-decoration: none;
-            color: var(--ink);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--blue);
-            color: var(--blue);
-        }
-
-        .btn-primary-lg {
-            padding: 12px 32px;
-            background: var(--blue);
-            color: #fff;
-            border: none;
-            border-radius: var(--radius-sm);
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-decoration: none;
-        }
-
-        .btn-primary-lg:hover { background: var(--blue-dark); }
-
-        /* ===== LOADING ===== */
         .spinner {
             width: 40px;
             height: 40px;
@@ -225,39 +109,35 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ===== ERROR ===== */
-        .error-card {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--ink-soft);
+        .btn-voucher {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 12px 28px;
+            background: var(--blue);
+            color: #fff;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.2s;
         }
 
-        .error-card h2 { color: var(--ink); margin-bottom: 8px; }
-
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 480px) {
-            .confirmation-card { padding: 28px 16px; }
-            .details-grid { grid-template-columns: 1fr; gap: 12px; }
-            .actions { flex-direction: column; align-items: center; }
-            .btn-secondary, .btn-primary-lg { width: 100%; text-align: center; }
-        }
+        .btn-voucher:hover { background: var(--blue-dark); }
     </style>
 </head>
 <body>
 
-    <!-- ===== HEADER ===== -->
     <header>
         <img class="logo-img" src="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png" alt="LuviaPlace" />
-        <button class="btn-primary" onclick="window.location.href='index.html'">Accueil</button>
+        <a class="btn-primary" href="index.html">Accueil</a>
     </header>
 
-    <!-- ===== MAIN ===== -->
     <div class="wrap" style="flex:1;">
 
         <!-- Loading -->
         <div id="loadingState" style="text-align:center;padding:60px 0;">
             <div class="spinner"></div>
-            <p style="color:var(--ink-soft);font-size:14px;">Chargement de votre confirmation...</p>
+            <p style="color:var(--ink-soft);font-size:14px;">Confirmation en cours...</p>
         </div>
 
         <!-- Confirmation -->
@@ -270,109 +150,26 @@
                 </div>
 
                 <h1>Réservation confirmée !</h1>
-                <p class="subtitle">Un email de confirmation a été envoyé à <strong id="guestEmail">—</strong></p>
-                <div class="booking-ref" id="bookingRef">—</div>
+                <p class="subtitle">Un email avec votre bon de confirmation vous a été envoyé.</p>
 
-                <!-- Détails -->
-                <div class="details-grid">
-                    <div class="detail-item">
-                        <div class="label">Hôtel</div>
-                        <div class="value" id="hotelName">—</div>
-                        <div style="font-size:13px;color:var(--ink-soft);" id="hotelAddress">—</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="label">Chambre</div>
-                        <div class="value" id="roomName">—</div>
-                        <div style="font-size:13px;color:var(--ink-soft);" id="guestInfo">—</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="label">Arrivée</div>
-                        <div class="value" id="checkinDate">—</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="label">Départ</div>
-                        <div class="value" id="checkoutDate">—</div>
-                    </div>
-                    <div class="detail-item" style="grid-column:1/-1;">
-                        <div class="label">Total payé</div>
-                        <div class="value" style="font-size:22px;font-family:var(--font-head);font-weight:800;color:var(--blue);" id="totalAmount">—</div>
-                    </div>
-                </div>
-
-                <!-- Code confirmation hôtel -->
-                <div style="font-size:13px;color:var(--ink-soft);margin-top:4px;">
-                    Code confirmation hôtel : <strong id="hotelConfirmationCode">—</strong>
-                </div>
-
-                <!-- Politique d'annulation -->
-                <div id="cancellationBox" class="cancel-box" style="display:none;">
-                    <strong id="cancelTitle">—</strong>
-                    <span id="cancelText">—</span>
-                </div>
-
-                <!-- Actions -->
-                <div class="actions">
-                    <a class="btn-secondary" href="javascript:window.print()">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:middle;">
-                            <path d="M6 9V3h12v6M6 21h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
-                            <path d="M18 9V3H6v6"/>
-                        </svg>
-                        Imprimer
-                    </a>
-                    <a class="btn-secondary" href="resultats-hebergement.html">Voir d'autres séjours</a>
-                    <a class="btn-primary-lg" href="index.html">Retour à l'accueil</a>
-                </div>
+                <a class="btn-voucher" id="voucherLink" href="#">📄 Voir mon bon de confirmation</a>
             </div>
         </div>
 
         <!-- Error -->
-        <div id="errorState" style="display:none;">
-            <div class="error-card">
-                <h2>⚠️ Une erreur est survenue</h2>
-                <p id="errorMessage">Impossible de charger les détails de votre réservation.</p>
-                <button class="btn-primary" style="margin-top:16px;" onclick="location.reload()">Réessayer</button>
-            </div>
+        <div id="errorState" style="display:none;text-align:center;padding:60px 0;">
+            <h2>⚠️ Une erreur est survenue</h2>
+            <p id="errorMessage" style="color:var(--ink-soft);font-size:14px;"></p>
+            <a class="btn-primary" href="index.html" style="display:inline-block;margin-top:16px;">Retour à l'accueil</a>
         </div>
 
     </div>
 
-    <!-- ===== JAVASCRIPT ===== -->
     <script>
-        // ============================================
-        // CONFIGURATION
-        // ============================================
-        var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
         var qp = new URLSearchParams(window.location.search);
         var bookingId = qp.get('bookingId') || qp.get('id') || '';
 
-        var bookingData = null;
-
-        // ============================================
-        // FORMATAGE
-        // ============================================
-        function fmtDate(s) {
-            if (!s) return '';
-            var d = new Date(s);
-            if (isNaN(d.getTime())) return s;
-            return d.toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            });
-        }
-
-        function formatPrice(amount, currency) {
-            currency = currency || 'USD';
-            var symbols = { 'USD': '$', 'EUR': '€', 'CDF': 'FC', 'GBP': '£' };
-            var symbol = symbols[currency] || currency;
-            return symbol + Number(amount).toFixed(2);
-        }
-
-        // ============================================
-        // RÉCUPÉRATION DES DONNÉES
-        // ============================================
-        async function loadConfirmation() {
+        document.addEventListener('DOMContentLoaded', function() {
             var loading = document.getElementById('loadingState');
             var confirmation = document.getElementById('confirmationState');
             var error = document.getElementById('errorState');
@@ -380,102 +177,30 @@
             if (!bookingId) {
                 loading.style.display = 'none';
                 error.style.display = 'block';
-                document.getElementById('errorMessage').textContent = 'Aucun numéro de réservation fourni.';
+                document.getElementById('errorMessage').textContent = 'Aucun numéro de réservation.';
                 return;
             }
 
-            try {
-                var response = await fetch(API_BASE_URL + '/booking/' + encodeURIComponent(bookingId), {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' }
-                });
+            // Afficher le lien vers le bon
+            document.getElementById('voucherLink').href = '/booking/' + encodeURIComponent(bookingId) + '/voucher';
 
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status);
-                }
-
-                var data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.message || 'Réservation non trouvée');
-                }
-
-                bookingData = data.data;
-
-                // Afficher la confirmation
-                displayConfirmation(bookingData);
-
-                loading.style.display = 'none';
-                confirmation.style.display = 'block';
-
-            } catch (error) {
-                console.error('❌ Erreur:', error);
-                loading.style.display = 'none';
-                error.style.display = 'block';
-                document.getElementById('errorMessage').textContent = error.message || 'Impossible de charger votre réservation.';
-            }
-        }
-
-        // ============================================
-        // AFFICHAGE DE LA CONFIRMATION
-        // ============================================
-        function displayConfirmation(data) {
-            // Référence
-            document.getElementById('bookingRef').textContent = '#' + (data.bookingId || '—');
-
-            // Email du client
-            document.getElementById('guestEmail').textContent = data.guest?.email || '—';
-
-            // Hôtel
-            document.getElementById('hotelName').textContent = data.hotelName || 'Hôtel';
-            var address = [data.hotelAddress, data.hotelCity, data.hotelCountry]
-                .filter(Boolean)
-                .join(', ');
-            document.getElementById('hotelAddress').textContent = address || 'Adresse non disponible';
-
-            // Chambre
-            document.getElementById('roomName').textContent = data.roomName || 'Chambre standard';
-            document.getElementById('guestInfo').textContent = data.adults + ' adulte' + (data.adults > 1 ? 's' : '');
-
-            // Dates
-            document.getElementById('checkinDate').textContent = fmtDate(data.checkin);
-            document.getElementById('checkoutDate').textContent = fmtDate(data.checkout);
-
-            // Prix
-            document.getElementById('totalAmount').textContent = formatPrice(data.totalAmount, data.currency);
-
-            // Code confirmation hôtel
-            document.getElementById('hotelConfirmationCode').textContent = data.hotelConfirmationCode || 'En attente';
-
-            // Politique d'annulation
-            var cancelBox = document.getElementById('cancellationBox');
-            var cancelTitle = document.getElementById('cancelTitle');
-            var cancelText = document.getElementById('cancelText');
-
-            if (data.cancellationPolicy) {
-                cancelBox.style.display = 'block';
-
-                if (data.cancellationPolicy.includes('Annulation gratuite')) {
-                    cancelBox.className = 'cancel-box rfn';
-                    cancelTitle.textContent = 'Annulation gratuite';
-                    if (data.cancellationDeadline) {
-                        cancelText.textContent = 'Annulation possible jusqu\'au ' + fmtDate(data.cancellationDeadline);
+            // Charger les infos de confirmation
+            fetch('/booking/' + encodeURIComponent(bookingId))
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    loading.style.display = 'none';
+                    if (data.success) {
+                        confirmation.style.display = 'block';
                     } else {
-                        cancelText.textContent = 'Vous pouvez annuler sans frais selon les conditions de l\'hôtel.';
+                        error.style.display = 'block';
+                        document.getElementById('errorMessage').textContent = data.message || 'Réservation non trouvée.';
                     }
-                } else {
-                    cancelBox.className = 'cancel-box nrfn';
-                    cancelTitle.textContent = 'Non remboursable';
-                    cancelText.textContent = 'Cette réservation n\'est pas remboursable en cas d\'annulation ou de modification.';
-                }
-            }
-        }
-
-        // ============================================
-        // INIT
-        // ============================================
-        document.addEventListener('DOMContentLoaded', function() {
-            loadConfirmation();
+                })
+                .catch(function() {
+                    loading.style.display = 'none';
+                    error.style.display = 'block';
+                    document.getElementById('errorMessage').textContent = 'Impossible de charger les données.';
+                });
         });
     </script>
 

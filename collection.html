@@ -1,145 +1,542 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Collections - LuviaPlace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-        /* Styles identiques à index.html */
-        .collection-header {
-            padding: 60px 0 30px;
-            text-align: center;
+        /* ============================================
+           VARIABLES
+           ============================================ */
+        :root {
+            --blue: #155EEF;
+            --blue-dark: #0E3FB0;
+            --blue-light: #EEF3FF;
+            --ink: #101828;
+            --ink-soft: #475467;
+            --line: #E7EAF0;
+            --bg: #FFFFFF;
+            --bg-soft: #F7F9FC;
+            --green: #12805C;
+            --green-bg: #E7F6EF;
+            --amber: #F5A623;
+            --font-head: 'Manrope', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+            --shadow: 0 8px 32px rgba(16, 24, 40, 0.12);
+            --shadow-lg: 0 16px 48px rgba(16, 24, 40, 0.18);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .collection-header h1 {
-            font-family: var(--font-head);
-            font-weight: 800;
-            font-size: 32px;
-            margin-bottom: 10px;
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-        .collection-header p {
-            color: var(--ink-soft);
-            max-width: 600px;
-            margin: 0 auto;
+
+        body {
+            font-family: var(--font-body);
+            color: var(--ink);
+            background: #0a0a0a;
+            line-height: 1.55;
+            overflow-x: hidden;
         }
-        .collection-hero {
-            width: 100%;
-            height: 250px;
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            margin-bottom: 30px;
-        }
-        .collection-hero img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .hotel-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 22px;
-        }
-        @media (max-width: 900px) {
-            .hotel-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-        @media (max-width: 600px) {
-            .hotel-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        .hotel-collection-card {
-            border-radius: var(--radius-md);
-            overflow: hidden;
-            border: 1px solid var(--line);
-            background: #fff;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            cursor: pointer;
-        }
-        .hotel-collection-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-        }
-        .hotel-collection-card .photo {
-            height: 190px;
-            background: var(--bg-soft);
-            overflow: hidden;
-            position: relative;
-        }
-        .hotel-collection-card .photo img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .hotel-collection-card .body {
-            padding: 16px;
-        }
-        .hotel-collection-card h3 {
-            font-family: var(--font-head);
-            font-weight: 700;
-            font-size: 16.5px;
-            margin-bottom: 4px;
-        }
-        .hotel-collection-card .location {
+
+        /* ============================================
+           HEADER (sombre)
+           ============================================ */
+        header.results-header {
             display: flex;
             align-items: center;
-            gap: 5px;
-            color: var(--ink-soft);
-            font-size: 13.5px;
-            margin-bottom: 14px;
+            gap: 18px;
+            padding: 14px clamp(16px, 4vw, 48px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            position: sticky;
+            top: 0;
+            background: rgba(10, 10, 10, 0.92);
+            backdrop-filter: blur(12px);
+            z-index: 200;
+            flex-wrap: wrap;
         }
-        .hotel-collection-card .location svg {
-            width: 13px;
-            height: 13px;
+
+        .logo-img {
+            height: 34px;
+            width: auto;
+            flex-shrink: 0;
+            filter: brightness(0) invert(1);
+        }
+
+        .rh-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
             flex-shrink: 0;
         }
-        .hotel-collection-card .card-bottom {
+
+        .header-mid {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 6px;
+            font-weight: 700;
+            font-size: 14.5px;
+            font-family: var(--font-head);
+            color: #fff;
         }
-        .hotel-collection-card .score-pill {
+
+        .btn-primary {
+            background: var(--blue);
+            color: #fff;
+            font-weight: 700;
+            font-size: 14.5px;
+            padding: 11px 20px;
+            border-radius: var(--radius-sm);
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-primary:hover {
+            background: var(--blue-dark);
+            transform: translateY(-1px);
+        }
+
+        /* ============================================
+           BACK ROW
+           ============================================ */
+        .back-row {
+            padding: 14px clamp(16px, 4vw, 48px) 0;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .back-link {
             display: flex;
             align-items: center;
             gap: 8px;
+            font-weight: 600;
+            font-size: 13.5px;
+            color: rgba(255,255,255,0.6);
+            width: fit-content;
+            transition: var(--transition);
         }
-        .hotel-collection-card .score-num {
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .back-link svg {
+            width: 15px;
+            height: 15px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+        }
+
+        /* ============================================
+           COLLECTION HEADER
+           ============================================ */
+        .collection-header {
+            padding: 30px 0 20px;
+            text-align: center;
+        }
+
+        .collection-header .section-eyebrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--blue);
+            margin-bottom: 12px;
+        }
+
+        .collection-header .section-eyebrow svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+        }
+
+        .collection-header h1 {
+            font-family: var(--font-head);
+            font-weight: 800;
+            font-size: clamp(28px, 5vw, 42px);
+            color: #fff;
+            margin-bottom: 10px;
+            letter-spacing: -0.02em;
+        }
+
+        .collection-header p {
+            color: rgba(255,255,255,0.6);
+            max-width: 600px;
+            margin: 0 auto;
+            font-size: 15px;
+        }
+
+        /* ============================================
+           REELS STYLE - CAROUSEL
+           ============================================ */
+        .reels-container {
+            position: relative;
+            padding: 10px 0 30px;
+        }
+
+        .reels-scroll {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding: 8px clamp(16px, 4vw, 48px) 20px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+
+        .reels-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .reels-scroll::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+
+        .reels-scroll::-webkit-scrollbar-thumb {
+            background: var(--blue);
+            border-radius: 4px;
+        }
+
+        /* ============================================
+           REEL CARD (Style Instagram)
+           ============================================ */
+        .reel-card {
+            flex: 0 0 320px;
+            scroll-snap-align: start;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: #1a1a1a;
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .reel-card:hover {
+            transform: translateY(-6px) scale(1.01);
+            border-color: rgba(255,255,255,0.15);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+
+        .reel-card .reel-photo {
+            width: 100%;
+            height: 400px;
+            background: #1a1a1a;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .reel-card .reel-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .reel-card:hover .reel-photo img {
+            transform: scale(1.05);
+        }
+
+        .reel-card .reel-badge {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .reel-card .reel-score {
+            position: absolute;
+            top: 14px;
+            right: 14px;
             background: var(--green);
             color: #fff;
             font-weight: 800;
-            font-size: 12.5px;
-            padding: 3px 7px;
-            border-radius: 6px;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 4px 16px rgba(18, 128, 92, 0.4);
         }
-        .hotel-collection-card .score-text {
-            font-size: 12px;
-            color: var(--ink-soft);
-            line-height: 1.25;
-        }
-        .hotel-collection-card .score-text b {
-            display: block;
-            color: var(--ink);
-            font-size: 12.5px;
-        }
-        .badge-collection {
+
+        .reel-card .reel-stars {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.6);
+            bottom: 100px;
+            left: 16px;
+            color: var(--amber);
+            font-size: 14px;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+        }
+
+        .reel-card .reel-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 16px 16px;
+            background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+        }
+
+        .reel-card .reel-overlay h3 {
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 18px;
             color: #fff;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            backdrop-filter: blur(4px);
+            margin-bottom: 4px;
+        }
+
+        .reel-card .reel-overlay .reel-location {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: rgba(255,255,255,0.6);
+            font-size: 13px;
+        }
+
+        .reel-card .reel-overlay .reel-location svg {
+            width: 13px;
+            height: 13px;
+            flex-shrink: 0;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        .reel-card .reel-overlay .reel-price {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            margin-top: 8px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .reel-card .reel-overlay .reel-price strong {
+            font-family: var(--font-head);
+            font-weight: 800;
+            font-size: 22px;
+            color: #fff;
+        }
+
+        .reel-card .reel-overlay .reel-price .per {
+            color: rgba(255,255,255,0.5);
+            font-size: 12px;
+        }
+
+        .reel-card .reel-overlay .reel-review {
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 4px;
+        }
+
+        /* ============================================
+           NAVIGATION INDICATORS
+           ============================================ */
+        .reels-nav {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 0 20px;
+        }
+
+        .reels-nav .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transition: var(--transition);
+        }
+
+        .reels-nav .dot.active {
+            background: var(--blue);
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        .reels-nav .dot:hover {
+            background: rgba(255,255,255,0.4);
+        }
+
+        /* ============================================
+           SQUELLETTES
+           ============================================ */
+        .skeleton-reel {
+            flex: 0 0 320px;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: #1a1a1a;
+            border: 1px solid rgba(255,255,255,0.06);
+            height: 440px;
+        }
+
+        .skeleton-reel .skeleton-photo {
+            height: 400px;
+            background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .skeleton-reel .skeleton-bottom {
+            padding: 16px;
+        }
+
+        .skeleton-reel .skeleton-line {
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            margin-bottom: 8px;
+        }
+
+        .skeleton-reel .skeleton-line.w70 { width: 70%; }
+        .skeleton-reel .skeleton-line.w50 { width: 50%; }
+        .skeleton-reel .skeleton-line.w40 { width: 40%; }
+
+        /* ============================================
+           EMPTY STATE
+           ============================================ */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .empty-state h3 {
+            font-family: var(--font-head);
+            font-size: 22px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .empty-state .home-link {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 12px 24px;
+            background: var(--blue);
+            color: #fff;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .empty-state .home-link:hover {
+            background: var(--blue-dark);
+            transform: translateY(-2px);
+        }
+
+        /* ============================================
+           RESPONSIVE
+           ============================================ */
+        @media (max-width: 768px) {
+            .reel-card,
+            .skeleton-reel {
+                flex: 0 0 280px;
+            }
+
+            .reel-card .reel-photo {
+                height: 340px;
+            }
+
+            .skeleton-reel {
+                height: 380px;
+            }
+
+            .skeleton-reel .skeleton-photo {
+                height: 340px;
+            }
+
+            .collection-header h1 {
+                font-size: 26px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .reel-card,
+            .skeleton-reel {
+                flex: 0 0 260px;
+            }
+
+            .reel-card .reel-photo {
+                height: 300px;
+            }
+
+            .skeleton-reel {
+                height: 340px;
+            }
+
+            .skeleton-reel .skeleton-photo {
+                height: 300px;
+            }
+
+            .reel-card .reel-overlay h3 {
+                font-size: 16px;
+            }
+
+            .reel-card .reel-overlay .reel-price strong {
+                font-size: 18px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Navigation identique à index.html -->
-    
-    <div class="wrap">
-        <div class="collection-header reveal">
+
+    <!-- ============================================
+    HEADER
+    ============================================ -->
+    <header class="results-header">
+        <div class="rh-left">
+            <img class="logo-img" src="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png" alt="LuviaPlace" />
+            <div class="header-mid">Collections</div>
+        </div>
+        <div style="flex:1;"></div>
+        <button class="btn-primary">Se connecter</button>
+    </header>
+
+    <!-- ============================================
+    BACK
+    ============================================ -->
+    <div class="back-row">
+        <a class="back-link" href="javascript:history.back()">
+            <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            Retour
+        </a>
+    </div>
+
+    <!-- ============================================
+    MAIN
+    ============================================ -->
+    <div class="wrap" style="max-width:1200px;margin:0 auto;">
+
+        <!-- Header -->
+        <div class="collection-header">
             <div class="section-eyebrow">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                     <path d="M2 12c4 0 4-6 8-6s4 12 8 12c2 0 3-2 4-4"/>
@@ -149,141 +546,162 @@
             <h1 id="collectionTitle">Loading...</h1>
             <p id="collectionDescription"></p>
         </div>
-        
-        <div class="collection-hero reveal">
-            <img id="collectionImage" src="" alt="">
-        </div>
-        
-        <div class="hotel-grid" id="collectionHotels">
-            <!-- Squelettes -->
-            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-photo"></div><div class="body"><div class="skeleton-line w90"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+
+        <!-- Reels Container -->
+        <div class="reels-container">
+            <div class="reels-scroll" id="reelsScroll">
+                <!-- Skelettes -->
+                <div class="skeleton-reel"><div class="skeleton-photo"></div><div class="skeleton-bottom"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+                <div class="skeleton-reel"><div class="skeleton-photo"></div><div class="skeleton-bottom"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+                <div class="skeleton-reel"><div class="skeleton-photo"></div><div class="skeleton-bottom"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+                <div class="skeleton-reel"><div class="skeleton-photo"></div><div class="skeleton-bottom"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+                <div class="skeleton-reel"><div class="skeleton-photo"></div><div class="skeleton-bottom"><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div><div class="skeleton-line w40"></div></div></div>
+            </div>
+
+            <!-- Navigation dots -->
+            <div class="reels-nav" id="reelsNav"></div>
         </div>
     </div>
 
-    <!-- Footer identique -->
-
+    <!-- ============================================
+    JAVASCRIPT
+    ============================================ -->
     <script>
     // ============================================
-    // CHARGEMENT DE LA COLLECTION
+    // CONFIGURATION
     // ============================================
     var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
     var params = new URLSearchParams(window.location.search);
-    var collectionSlug = params.get('slug') || 'nairobi-top-20';
+    var collectionSlug = params.get('slug') || params.get('id') || 'nairobi-top-20';
 
     // ============================================
-// DÉFINITION DES COLLECTIONS AVEC NOMS
-// ============================================
-var COLLECTIONS = {
-    'nairobi-top-20': {
-        id: 'nairobi-top-20',
-        title: 'Our Top 20 Hotels in Nairobi',
-        description: 'Une sélection des meilleurs hôtels de Nairobi, soigneusement choisis pour vous offrir le meilleur séjour.',
-        image: 'https://images.unsplash.com/photo-1574321018380-59c7be9c6b6f?w=1200&h=400&fit=crop',
-        hotelNames: [
-            'Glee Nairobi, a Preferred LVX Hotel',
-            'Hyatt House Nairobi Westlands',
-            'Pan Pacific Serviced Suites Nairobi',
-            'Radisson Blu Hotel Nairobi Upper Hill',
-            'Fairview Hotel Nairobi, Vignette Collection by IHG',
-            'Hilton Garden Inn Nairobi Airport',
-            'Hemingways Nairobi',
-            'Villa Rosa Kempinski',
-            'The Sarova Stanley',
-            'Hilton Nairobi'
-        ]
-    },
-    'kinshasa-exception': {
-        id: 'kinshasa-exception',
-        title: 'Séjours d\'exception à Kinshasa',
-        description: 'Découvrez le meilleur de l\'hébergement à Kinshasa, pour un séjour inoubliable au cœur de la RDC.',
-        image: 'https://images.unsplash.com/photo-1585148785744-0e58d35e0a98?w=1200&h=400&fit=crop',
-        hotelNames: [
-            'Protea Hotel by Marriott Kinshasa',
-            'Hotel Finesse',
-            'Ixoras Hotel',
-            'Four Points By Sheraton Kinshasa',
-            'Hilton Kinshasa',
-            'Léon Hôtel Kinshasa',
-            'Golden Tulip Kin-Oasis Kinshasa'
-        ]
-    }
-};
-
-// ============================================
-// RÉCUPÉRATION DES HÔTELS PAR NOM
-// ============================================
-async function fetchHotelsByNames(hotelNames) {
-    if (!hotelNames || hotelNames.length === 0) return [];
-    
-    var allHotels = [];
-    var checkin = '2026-07-25';
-    var checkout = '2026-07-28';
-    
-    for (var i = 0; i < hotelNames.length; i++) {
-        try {
-            var queryParams = new URLSearchParams({
-                aiSearch: hotelNames[i],
-                checkin: checkin,
-                checkout: checkout,
-                adults: 2,
-                environment: 'production',
-                limit: 2
-            });
-
-            var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
-            console.log(`🔍 Recherche: ${hotelNames[i]}`);
-            
-            var response = await fetch(url, {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' }
-            });
-
-            if (!response.ok) continue;
-
-            var data = await response.json();
-            
-            if (data.success && data.hotels && data.hotels.length > 0) {
-                // Trouver le meilleur match
-                var matched = data.hotels.find(function(h) {
-                    return h.name && h.name.toLowerCase().includes(hotelNames[i].toLowerCase());
-                }) || data.hotels[0];
-                
-                allHotels.push(matched);
-                console.log(`✅ ${hotelNames[i]} trouvé`);
-            } else {
-                console.warn(`⚠️ ${hotelNames[i]} non trouvé`);
-            }
-        } catch (error) {
-            console.warn(`⚠️ Erreur pour ${hotelNames[i]}:`, error.message);
+    // COLLECTIONS
+    // ============================================
+    var COLLECTIONS = {
+        'nairobi-top-20': {
+            id: 'nairobi-top-20',
+            title: 'Our Top 20 Hotels in Nairobi',
+            description: 'Une sélection des meilleurs hôtels de Nairobi, soigneusement choisis pour vous offrir le meilleur séjour.',
+            image: 'https://images.unsplash.com/photo-1574321018380-59c7be9c6b6f?w=1200&h=400&fit=crop',
+            hotelNames: [
+                'Glee Nairobi, a Preferred LVX Hotel',
+                'Hyatt House Nairobi Westlands',
+                'Pan Pacific Serviced Suites Nairobi',
+                'Radisson Blu Hotel Nairobi Upper Hill',
+                'Fairview Hotel Nairobi, Vignette Collection by IHG',
+                'Hilton Garden Inn Nairobi Airport',
+                'Hemingways Nairobi',
+                'Villa Rosa Kempinski',
+                'The Sarova Stanley',
+                'Hilton Nairobi'
+            ]
+        },
+        'kinshasa-exception': {
+            id: 'kinshasa-exception',
+            title: 'Séjours d\'exception à Kinshasa',
+            description: 'Découvrez le meilleur de l\'hébergement à Kinshasa, pour un séjour inoubliable au cœur de la RDC.',
+            image: 'https://images.unsplash.com/photo-1585148785744-0e58d35e0a98?w=1200&h=400&fit=crop',
+            hotelNames: [
+                'Protea Hotel by Marriott Kinshasa',
+                'Hotel Finesse',
+                'Ixoras Hotel',
+                'Four Points By Sheraton Kinshasa',
+                'Hilton Kinshasa',
+                'Léon Hôtel Kinshasa',
+                'Golden Tulip Kin-Oasis Kinshasa'
+            ]
+        },
+        'international-ideal': {
+            id: 'international-ideal',
+            title: 'Votre hébergement idéal pour l\'international',
+            description: 'Des hôtels sélectionnés aux quatre coins du monde pour vos voyages internationaux.',
+            image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&h=400&fit=crop',
+            hotelNames: [
+                'Hyatt Place Dubai Al Rigga',
+                'Novotel Paris Centre Bercy',
+                'Royal Beach Tel Aviv by Isrotel exclusive',
+                'Fairmont Century Plaza Los Angeles at Beverly Hills',
+                'Only YOU Hotel Málaga'
+            ]
+        },
+        'kivu-escape': {
+            id: 'kivu-escape',
+            title: 'Escapades au bord du lac Kivu',
+            description: 'Découvrez la beauté du lac Kivu avec ces hébergements d\'exception.',
+            image: 'https://images.unsplash.com/photo-291961649.jpg?w=1200&h=400&fit=crop',
+            hotelNames: [
+                'Lake Kivu Serena Hotel',
+                'Kivu Lodge',
+                'Bella Vista Hotel',
+                'Hotel Des Mille Collines',
+                'Kivu Paradise Resort'
+            ]
         }
+    };
+
+    // ============================================
+    // RÉCUPÉRATION DES HÔTELS PAR NOM
+    // ============================================
+    async function fetchHotelsByNames(hotelNames) {
+        if (!hotelNames || hotelNames.length === 0) return [];
+
+        var allHotels = [];
+        var checkin = '2026-07-25';
+        var checkout = '2026-07-28';
+
+        for (var i = 0; i < hotelNames.length; i++) {
+            try {
+                var queryParams = new URLSearchParams({
+                    aiSearch: hotelNames[i],
+                    checkin: checkin,
+                    checkout: checkout,
+                    adults: 2,
+                    environment: 'production',
+                    limit: 3
+                });
+
+                var url = API_BASE_URL + '/search-hotels?' + queryParams.toString();
+
+                var response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!response.ok) continue;
+
+                var data = await response.json();
+
+                if (data.success && data.hotels && data.hotels.length > 0) {
+                    var matched = data.hotels.find(function(h) {
+                        return h.name && h.name.toLowerCase().includes(hotelNames[i].toLowerCase());
+                    }) || data.hotels[0];
+
+                    allHotels.push(matched);
+                }
+            } catch (error) {
+                console.warn('⚠️ Erreur pour ' + hotelNames[i] + ':', error.message);
+            }
+        }
+
+        return allHotels;
     }
-    
-    console.log(`📊 ${allHotels.length}/${hotelNames.length} hôtels trouvés`);
-    return allHotels;
-}
 
     // ============================================
-    // AFFICHAGE DE LA COLLECTION
+    // AFFICHAGE EN STYLE REELS
     // ============================================
-    function displayCollection(hotels, collection) {
-        var titleEl = document.getElementById('collectionTitle');
-        var descEl = document.getElementById('collectionDescription');
-        var imageEl = document.getElementById('collectionImage');
-        var container = document.getElementById('collectionHotels');
-
-        if (titleEl) titleEl.textContent = collection.title;
-        if (descEl) descEl.textContent = collection.description;
-        if (imageEl) imageEl.src = collection.image;
+    function displayReels(hotels) {
+        var container = document.getElementById('reelsScroll');
+        var nav = document.getElementById('reelsNav');
 
         if (!hotels || hotels.length === 0) {
             container.innerHTML = `
-                <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--ink-soft);">
+                <div class="empty-state" style="flex:1;min-width:300px;padding:60px 20px;">
                     <h3>Aucun hôtel trouvé</h3>
                     <p>Cette collection est en cours de préparation.</p>
+                    <a class="home-link" href="index.html">Retour à l'accueil</a>
                 </div>
             `;
+            nav.innerHTML = '';
             return;
         }
 
@@ -293,34 +711,34 @@ async function fetchHotelsByNames(hotelNames) {
             var stars = hotel.starRating || 3;
             var starHtml = '★'.repeat(Math.min(Math.round(stars), 5));
             var rating = hotel.rating || 0;
-            var ratingText = rating >= 8 ? 'Excellent' : rating >= 7 ? 'Très bien' : 'Bien';
             var reviewCount = hotel.reviewCount || 0;
             var hotelId = hotel.id || '';
+            var price = hotel.minPrice || 0;
+            var currency = hotel.currency || 'USD';
+
+            var ratingText = rating >= 8 ? 'Excellent' : rating >= 7 ? 'Très bien' : 'Bien';
+
+            // Prix formaté
+            var priceDisplay = price > 0 ? '$' + Math.round(price) : '';
 
             html += `
-                <div class="hotel-collection-card" onclick="window.location.href='hotel-detail.html?hotelId=${hotelId}'">
-                    <div class="photo">
-                        <img src="${hotel.main_photo || 'https://picsum.photos/seed/' + hotelId + '/500/380'}" alt="${hotel.name || 'Hôtel'}">
-                        <span class="badge-collection">Collection</span>
-                    </div>
-                    <div class="body">
-                        <div class="stars">${starHtml}</div>
-                        <h3>${hotel.name || 'Hôtel sans nom'}</h3>
-                        <div class="location">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/>
-                                <circle cx="12" cy="9" r="2.4"/>
-                            </svg>
-                            ${hotel.address || hotel.city || 'Adresse non disponible'}
-                        </div>
-                        <div class="card-bottom">
-                            <div class="score-pill">
-                                <div class="score-num">${rating > 0 ? rating.toFixed(1) : 'N/A'}</div>
-                                <div class="score-text">${ratingText}<b>${reviewCount} avis</b></div>
+                <div class="reel-card" onclick="window.location.href='hotel-detail.html?hotelId=${hotelId}&checkin=2026-07-25&checkout=2026-07-28&adults=2'">
+                    <div class="reel-photo">
+                        <img src="${hotel.main_photo || 'https://picsum.photos/seed/' + hotelId + '/600/800'}" alt="${hotel.name || 'Hôtel'}">
+                        <span class="reel-badge">Collection</span>
+                        ${rating > 0 ? `<span class="reel-score">${rating.toFixed(1)}</span>` : ''}
+                        <div class="reel-stars">${starHtml}</div>
+                        <div class="reel-overlay">
+                            <h3>${hotel.name || 'Hôtel sans nom'}</h3>
+                            <div class="reel-location">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/>
+                                    <circle cx="12" cy="9" r="2.4"/>
+                                </svg>
+                                ${hotel.city || hotel.address || 'Localisation'}
                             </div>
-                            <div style="color:var(--blue);font-weight:600;font-size:13px;">
-                                Voir les tarifs →
-                            </div>
+                            ${priceDisplay ? `<div class="reel-price"><strong>${priceDisplay}</strong> <span class="per">/ nuit</span></div>` : ''}
+                            ${reviewCount > 0 ? `<div class="reel-review">${reviewCount} avis • ${ratingText}</div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -328,6 +746,36 @@ async function fetchHotelsByNames(hotelNames) {
         }
 
         container.innerHTML = html;
+
+        // Navigation dots
+        var total = hotels.length;
+        nav.innerHTML = '';
+        for (var j = 0; j < total; j++) {
+            var dot = document.createElement('span');
+            dot.className = 'dot' + (j === 0 ? ' active' : '');
+            dot.dataset.index = j;
+            dot.addEventListener('click', function() {
+                var index = parseInt(this.dataset.index);
+                var scrollEl = document.getElementById('reelsScroll');
+                var cardWidth = scrollEl.querySelector('.reel-card')?.offsetWidth || 320;
+                scrollEl.scrollTo({ left: index * (cardWidth + 16), behavior: 'smooth' });
+            });
+            nav.appendChild(dot);
+        }
+
+        // Scroll listener pour les dots
+        var scrollEl = document.getElementById('reelsScroll');
+        scrollEl.addEventListener('scroll', function() {
+            var cards = scrollEl.querySelectorAll('.reel-card');
+            if (cards.length === 0) return;
+            var scrollLeft = scrollEl.scrollLeft;
+            var cardWidth = cards[0].offsetWidth + 16;
+            var activeIndex = Math.round(scrollLeft / cardWidth);
+            var dots = nav.querySelectorAll('.dot');
+            dots.forEach(function(d, i) {
+                d.classList.toggle('active', i === activeIndex);
+            });
+        });
     }
 
     // ============================================
@@ -335,29 +783,28 @@ async function fetchHotelsByNames(hotelNames) {
     // ============================================
     async function loadCollection() {
         var collection = COLLECTIONS[collectionSlug];
-        
+
         if (!collection) {
             document.getElementById('collectionTitle').textContent = 'Collection non trouvée';
-            document.getElementById('collectionHotels').innerHTML = `
-                <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--ink-soft);">
+            document.getElementById('collectionDescription').textContent = 'Cette collection n\'existe pas.';
+            document.getElementById('reelsScroll').innerHTML = `
+                <div class="empty-state" style="flex:1;min-width:300px;padding:60px 20px;">
                     <h3>⚠️ Collection introuvable</h3>
                     <p>La collection "${collectionSlug}" n'existe pas.</p>
-                    <a href="index.html" style="display:inline-block;margin-top:16px;padding:10px 20px;background:var(--blue);color:#FFF;border-radius:var(--radius);text-decoration:none;">
-                        Retour à l'accueil
-                    </a>
+                    <a class="home-link" href="index.html">Retour à l'accueil</a>
                 </div>
             `;
+            document.getElementById('reelsNav').innerHTML = '';
             return;
         }
 
-        // Afficher les infos de la collection
+        // Afficher les infos
         document.getElementById('collectionTitle').textContent = collection.title;
         document.getElementById('collectionDescription').textContent = collection.description;
-        document.getElementById('collectionImage').src = collection.image;
 
         // Récupérer les hôtels
-        var hotels = await fetchHotelsByIds(collection.hotelIds);
-        displayCollection(hotels, collection);
+        var hotels = await fetchHotelsByNames(collection.hotelNames);
+        displayReels(hotels);
     }
 
     // ============================================
@@ -369,5 +816,6 @@ async function fetchHotelsByNames(hotelNames) {
 
     console.log('🚀 Collection chargée:', collectionSlug);
     </script>
+
 </body>
 </html>

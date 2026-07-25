@@ -2704,6 +2704,65 @@ app.post("/api/book-with-payment", async (req, res) => {
   }
 });
 // ============================================
+// RÉCUPÉRER UNE RÉSERVATION PAR ID
+// ============================================
+app.get("/booking/:id", async (req, res) => {
+    console.log("\n📋 ===== GET BOOKING ===== 📋");
+    const { id } = req.params;
+    const { environment = 'sandbox' } = req.query;
+
+    if (!id) {
+        return res.status(400).json({
+            success: false,
+            error: "Booking ID is required"
+        });
+    }
+
+    const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
+
+    try {
+        // 1. Récupérer la réservation depuis LiteAPI
+        const bookingData = await callLiteAPI(
+            `bookings/${id}`,
+            'GET',
+            null,
+            apiKey
+        );
+
+        if (!bookingData.data) {
+            return res.status(404).json({
+                success: false,
+                error: "Booking not found"
+            });
+        }
+
+        const booking = bookingData.data;
+
+        // 2. Récupérer les détails de l'hôtel
+        const hotelDetails = await getHotelDetails(booking.hotelId, apiKey);
+
+        // 3. Construire les données formatées
+        const formattedData = buildConfirmationData(booking, {}, hotelDetails, {
+            firstName: booking.holder?.firstName || '',
+            lastName: booking.holder?.lastName || '',
+            email: booking.holder?.email || '',
+            phone: booking.holder?.phone || ''
+        });
+
+        res.json({
+            success: true,
+            data: formattedData
+        });
+
+    } catch (error) {
+        console.error('❌ Erreur récupération réservation:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+// ============================================
 // ROUTES FRONTEND
 // ============================================
 app.use(express.static(path.join(__dirname)));

@@ -8,7 +8,7 @@
     // ============================================
     // CONFIGURATION
     // ============================================
-    var API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
+    var API_BASE_URL = 'https://luvia-place-v2-1.onrender.com';
     var sharedState = { dest: '' };
 
     // ============================================

@@ -1,7 +1,7 @@
 // ============================================
 // CONFIGURATION
 // ============================================
-const API_BASE_URL = 'https://luvia-place-v2-1-plh1.onrender.com';
+const API_BASE_URL = 'https://luvia-place-v2-1.onrender.com';
 const qp = new URLSearchParams(window.location.search);
 const hotelId = qp.get('hotelId') || '';
 let checkin = qp.get('checkin') || '';

@@ -2,10 +2,11 @@
   "name": "luviaplace-backend",
   "version": "2.0.0",
   "description": "LuviaPlace backend with LiteAPI - Hotels & Flights",
-  "main": "server.js",
+  "main": "api/index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node api/index.js",
+    "dev": "nodemon api/index.js",
+    "vercel-build": "npm install"
   },
   "dependencies": {
     "liteapi-node-sdk": "^4.3.2",

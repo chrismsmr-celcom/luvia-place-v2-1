@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: luviaplace
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PROD_API_KEY
+        sync: false
+      - key: SAND_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
+    plan: free

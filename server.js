@@ -7,16 +7,40 @@ const path = require("path");
 require("dotenv").config();
 
 // ============================================
-// CORS - Configuration ouverte
+// ✅ CORS - Configuration complète pour Render
 // ============================================
-app.use(cors({
-  origin: '*',
+const corsOptions = {
+  origin: [
+    'https://luvia-place-v2-1.onrender.com',
+    'https://luvia-place-v2-1-plh1.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:10000'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'X-Nationality']
+};
 
-app.options('*', cors());
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+// ✅ Middleware CORS supplémentaire pour les headers
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && corsOptions.origin.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With, X-Nationality');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 const prod_apiKey = process.env.PROD_API_KEY;
 const sandbox_apiKey = process.env.SAND_API_KEY;
@@ -24,6 +48,11 @@ const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// ============================================
+// ✅ SERVIR LES FICHIERS STATIQUES
+// ============================================
+app.use(express.static(path.join(__dirname)));
 
 // ============================================
 // LOG MIDDLEWARE

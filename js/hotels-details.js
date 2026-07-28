@@ -760,9 +760,19 @@ function renderRooms(rateInfo, hotel) {
             const publicTotalDisplay = currencySymbol + publicTotal.toFixed(2);
 
             let memberBadge = '';
-            if (!isLoggedIn) {
-                memberBadge = '<div style="margin-top:4px;font-size:11px;color:#12805C;font-weight:600;">🔑 Connectez-vous pour économiser 10%</div>';
-            }
+if (!isLoggedIn) {
+    memberBadge = '<div class="member-badge">' +
+        '<svg width="14" height="14" viewBox="0 0 13 16" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+            '<path d="M10.668 15.72H2.33464C1.4138 15.72 0.667969 14.9741 0.667969 14.0533V7.38664C0.667969 6.4658 1.4138 5.71997 2.33464 5.71997H10.668C11.5888 5.71997 12.3346 6.4658 12.3346 7.38664V14.0533C12.3346 14.9741 11.5888 15.72 10.668 15.72Z" fill="#1A360B"/>' +
+            '<path d="M6.50391 12.2658L6.50391 10.009" stroke="#C1EBAB" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M6.50115 9.17432C6.18661 9.17432 5.93133 9.4296 5.93361 9.74414C5.93361 10.0587 6.18889 10.314 6.50343 10.314C6.81797 10.314 7.07325 10.0587 7.07325 9.74414C7.07325 9.4296 6.81797 9.17432 6.50115 9.17432Z" stroke="#C1EBAB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M3.66406 6.53335L3.66406 4.76074" stroke="#1A360B" stroke-width="1.4031" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M3.66345 4.76077C3.09185 3.30289 3.81042 1.65743 5.2683 1.08583C6.72619 0.514223 8.37164 1.2328 8.94325 2.69068" stroke="#1A360B" stroke-width="1.4031" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>' +
+        '<span class="badge-text">Connectez-vous pour économiser 10%</span>' +
+    '</div>';
+}
+
 
             return '<div class="rate-row">' +
                 '<div class="rate-info"><div class="board">' + boardLabel + '</div>' +

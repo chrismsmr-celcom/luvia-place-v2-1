@@ -1,4 +1,8 @@
 // ============================================
+// hotels-details.js - Page détail hôtel (CORRIGÉ)
+// ============================================
+
+// ============================================
 // CONFIGURATION
 // ============================================
 const API_BASE_URL = 'https://luvia-place-v2-1.onrender.com';
@@ -7,6 +11,8 @@ const hotelId = qp.get('hotelId') || '';
 let checkin = qp.get('checkin') || '';
 let checkout = qp.get('checkout') || '';
 let adults = qp.get('adults') || '2';
+let children = qp.get('children') || '0';           // ✅ AJOUTÉ
+let childrenAges = qp.get('childrenAges') || '';    // ✅ AJOUTÉ
 let currentHotel = null;
 let currentRateInfo = [];
 let currentImages = [];
@@ -16,6 +22,26 @@ let roomGalleries = {};
 let amenitiesVisible = false;
 let aiConversationHistory = [];
 let isAiLoading = false;
+let isLoggedIn = false;
+
+// ============================================
+// VÉRIFICATION CONNEXION
+// ============================================
+function checkIfLoggedIn() {
+    if (typeof window.auth !== 'undefined' && window.auth.isLoggedIn) {
+        return window.auth.isLoggedIn();
+    }
+    try {
+        const cachedUser = localStorage.getItem('luviaplace_user');
+        if (cachedUser) {
+            const user = JSON.parse(cachedUser);
+            if (user && user.email) {
+                return true;
+            }
+        }
+    } catch (e) {}
+    return false;
+}
 
 // ============================================
 // SYNCHRONISATION DES PRIX
@@ -185,21 +211,48 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
+function getCurrencySymbol(currency) {
+    const symbols = {
+        'USD': '$',
+        'EUR': '€',
+        'GBP': '£',
+        'CDF': 'FC',
+        'XAF': 'FCFA',
+        'XOF': 'FCFA',
+        'NGN': '₦',
+        'GHS': 'GH₵',
+        'ZAR': 'R',
+        'KES': 'KSh',
+        'TZS': 'TSh',
+        'UGX': 'USh'
+    };
+    return symbols[currency] || currency + ' ';
+}
+
 const AMENITY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
 const HIGHLIGHT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6h6l-5 4 2 6-6-4-6 4 2-6-5-4h6z"/></svg>';
 
 // ============================================
-// CHARGEMENT DES DONNÉES
+// CHARGEMENT DES DONNÉES (CORRIGÉ)
 // ============================================
 async function loadHotel() {
     if (!hotelId) { showError("Aucun identifiant d'hôtel fourni dans le lien."); return; }
 
+    isLoggedIn = checkIfLoggedIn();
+
+    // Affichage du résumé
     document.getElementById('sumDestSeg').textContent = qp.get('hotelName') || 'Hôtel';
     document.getElementById('sumDatesSeg').textContent = (checkin && checkout) ? (fmtDate(checkin) + ' - ' + fmtDate(checkout)) : '—';
-    document.getElementById('sumGuestsSeg').textContent = adults + ' Client' + (adults > 1 ? 's' : '');
+    
+    // ✅ Affichage des voyageurs avec enfants
+    let guestsText = adults + ' adulte' + (adults > 1 ? 's' : '');
+    if (children > 0) {
+        guestsText += ', ' + children + ' enfant' + (children > 1 ? 's' : '');
+    }
+    document.getElementById('sumGuestsSeg').textContent = guestsText;
     document.getElementById('modCheckin').value = checkin;
     document.getElementById('modCheckout').value = checkout;
-    document.getElementById('modGuests').textContent = adults + ' adulte' + (adults > 1 ? 's' : '');
+    document.getElementById('modGuests').textContent = guestsText;
 
     document.getElementById('loadingSkeleton').classList.remove('hidden');
 
@@ -207,8 +260,15 @@ async function loadHotel() {
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
 
+    // ✅ RATES AVEC ENFANTS ET maxRates=100
     const ratesPromise = (checkin && checkout) ?
-        fetch(API_BASE_URL + '/search-rates?hotelId=' + encodeURIComponent(hotelId) + '&checkin=' + checkin + '&checkout=' + checkout + '&adults=' + adults + '&environment=production&maxRates=200')
+        fetch(API_BASE_URL + '/search-rates?hotelId=' + encodeURIComponent(hotelId) 
+            + '&checkin=' + checkin 
+            + '&checkout=' + checkout 
+            + '&adults=' + adults
+            + (children > 0 ? '&children=' + children : '')
+            + (childrenAges ? '&childrenAges=' + childrenAges : '')
+            + '&environment=production&maxRates=100')
         .then(function(r) { return r.json(); })
         .catch(function() { return null; }) :
         Promise.resolve(null);
@@ -591,7 +651,7 @@ function renderTravelerTypes(reviews) {
 }
 
 // ============================================
-// AFFICHAGE DES CHAMBRES
+// AFFICHAGE DES CHAMBRES (CORRIGÉ avec prix membre)
 // ============================================
 function renderRooms(rateInfo, hotel) {
     const roomsById = {};
@@ -617,6 +677,7 @@ function renderRooms(rateInfo, hotel) {
     }
 
     const breakfastOnly = document.getElementById('breakfastFilter').checked;
+    const currentCurrency = localStorage.getItem('luviaplace_currency') || 'USD';
 
     // Grouper par type de chambre
     const groups = {};
@@ -667,18 +728,57 @@ function renderRooms(rateInfo, hotel) {
             const refundable = rate.refundableTag === 'RFN';
             const boardLabel = /petit|breakfast|dej|BB|BI/i.test(rate.board || '') ? 'Chambre avec petit-déjeuner' : 'Chambre seule';
             const savingsPct = rate.originalRate && rate.originalRate > rate.retailRate ? Math.round((1 - rate.retailRate / rate.originalRate) * 100) : 0;
+            
             const pricePerNight = Math.round(rate.retailRate / nights);
             const totalPrice = Math.round(rate.retailRate);
+            
+            // ✅ Prix public = prix de base + 10%
+            const publicPricePerNight = pricePerNight + (pricePerNight * 0.10);
+            const publicTotalPrice = totalPrice + (totalPrice * 0.10);
+            
+            // ✅ Prix affiché = prix de base
+            const displayPricePerNight = pricePerNight;
+            const displayTotalPrice = totalPrice;
+            
+            // ✅ Conversion devise
+            let displayPrice = displayPricePerNight;
+            let publicPrice = publicPricePerNight;
+            let displayTotal = displayTotalPrice;
+            let publicTotal = publicTotalPrice;
+            
+            if (typeof window.convertPrice === 'function') {
+                displayPrice = window.convertPrice(displayPricePerNight, 'USD', currentCurrency);
+                publicPrice = window.convertPrice(publicPricePerNight, 'USD', currentCurrency);
+                displayTotal = window.convertPrice(displayTotalPrice, 'USD', currentCurrency);
+                publicTotal = window.convertPrice(publicTotalPrice, 'USD', currentCurrency);
+            }
+            
+            const currencySymbol = getCurrencySymbol(currentCurrency);
+            const priceDisplay = currencySymbol + displayPrice.toFixed(2);
+            const publicPriceDisplay = currencySymbol + publicPrice.toFixed(2);
+            const totalDisplay = currencySymbol + displayTotal.toFixed(2);
+            const publicTotalDisplay = currencySymbol + publicTotal.toFixed(2);
+
+            let memberBadge = '';
+            if (!isLoggedIn) {
+                memberBadge = '<div style="margin-top:4px;font-size:11px;color:#12805C;font-weight:600;">🔑 Connectez-vous pour économiser 10%</div>';
+            }
 
             return '<div class="rate-row">' +
                 '<div class="rate-info"><div class="board">' + boardLabel + '</div>' +
                 '<div class="sub">' + escapeHtml(rate.board || 'Room Only') + '</div>' +
-                '<span class="refund-tag ' + (refundable ? 'rfn' : 'nrfn') + '">' + (refundable ? 'Annulation gratuite' : 'Non remboursable') + '</span></div>' +
+                '<span class="refund-tag ' + (refundable ? 'rfn' : 'nrfn') + '">' + (refundable ? 'Annulation gratuite' : 'Non remboursable') + '</span>' +
+                memberBadge +
+                '</div>' +
                 '<div class="rate-side">' +
                 (savingsPct > 0 ? '<span class="savings-pill">Économisez ' + savingsPct + '%</span>' : '') +
-                '<div class="rate-price">' + (rate.originalRate && rate.originalRate > rate.retailRate ? '<div class="strike">$' + rate.originalRate.toFixed(0) + '</div>' : '') +
-                '<div class="amount">$' + pricePerNight + ' <span class="per">/ nuit</span></div>' +
-                '<div class="note">Total $' + totalPrice + ' pour ' + nights + ' nuit' + (nights > 1 ? 's' : '') + '</div></div>' +
+                '<div class="rate-price">' + 
+                (rate.originalRate && rate.originalRate > rate.retailRate ? '<div class="strike">' + priceDisplay + '</div>' : '') +
+                '<div class="amount">' + priceDisplay + ' <span class="per">/ nuit</span></div>' +
+                (!isLoggedIn ? '<div class="public-price" style="font-size:11px;color:var(--ink-soft);">Prix public <s>' + publicPriceDisplay + '</s></div>' : '') +
+                '<div class="note">Total ' + totalDisplay + ' pour ' + nights + ' nuit' + (nights > 1 ? 's' : '') + 
+                (!isLoggedIn ? ' (public: ' + publicTotalDisplay + ')' : '') +
+                '</div></div>' +
                 '<button class="cta-btn-sm" onclick="reserverChambre(\'' + rate.offerId + '\', ' + rate.retailRate + ', \'' + escapeHtml(roomName).replace(/'/g, "\\'") + '\', ' + (refundable ? 'true' : 'false') + ')">Choisir</button>' +
                 '</div></div>';
         }).filter(function(html) { return html !== ''; }).join('');
@@ -723,7 +823,7 @@ function renderRooms(rateInfo, hotel) {
 }
 
 // ============================================
-// RECHARGER LES TARIFS
+// RECHARGER LES TARIFS (CORRIGÉ)
 // ============================================
 function reloadRates() {
     const newCheckin = document.getElementById('modCheckin').value;
@@ -732,6 +832,9 @@ function reloadRates() {
     const url = new URL(window.location.href);
     url.searchParams.set('checkin', newCheckin);
     url.searchParams.set('checkout', newCheckout);
+    // ✅ Conserver les enfants si présents
+    if (children) url.searchParams.set('children', children);
+    if (childrenAges) url.searchParams.set('childrenAges', childrenAges);
     window.location.href = url.toString();
 }
 
@@ -740,13 +843,16 @@ document.getElementById('breakfastFilter').addEventListener('change', function()
 });
 
 // ============================================
-// RÉSERVER UNE CHAMBRE
+// RÉSERVER UNE CHAMBRE (CORRIGÉ)
 // ============================================
 function reserverChambre(offerId, price, roomName, refundable) {
     const hotelName = document.getElementById('hName') ? document.getElementById('hName').textContent : '';
     const url = 'prebook.html?offerId=' + encodeURIComponent(offerId) +
         '&hotelId=' + encodeURIComponent(hotelId) +
-        '&checkin=' + checkin + '&checkout=' + checkout + '&adults=' + adults +
+        '&checkin=' + checkin + '&checkout=' + checkout + 
+        '&adults=' + adults +
+        (children > 0 ? '&children=' + children : '') +
+        (childrenAges ? '&childrenAges=' + childrenAges : '') +
         '&price=' + encodeURIComponent(price || '') +
         '&roomName=' + encodeURIComponent(roomName || '') +
         '&hotelName=' + encodeURIComponent(hotelName) +

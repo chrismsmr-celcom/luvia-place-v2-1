@@ -2114,7 +2114,10 @@ app.get("/hotel-detail.html", (req, res) => {
 // ============================================================
 // ERROR HANDLERS
 // ============================================================
-app.use((req, res) => res.status(404).json({ success: false, error: "Route non trouvée" }));
+app.use((req, res) => {
+  res.status(404).json({ success: false, error: "Route non trouvée" });
+});
+
 app.use((err, req, res, next) => {
   console.error("❌ Global error:", err.message);
   res.status(err.status || 500).json({ success: false, error: err.message });

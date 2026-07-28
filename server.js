@@ -1,21 +1,28 @@
 const express = require("express");
 const app = express();
-const bodyParser = require("body-parser");
-const liteApi = require("liteapi-node-sdk");
-const cors = require("cors");
 const path = require("path");
+const cors = require("cors");
+const liteApi = require("liteapi-node-sdk");
 require("dotenv").config();
 
 // ============================================
-// ✅ CORS - Configuration complète pour Render
+// ✅ CORS - Configuration corrigée pour Render
 // ============================================
+const allowedOrigins = [
+  'https://luvia-place-v2-1.onrender.com',
+  'https://luvia-place-v2-1-plh1.onrender.com',
+  'http://localhost:3000',
+  'http://localhost:10000'
+];
+
 const corsOptions = {
-  origin: [
-    'https://luvia-place-v2-1.onrender.com',
-    'https://luvia-place-v2-1-plh1.onrender.com',
-    'http://localhost:3000',
-    'http://localhost:10000'
-  ],
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'X-Nationality']
@@ -24,18 +31,15 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// ✅ Middleware CORS supplémentaire pour les headers
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && corsOptions.origin.includes(origin)) {
+  if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
-  } else {
-    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
   }
-  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With, X-Nationality');
-  
+
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -46,13 +50,17 @@ const prod_apiKey = process.env.PROD_API_KEY;
 const sandbox_apiKey = process.env.SAND_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// ============================================
+// ✅ Express natif (body-parser déprécié)
+// ============================================
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ============================================
-// ✅ SERVIR LES FICHIERS STATIQUES
+// ✅ SERVIR LES FICHIERS STATIQUES — DANS UN SOUS-DOSSIER
+// ⚠️ Crée un dossier /public/ et mets tes fichiers frontend dedans
 // ============================================
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================
 // LOG MIDDLEWARE
@@ -69,27 +77,45 @@ app.use((req, res, next) => {
 });
 
 // ============================================
+// FONCTION : fetch avec timeout (AbortController)
+// ============================================
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error(`Request timeout after ${timeoutMs}ms`);
+    }
+    throw error;
+  }
+}
+
+// ============================================
 // FONCTION : Récupérer la nationalité par géolocalisation IP
 // ============================================
 async function getCountryFromIP(ip) {
-    // Liste des APIs à tester (ordre de priorité)
     const apis = [
-        // 1. ip-api.com - Gratuit, fiable, supporte bien l'Afrique
         {
             url: `http://ip-api.com/json/${ip}?fields=status,countryCode`,
             parser: (data) => data.countryCode
         },
-        // 2. ipapi.co - Alternative
         {
             url: `https://ipapi.co/${ip}/json/`,
             parser: (data) => data.country_code
         },
-        // 3. FreeGeoIP - Alternative
         {
             url: `https://freegeoip.app/json/${ip}`,
             parser: (data) => data.country_code
         },
-        // 4. IPInfo - Alternative (avec token optionnel)
         {
             url: `https://ipinfo.io/${ip}/json`,
             parser: (data) => data.country
@@ -99,13 +125,13 @@ async function getCountryFromIP(ip) {
     for (const api of apis) {
         try {
             console.log(`📡 Tentative géolocalisation avec: ${api.url}`);
-            const response = await fetch(api.url, { timeout: 3000 });
-            
+            const response = await fetchWithTimeout(api.url, {}, 3000);
+
             if (!response.ok) continue;
-            
+
             const data = await response.json();
             const countryCode = api.parser(data);
-            
+
             if (countryCode && countryCode.length === 2) {
                 console.log(`✅ Géolocalisation réussie: ${countryCode}`);
                 return countryCode.toUpperCase();
@@ -114,7 +140,7 @@ async function getCountryFromIP(ip) {
             console.warn(`⚠️ Échec API: ${api.url} - ${error.message}`);
         }
     }
-    
+
     console.warn('⚠️ Toutes les APIs de géolocalisation ont échoué');
     return null;
 }
@@ -124,7 +150,6 @@ async function getCountryFromIP(ip) {
 // MIDDLEWARE : Récupérer la nationalité
 // ============================================
 async function getGuestNationality(req) {
-    // 1. Priorité au paramètre explicite
     if (req.query.nationality) {
         const nat = req.query.nationality.toUpperCase();
         console.log(`🌍 Nationalité via paramètre: ${nat}`);
@@ -135,15 +160,13 @@ async function getGuestNationality(req) {
         console.log(`🌍 Nationalité via body: ${nat}`);
         return nat;
     }
-    
-    // 2. Récupérer depuis l'en-tête
+
     if (req.headers['x-nationality']) {
         const nat = req.headers['x-nationality'].toUpperCase();
         console.log(`🌍 Nationalité via en-tête: ${nat}`);
         return nat;
     }
-    
-    // 3. Récupérer depuis les cookies
+
     if (req.headers.cookie) {
         const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
             const [key, value] = cookie.trim().split('=');
@@ -156,15 +179,14 @@ async function getGuestNationality(req) {
             return nat;
         }
     }
-    
-    // 4. Géolocalisation par IP
+
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
                req.connection?.remoteAddress || 
                req.socket?.remoteAddress || 
                '8.8.8.8';
-    
+
     console.log(`📍 IP détectée: ${ip}`);
-    
+
     try {
         const country = await getCountryFromIP(ip);
         if (country) {
@@ -174,35 +196,21 @@ async function getGuestNationality(req) {
     } catch (error) {
         console.warn('⚠️ Erreur géolocalisation:', error.message);
     }
-    
-    // 5. Fallback intelligent : Utiliser le pays de la destination si disponible
+
     if (req.query.city) {
         const city = req.query.city.toLowerCase();
         const cityCountryMap = {
-            'kinshasa': 'CD',
-            'lubumbashi': 'CD',
-            'goma': 'CD',
-            'bukavu': 'CD',
-            'kisangani': 'CD',
-            'kananga': 'CD',
-            'mbuji-mayi': 'CD',
-            'dar es salaam': 'TZ',
-            'zanzibar': 'TZ',
-            'nairobi': 'KE',
-            'mombasa': 'KE',
-            'kampala': 'UG',
-            'entebbe': 'UG',
-            'kigali': 'RW',
-            'bujumbura': 'BI',
-            'lagos': 'NG',
-            'abuja': 'NG',
-            'accra': 'GH',
-            'dakar': 'SN',
-            'abidjan': 'CI',
-            'douala': 'CM',
-            'yaoundé': 'CM'
+            'kinshasa': 'CD', 'lubumbashi': 'CD', 'goma': 'CD', 'bukavu': 'CD',
+            'kisangani': 'CD', 'kananga': 'CD', 'mbuji-mayi': 'CD',
+            'dar es salaam': 'TZ', 'zanzibar': 'TZ',
+            'nairobi': 'KE', 'mombasa': 'KE',
+            'kampala': 'UG', 'entebbe': 'UG',
+            'kigali': 'RW', 'bujumbura': 'BI',
+            'lagos': 'NG', 'abuja': 'NG',
+            'accra': 'GH', 'dakar': 'SN',
+            'abidjan': 'CI', 'douala': 'CM', 'yaoundé': 'CM'
         };
-        
+
         for (const [cityName, countryCode] of Object.entries(cityCountryMap)) {
             if (city.includes(cityName)) {
                 console.log(`🌍 Fallback par ville: ${city} -> ${countryCode}`);
@@ -210,8 +218,7 @@ async function getGuestNationality(req) {
             }
         }
     }
-    
-    // 6. Fallback final : US (comportement par défaut de LiteAPI)
+
     console.warn('⚠️ Fallback final: US');
     return 'US';
 }
@@ -222,72 +229,27 @@ async function getGuestNationality(req) {
 function normalizeCountryCode(code) {
     if (!code) return 'US';
     code = code.toUpperCase().trim();
-    
-    // Mapping des codes courants
+
     const countryMap = {
-        'CONGO': 'CD',
-        'DRC': 'CD',
-        'RDC': 'CD',
-        'Congo': 'CD',
-        'Kinshasa': 'CD',
-        'Lubumbashi': 'CD',
-        'Goma': 'CD',
-        'Bukavu': 'CD',
-        'Kisangani': 'CD',
-        'Kananga': 'CD',
-        'Mbuji-Mayi': 'CD',
-        'TANZANIA': 'TZ',
-        'TANZANIE': 'TZ',
-        'Dar es Salaam': 'TZ',
-        'Zanzibar': 'TZ',
-        'KENYA': 'KE',
-        'Nairobi': 'KE',
-        'Mombasa': 'KE',
-        'UGANDA': 'UG',
-        'UGANDE': 'UG',
-        'Kampala': 'UG',
-        'Entebbe': 'UG',
-        'RWANDA': 'RW',
-        'Kigali': 'RW',
-        'BURUNDI': 'BI',
-        'Bujumbura': 'BI',
-        'SOUTH AFRICA': 'ZA',
-        'AFRIQUE DU SUD': 'ZA',
-        'Johannesburg': 'ZA',
-        'Cape Town': 'ZA',
-        'ETHIOPIA': 'ET',
-        'ETHIOPIE': 'ET',
-        'Addis Ababa': 'ET',
-        'NIGERIA': 'NG',
-        'Lagos': 'NG',
-        'Abuja': 'NG',
-        'GHANA': 'GH',
-        'Accra': 'GH',
-        'SENEGAL': 'SN',
-        'Dakar': 'SN',
-        'COTE D\'IVOIRE': 'CI',
-        'Abidjan': 'CI',
-        'CAMEROON': 'CM',
-        'CAMEROUN': 'CM',
-        'Douala': 'CM',
-        'Yaoundé': 'CM'
+        'CONGO': 'CD', 'DRC': 'CD', 'RDC': 'CD',
+        'TANZANIA': 'TZ', 'TANZANIE': 'TZ',
+        'KENYA': 'KE', 'UGANDA': 'UG', 'UGANDE': 'UG',
+        'RWANDA': 'RW', 'BURUNDI': 'BI',
+        'SOUTH AFRICA': 'ZA', 'AFRIQUE DU SUD': 'ZA',
+        'ETHIOPIA': 'ET', 'ETHIOPIE': 'ET',
+        'NIGERIA': 'NG', 'GHANA': 'GH', 'SENEGAL': 'SN',
+        'COTE D\'IVOIRE': 'CI', 'CAMEROON': 'CM', 'CAMEROUN': 'CM'
     };
-    
-    // Vérifier si c'est un nom de pays
-    if (countryMap[code]) {
-        return countryMap[code];
-    }
-    
-    // Vérifier si c'est un code pays valide (2 lettres)
-    if (/^[A-Z]{2}$/.test(code)) {
-        return code;
-    }
-    
+
+    if (countryMap[code]) return countryMap[code];
+    if (/^[A-Z]{2}$/.test(code)) return code;
+
     return 'US';
 }
 
 // ============================================
 // FONCTION UTILITAIRE : Appel REST LiteAPI
+// ✅ CORRECTION : vérifie response.ok + timeout
 // ============================================
 async function callLiteAPI(endpoint, method = 'GET', body = null, apiKey) {
   const url = `https://api.liteapi.travel/v3.0/${endpoint}`;
@@ -302,9 +264,18 @@ async function callLiteAPI(endpoint, method = 'GET', body = null, apiKey) {
   if (body) {
     options.body = JSON.stringify(body);
   }
-  
+
   console.log(`📡 ${method} ${url}`);
-  const response = await fetch(url, options);
+
+  const response = await fetchWithTimeout(url, options, 30000);
+
+  if (!response.ok) {
+    let errBody = {};
+    try { errBody = await response.json(); } catch(e) {}
+    const errMsg = errBody.message || errBody.error?.message || `LiteAPI HTTP ${response.status}`;
+    throw new Error(errMsg);
+  }
+
   const data = await response.json();
   console.log(`📦 Réponse:`, JSON.stringify(data, null, 2).substring(0, 500));
   return data;
@@ -320,26 +291,17 @@ async function translateWithDeepSeek(text, targetLang, sourceLang = 'fr', contex
     return text;
   }
 
-  // Mapping des langues
   const langNames = {
-    'fr': 'Français',
-    'en': 'English',
-    'es': 'Español',
-    'sw': 'Kiswahili',
-    'pt': 'Português',
-    'it': 'Italiano',
-    'de': 'Deutsch',
-    'ar': 'العربية',
-    'zh': '中文',
-    'ja': '日本語',
-    'ru': 'Русский'
+    'fr': 'Français', 'en': 'English', 'es': 'Español', 'sw': 'Kiswahili',
+    'pt': 'Português', 'it': 'Italiano', 'de': 'Deutsch', 'ar': 'العربية',
+    'zh': '中文', 'ja': '日本語', 'ru': 'Русский'
   };
-  
+
   const targetLangName = langNames[targetLang] || targetLang;
   const sourceLangName = langNames[sourceLang] || sourceLang;
 
   try {
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const response = await fetchWithTimeout('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
@@ -350,28 +312,14 @@ async function translateWithDeepSeek(text, targetLang, sourceLang = 'fr', contex
         messages: [
           {
             role: 'system',
-            content: `Tu es un traducteur professionnel pour LuviaPlace, une plateforme de voyage en Afrique centrale.
-
-RÈGLES IMPORTANTES :
-1. Traduis le texte de ${sourceLangName} vers ${targetLangName}
-2. Garde le ton professionnel et chaleureux
-3. Préserve les nombres, dates et prix exacts
-4. Conserve les noms propres et marques
-5. Traduis les termes touristiques avec précision
-6. Ne traduis JAMAIS "LuviaPlace" - c'est le nom de la marque
-7. Ne réponds à AUCUNE question - tu es un TRADUCTEUR, PAS UN ASSISTANT
-8. La réponse DOIT être UNIQUEMENT la traduction, sans commentaire supplémentaire
-${context ? `\nCONTEXTE : ${context}` : ''}`
+            content: `Tu es un traducteur professionnel pour LuviaPlace, une plateforme de voyage en Afrique centrale.\n\nRÈGLES IMPORTANTES :\n1. Traduis le texte de ${sourceLangName} vers ${targetLangName}\n2. Garde le ton professionnel et chaleureux\n3. Préserve les nombres, dates et prix exacts\n4. Conserve les noms propres et marques\n5. Traduis les termes touristiques avec précision\n6. Ne traduis JAMAIS "LuviaPlace" - c'est le nom de la marque\n7. Ne réponds à AUCUNE question - tu es un TRADUCTEUR, PAS UN ASSISTANT\n8. La réponse DOIT être UNIQUEMENT la traduction, sans commentaire supplémentaire\n${context ? `\nCONTEXTE : ${context}` : ''}`
           },
-          {
-            role: 'user',
-            content: text
-          }
+          { role: 'user', content: text }
         ],
         temperature: 0.3,
         max_tokens: Math.min(text.length * 2 + 500, 4000)
       })
-    });
+    }, 15000);
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -380,10 +328,10 @@ ${context ? `\nCONTEXTE : ${context}` : ''}`
 
     const data = await response.json();
     return data.choices[0].message.content.trim();
-    
+
   } catch (error) {
     console.error('❌ Erreur DeepSeek:', error.message);
-    return text; // Fallback : retourner le texte original
+    return text;
   }
 }
 
@@ -398,19 +346,18 @@ function getCacheKey(text, targetLang) {
 
 async function translateWithCache(text, targetLang, sourceLang = 'fr', context = '') {
   if (!text || !targetLang || targetLang === 'fr') return text;
-  
+
   const cacheKey = getCacheKey(text, targetLang);
   if (translationCache.has(cacheKey)) {
     console.log('📦 Cache hit:', cacheKey);
     return translationCache.get(cacheKey);
   }
-  
+
   const translation = await translateWithDeepSeek(text, targetLang, sourceLang, context);
   translationCache.set(cacheKey, translation);
-  
-  // Nettoyer le cache après 24h
+
   setTimeout(() => translationCache.delete(cacheKey), 24 * 60 * 60 * 1000);
-  
+
   return translation;
 }
 
@@ -433,7 +380,7 @@ app.get("/search-places", async (req, res) => {
       null, 
       apiKey
     );
-    
+
     const places = (data.data || []).map(function(place) {
       return {
         placeId: place.placeId || place.id,
@@ -454,15 +401,15 @@ app.get("/search-places", async (req, res) => {
 // ============================================
 app.get("/search-hotels", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS (LISTING) ===== 🔍");
-  const { checkin, checkout, adults, placeId, city, environment, limit = 500, language = 'fr' } = req.query;
+  const { checkin, checkout, adults, children, placeId, city, environment, limit = 500, language = 'fr' } = req.query;
   const apiKey = environment == "sandbox" ? sandbox_apiKey : prod_apiKey;
- 
+
   const guestNationality = await getGuestNationality(req);
   console.log(`🌍 Nationalité du client: ${guestNationality}`);
- 
+
   try {
     let finalPlaceId = placeId;
- 
+
     if (!finalPlaceId && city) {
       console.log(`⏳ Récupération du placeId pour "${city}"...`);
       try {
@@ -478,55 +425,56 @@ app.get("/search-hotels", async (req, res) => {
         console.warn(`⚠️ Erreur géocodage: ${error.message}`);
       }
     }
- 
+
     if (!finalPlaceId) {
       return res.json({ success: true, hotels: [], total: 0, message: "Ville non reconnue" });
     }
- 
-    // ✅ LISTING: 1 tarif par hôtel, beaucoup d'hôtels
+
     const requestedLimit = Math.min(parseInt(limit) || 500, 5000);
+
+    // ✅ Gestion des occupancies avec enfants
+    const occupancies = [{ adults: parseInt(adults, 10) || 2 }];
+    if (children && parseInt(children) > 0) {
+      occupancies[0].children = parseInt(children);
+      occupancies[0].ages = req.query.childrenAges 
+        ? req.query.childrenAges.split(',').map(a => parseInt(a.trim()))
+        : Array(parseInt(children)).fill(5);
+    }
+
     const ratesBody = {
       placeId: finalPlaceId,
-      occupancies: [{ adults: parseInt(adults, 10) || 2 }],
+      occupancies: occupancies,
       currency: "USD",
       guestNationality: guestNationality,
       checkin: checkin,
       checkout: checkout,
       includeHotelData: true,
       roomMapping: true,
-      maxRatesPerHotel: 1,        // ✅ 1 tarif par hôtel (fast, léger)
-      limit: requestedLimit,      // ✅ Plus d'hôtels
-      timeout: 25                 // ✅ Laisse le temps à l'agrégation live
+      maxRatesPerHotel: 1,
+      limit: requestedLimit,
+      timeout: 25
     };
- 
+
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);
- 
+
     const rateEntries = Array.isArray(ratesResponse.data) ? ratesResponse.data : [];
-    const hotelInfoList = Array.isArray(ratesResponse.hotels) ? ratesResponse.hotels : [];
- 
-    // ---- Diagnostic ----
+
     const withRoomTypes = rateEntries.filter(e => Array.isArray(e.roomTypes) && e.roomTypes.length > 0).length;
     const withRates = rateEntries.filter(e => e.roomTypes?.[0]?.rates?.length > 0).length;
     console.log(`📊 Diagnostic /search-hotels :`);
     console.log(`   - data[] reçues de LiteAPI : ${rateEntries.length}`);
-    console.log(`   - hotels[] (infos hôtel) reçues : ${hotelInfoList.length}`);
     console.log(`   - avec roomTypes non vide : ${withRoomTypes}`);
     console.log(`   - avec au moins 1 rate : ${withRates}`);
-    // ---------------------
- 
-    // Indexer les infos hôtel
-    const hotelInfoMap = {};
-    hotelInfoList.forEach(h => { hotelInfoMap[h.id || h.hotelId] = h; });
- 
+
     let hotels = rateEntries.map(function (entry) {
       const hotelId = entry.hotelId || entry.id;
-      const info = hotelInfoMap[hotelId] || entry.hotel || {};
+      const info = entry.hotel || {};  // ✅ CORRECTION : pas de ratesResponse.hotels
       const bestRate = entry.roomTypes?.[0]?.rates?.[0];
- 
+
       const stars = info.stars ?? info.starRating ?? entry.stars ?? entry.starRating ?? 0;
       const photo = info.main_photo || info.photo || info.image ||
         `https://picsum.photos/seed/${hotelId || Math.random()}/460/380`;
- 
+
       return {
         id: hotelId || `hotel-${Math.random()}`,
         name: info.name || 'Hôtel sans nom',
@@ -547,19 +495,18 @@ app.get("/search-hotels", async (req, res) => {
         language: language
       };
     });
- 
+
     const beforeFilterCount = hotels.length;
     hotels = hotels.filter(h => h.minPrice > 0).sort((a, b) => a.minPrice - b.minPrice);
     console.log(`   - après filtre minPrice > 0 : ${hotels.length} / ${beforeFilterCount}`);
- 
+
     const finalHotels = hotels.slice(0, Math.min(parseInt(limit) || 500, hotels.length));
- 
-    // Traduction DeepSeek...
+
     const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
- 
+
     if (!supportedLangs.includes(language) && language !== 'fr') {
       console.log(`🔄 Traduction DeepSeek pour la langue: ${language}`);
- 
+
       const translatedHotels = await Promise.all(
         finalHotels.slice(0, 20).map(async (hotel) => {
           try {
@@ -577,7 +524,7 @@ app.get("/search-hotels", async (req, res) => {
           }
         })
       );
- 
+
       return res.json({
         success: true,
         hotels: translatedHotels,
@@ -586,38 +533,38 @@ app.get("/search-hotels", async (req, res) => {
         translated: true
       });
     }
- 
+
     res.json({ success: true, hotels: finalHotels, total: finalHotels.length, language: language });
   } catch (error) {
     console.error("❌ Error:", error);
     res.status(500).json({ success: false, error: "Internal server error", message: error.message });
   }
 });
- 
+
 // ============================================
 // 3. RECHERCHE HÔTELS - STREAMING (SSE)
 // ============================================
 app.get("/search-hotels-stream", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS (STREAMING) ===== 🔍");
-  const { checkin, checkout, adults, placeId, city, environment, limit = 500, language = 'fr' } = req.query;
+  const { checkin, checkout, adults, children, placeId, city, environment, limit = 500, language = 'fr' } = req.query;
   const apiKey = environment == "sandbox" ? sandbox_apiKey : prod_apiKey;
- 
+
   const guestNationality = await getGuestNationality(req);
   console.log(`🌍 Nationalité du client: ${guestNationality}`);
- 
+
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('Access-Control-Allow-Origin', '*');
- 
+
   function sendEvent(event, data) {
     res.write(`event: ${event}\n`);
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   }
- 
+
   try {
     let finalPlaceId = placeId;
- 
+
     if (!finalPlaceId && city) {
       sendEvent('status', { step: 'geocoding', message: `📍 Recherche de "${city}"...`, language });
       try {
@@ -634,54 +581,55 @@ app.get("/search-hotels-stream", async (req, res) => {
         return res.end();
       }
     }
- 
+
     if (!finalPlaceId) {
       sendEvent('error', { message: 'Ville non reconnue' });
       return res.end();
     }
- 
+
     sendEvent('status', { step: 'rates', message: '🔍 Recherche des hôtels disponibles...' });
- 
-    // ✅ LISTING: 1 tarif par hôtel, beaucoup d'hôtels
+
     const requestedLimit = Math.min(parseInt(limit) || 500, 5000);
+
+    const occupancies = [{ adults: parseInt(adults, 10) || 2 }];
+    if (children && parseInt(children) > 0) {
+      occupancies[0].children = parseInt(children);
+      occupancies[0].ages = req.query.childrenAges 
+        ? req.query.childrenAges.split(',').map(a => parseInt(a.trim()))
+        : Array(parseInt(children)).fill(5);
+    }
+
     const ratesBody = {
       placeId: finalPlaceId,
-      occupancies: [{ adults: parseInt(adults, 10) || 2 }],
+      occupancies: occupancies,
       currency: "USD",
       guestNationality: guestNationality,
       checkin: checkin,
       checkout: checkout,
       includeHotelData: true,
       roomMapping: true,
-      maxRatesPerHotel: 1,        // ✅ 1 tarif par hôtel
-      limit: requestedLimit,      // ✅ Plus d'hôtels
+      maxRatesPerHotel: 1,
+      limit: requestedLimit,
       timeout: 25
     };
- 
+
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);
- 
+
     const rateEntries = Array.isArray(ratesResponse.data) ? ratesResponse.data : [];
-    const hotelInfoList = Array.isArray(ratesResponse.hotels) ? ratesResponse.hotels : [];
- 
-    // ---- Diagnostic ----
+
     const withRoomTypes = rateEntries.filter(e => Array.isArray(e.roomTypes) && e.roomTypes.length > 0).length;
     const withRates = rateEntries.filter(e => e.roomTypes?.[0]?.rates?.length > 0).length;
     console.log(`📊 Diagnostic /search-hotels-stream :`);
     console.log(`   - data[] reçues de LiteAPI : ${rateEntries.length}`);
-    console.log(`   - hotels[] (infos hôtel) reçues : ${hotelInfoList.length}`);
     console.log(`   - avec roomTypes non vide : ${withRoomTypes}`);
     console.log(`   - avec au moins 1 rate : ${withRates}`);
-    // ---------------------
- 
-    const hotelInfoMap = {};
-    hotelInfoList.forEach(h => { hotelInfoMap[h.id || h.hotelId] = h; });
- 
+
     let allHotels = rateEntries.map(function (entry) {
       const hotelId = entry.hotelId || entry.id;
-      const info = hotelInfoMap[hotelId] || entry.hotel || {};
+      const info = entry.hotel || {};  // ✅ CORRECTION
       const bestRate = entry.roomTypes?.[0]?.rates?.[0];
       const stars = info.stars ?? info.starRating ?? entry.stars ?? entry.starRating ?? 0;
- 
+
       return {
         id: hotelId,
         name: info.name || 'Hôtel sans nom',
@@ -701,19 +649,18 @@ app.get("/search-hotels-stream", async (req, res) => {
         language: language
       };
     });
- 
+
     const beforeFilterCount = allHotels.length;
     allHotels = allHotels.filter(h => h.minPrice > 0);
     console.log(`   - après filtre minPrice > 0 : ${allHotels.length} / ${beforeFilterCount}`);
- 
+
     allHotels.sort((a, b) => a.minPrice - b.minPrice);
- 
+
     sendEvent('status', { step: 'found', message: `✅ ${allHotels.length} hôtels disponibles trouvés` });
- 
-    // Envoyer par paquets
+
     const CHUNK_SIZE = 20;
     const totalChunks = Math.ceil(allHotels.length / CHUNK_SIZE) || 1;
- 
+
     for (let i = 0; i < allHotels.length; i += CHUNK_SIZE) {
       const chunk = allHotels.slice(i, i + CHUNK_SIZE);
       sendEvent('batch', {
@@ -724,11 +671,10 @@ app.get("/search-hotels-stream", async (req, res) => {
         total: allHotels.length
       });
     }
- 
-    // Traduction DeepSeek...
+
     const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
     let finalHotels = allHotels;
- 
+
     if (!supportedLangs.includes(language) && language !== 'fr') {
       const translated = await Promise.all(
         allHotels.slice(0, 20).map(async (hotel) => {
@@ -740,7 +686,7 @@ app.get("/search-hotels-stream", async (req, res) => {
       );
       finalHotels = translated;
     }
- 
+
     sendEvent('complete', { hotels: finalHotels, total: finalHotels.length, language: language });
     res.end();
   } catch (error) {
@@ -755,8 +701,8 @@ app.get("/search-hotels-stream", async (req, res) => {
 // ============================================
 app.get("/search-rates", async (req, res) => {
   console.log("\n💰 ===== SEARCH RATES ===== 💰");
-  const { checkin, checkout, adults, hotelId, environment, maxRates = 20, language = 'fr' } = req.query;
-  
+  const { checkin, checkout, adults, children, hotelId, environment, maxRates = 20, language = 'fr' } = req.query;
+
   if (!hotelId) {
     return res.status(400).json({ success: false, error: "hotelId is required" });
   }
@@ -767,18 +713,26 @@ app.get("/search-rates", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
 
   try {
-    // ✅ maxRatesPerHotel = 30 pour avoir plus de chambres
     const max = Math.min(parseInt(maxRates) || 30, 100);
+
+    const occupancies = [{ adults: parseInt(adults, 10) || 2 }];
+    if (children && parseInt(children) > 0) {
+      occupancies[0].children = parseInt(children);
+      occupancies[0].ages = req.query.childrenAges 
+        ? req.query.childrenAges.split(',').map(a => parseInt(a.trim()))
+        : Array(parseInt(children)).fill(5);
+    }
+
     const body = {
       hotelIds: [hotelId],
-      occupancies: [{ adults: parseInt(adults, 10) || 2 }],
+      occupancies: occupancies,
       currency: "USD",
       guestNationality: guestNationality,
       checkin: checkin,
       checkout: checkout,
       includeHotelData: true,
       roomMapping: true,
-      maxRatesPerHotel: max,      // ✅ 30 par défaut (au lieu de 20)
+      maxRatesPerHotel: max,
       timeout: 15
     };
 
@@ -786,7 +740,7 @@ app.get("/search-rates", async (req, res) => {
 
     let rates = [];
     let hotelInfo = {};
-    
+
     if (data.data && Array.isArray(data.data)) {
       rates = data.data;
     } else if (data.data && data.data.data && Array.isArray(data.data.data)) {
@@ -861,13 +815,14 @@ app.get("/search-rates", async (req, res) => {
     res.status(500).json({ success: false, error: "No availability found", message: error.message });
   }
 });
+
 // ============================================
 // 5. PRÉ-RÉSERVATION HÔTEL
 // ============================================
 app.post("/prebook", async (req, res) => {
   console.log("\n📋 ===== PREBOOK ===== 📋");
   const { offerId, environment, voucherCode } = req.body;
-  
+
   if (!offerId) {
     return res.status(400).json({ success: false, error: "offerId is required" });
   }
@@ -888,7 +843,7 @@ app.post("/prebook", async (req, res) => {
 });
 
 // ============================================
-// 6. BOOK - Réservation finale (CORRIGÉ)
+// 6. BOOK - Réservation finale
 // ============================================
 app.post("/book", async (req, res) => {
   console.log("\n📝 ===== BOOK ===== 📝");
@@ -933,19 +888,13 @@ app.post("/book", async (req, res) => {
   };
 
   try {
-    // 1. Réservation avec LiteAPI
     const response = await sdk.book(bodyData);
     const bookingData = response.data;
 
     console.log('✅ Réservation réussie:', bookingData.bookingId);
 
-    // 2. Récupérer les détails complets de la réservation
     const bookingDetails = await getBookingDetails(bookingData.bookingId, apiKey);
-
-    // 3. Récupérer les détails de l'hôtel
     const hotelDetails = await getHotelDetails(bookingData.hotelId, apiKey);
-
-    // 4. Construire les données pour l'email et la page de confirmation
     const confirmationData = buildConfirmationData(bookingData, bookingDetails, hotelDetails, {
       firstName: guestFirstName,
       lastName: guestLastName,
@@ -953,10 +902,8 @@ app.post("/book", async (req, res) => {
       phone: guestPhone
     });
 
-    // 5. Envoyer l'email de confirmation
     await sendConfirmationEmail(confirmationData);
 
-    // 6. Retourner les données au frontend
     res.json({ 
       success: true, 
       data: confirmationData 
@@ -1012,7 +959,6 @@ async function getHotelDetails(hotelId, apiKey) {
 // CONSTRUIRE LES DONNÉES DE CONFIRMATION
 // ============================================
 function buildConfirmationData(booking, details, hotel, guest) {
-  // Extraire le nom de la chambre
   let roomName = 'Chambre standard';
   if (booking.items && booking.items.length > 0) {
     roomName = booking.items[0].roomName || booking.items[0].name || roomName;
@@ -1020,7 +966,6 @@ function buildConfirmationData(booking, details, hotel, guest) {
     roomName = booking.roomTypes[0].name || roomName;
   }
 
-  // Extraire le nombre d'adultes
   let adults = 1;
   if (booking.guests && booking.guests.length > 0) {
     adults = booking.guests.reduce((sum, g) => sum + (g.adults || 1), 0);
@@ -1028,16 +973,14 @@ function buildConfirmationData(booking, details, hotel, guest) {
     adults = booking.occupancies[0].adults || 1;
   }
 
-  // Extraire la politique d'annulation
   let cancellationPolicy = 'Non remboursable';
   let cancellationDeadline = null;
-  
+
   if (booking.items && booking.items.length > 0) {
     const item = booking.items[0];
     if (item.cancellationPolicies) {
       const policies = item.cancellationPolicies;
-      
-      // Vérifier si c'est remboursable
+
       if (policies.refundableTag === 'RFN') {
         cancellationPolicy = 'Annulation gratuite';
         if (policies.deadline) {
@@ -1054,15 +997,10 @@ function buildConfirmationData(booking, details, hotel, guest) {
     }
   }
 
-  // Extraire le prix total
   let totalAmount = booking.total?.amount || 0;
   let currency = booking.total?.currency || 'USD';
-  
-  // Extraire les dates
   let checkin = booking.checkin || '';
   let checkout = booking.checkout || '';
-
-  // Extraire le code de confirmation
   let hotelConfirmationCode = booking.hotelConfirmationCode || booking.confirmationCode || '';
 
   return {
@@ -1092,8 +1030,7 @@ function buildConfirmationData(booking, details, hotel, guest) {
 // ============================================
 async function sendConfirmationEmail(data) {
   console.log("\n📧 ===== ENVOI EMAIL CONFIRMATION ===== 📧");
-  
-  // En développement, on simule l'envoi
+
   if (process.env.NODE_ENV !== 'production') {
     console.log('📧 SIMULATION EMAIL:');
     console.log(`   À: ${data.guest.email}`);
@@ -1102,8 +1039,6 @@ async function sendConfirmationEmail(data) {
     return;
   }
 
-  // En production, utiliser un service comme SendGrid, Mailgun, etc.
-  // Exemple avec SendGrid (à installer: npm install @sendgrid/mail)
   try {
     const sgMail = require('@sendgrid/mail');
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -1112,7 +1047,7 @@ async function sendConfirmationEmail(data) {
       to: data.guest.email,
       from: 'reservations@luviaplace.com',
       subject: `Confirmation de réservation #${data.bookingId} - LuviaPlace`,
-      templateId: 'd-xxxxxxxxxxxxxxxx', // Template SendGrid
+      templateId: 'd-xxxxxxxxxxxxxxxx',
       dynamicTemplateData: {
         bookingId: data.bookingId,
         hotelName: data.hotelName,
@@ -1137,6 +1072,7 @@ async function sendConfirmationEmail(data) {
     console.error('❌ Erreur envoi email:', error.message);
   }
 }
+
 // ============================================
 // 7. RECHERCHE VOLS
 // ============================================
@@ -1224,7 +1160,7 @@ app.post("/book-flight", async (req, res) => {
 app.get("/hotel-details", async (req, res) => {
   console.log("\n🏨 ===== HOTEL DETAILS ===== 🏨");
   const { hotelId, timeout = 8, environment, language = 'fr' } = req.query;
-  
+
   if (!hotelId) {
     return res.status(400).json({ success: false, error: "hotelId is required" });
   }
@@ -1281,28 +1217,25 @@ app.get("/hotel-details", async (req, res) => {
       language: language
     };
 
-    // Traduction DeepSeek pour les langues non supportées
     const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
-    
+
     if (!supportedLangs.includes(language) && language !== 'fr') {
       console.log(`🔄 Traduction DeepSeek des détails hôtel en: ${language}`);
-      
+
       hotel.name = await translateWithCache(hotel.name, language, 'fr', 'Nom d\'hôtel');
       hotel.address = await translateWithCache(hotel.address, language, 'fr', 'Adresse');
       hotel.hotelDescription = await translateWithCache(hotel.hotelDescription, language, 'fr', 'Description d\'hôtel');
-      
-      // Traduire les noms des chambres
+
       hotel.rooms = await Promise.all(hotel.rooms.map(async (room) => {
         room.roomName = await translateWithCache(room.roomName, language, 'fr', 'Nom de chambre');
         room.description = await translateWithCache(room.description, language, 'fr', 'Description de chambre');
         return room;
       }));
-      
-      // Traduire les équipements
+
       hotel.hotelFacilities = await Promise.all(hotel.hotelFacilities.map(async (facility) => {
         return await translateWithCache(facility, language, 'fr', 'Équipement d\'hôtel');
       }));
-      
+
       hotel.translated = true;
       hotel.translatedLanguage = language;
     }
@@ -1321,7 +1254,7 @@ app.get("/hotel-details", async (req, res) => {
 app.get("/hotel-reviews", async (req, res) => {
   console.log("\n⭐ ===== HOTEL REVIEWS ===== ⭐");
   const { hotelId, timeout = 8, environment, language = 'fr' } = req.query;
-  
+
   if (!hotelId) {
     return res.status(400).json({ success: false, error: "hotelId is required" });
   }
@@ -1354,12 +1287,11 @@ app.get("/hotel-reviews", async (req, res) => {
       };
     });
 
-    // Traduire les avis si la langue n'est pas supportée
     const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
-    
+
     if (!supportedLangs.includes(language) && language !== 'fr' && formattedReviews.length > 0) {
       console.log(`🔄 Traduction DeepSeek des avis en: ${language}`);
-      
+
       const translatedReviews = await Promise.all(
         formattedReviews.map(async (review) => {
           try {
@@ -1369,10 +1301,10 @@ app.get("/hotel-reviews", async (req, res) => {
               'fr', 
               'Avis d\'hôtel. Termes courants : "propre", "bien situé", "bon service", "confortable"'
             );
-            
+
             const translatedPros = review.pros ? await translateWithCache(review.pros, language, 'fr', 'Points positifs') : '';
             const translatedCons = review.cons ? await translateWithCache(review.cons, language, 'fr', 'Points négatifs') : '';
-            
+
             return {
               ...review,
               comment: translatedComment || review.comment,
@@ -1386,7 +1318,7 @@ app.get("/hotel-reviews", async (req, res) => {
           }
         })
       );
-      
+
       formattedReviews = translatedReviews;
     }
 
@@ -1403,19 +1335,19 @@ app.get("/hotel-reviews", async (req, res) => {
 // ============================================
 app.get("/api/chatbot-key", (req, res) => {
   console.log("\n🤖 ===== CHATBOT KEY ===== 🤖");
-  
+
   const environment = req.query.environment || process.env.NODE_ENV || 'sandbox';
-  
+
   let apiKey;
   if (environment === 'production' || environment === 'prod') {
     apiKey = process.env.PROD_API_KEY;
   } else {
     apiKey = process.env.SAND_API_KEY;
   }
-  
+
   console.log(`🔑 Environnement: ${environment}`);
   console.log(`🔑 Clé trouvée: ${apiKey ? '✅ Oui' : '❌ Non'}`);
-  
+
   if (!apiKey) {
     console.error('❌ Aucune clé API configurée');
     return res.status(500).json({ 
@@ -1423,29 +1355,29 @@ app.get("/api/chatbot-key", (req, res) => {
       error: 'Configuration API manquante'
     });
   }
-  
+
   res.json({ 
     success: true,
     key: apiKey,
     environment: environment
   });
 });
+
 // ============================================
 // CHATBOT - Configuration
 // ============================================
 app.get("/api/chatbot-config", (req, res) => {
   console.log("\n⚙️ ===== CHATBOT CONFIG ===== ⚙️");
-  
+
   const environment = req.query.environment || process.env.NODE_ENV || 'sandbox';
-  
+
   let apiKey;
   if (environment === 'production' || environment === 'prod') {
     apiKey = process.env.PROD_API_KEY;
   } else {
     apiKey = process.env.SAND_API_KEY;
   }
-  
-  // ✅ Retourner la configuration même si la clé est manquante
+
   if (!apiKey) {
     console.warn('⚠️ Aucune clé API configurée pour le chatbot');
     return res.json({
@@ -1454,74 +1386,58 @@ app.get("/api/chatbot-config", (req, res) => {
       environment: environment
     });
   }
-  
+
   res.json({
     success: true,
     apiKey: apiKey,
     environment: environment
   });
 });
+
 // ============================================
 // 14. CHATBOT - Proxy pour le script
 // ============================================
 app.get("/api/chatbot-script", async (req, res) => {
   console.log("\n📦 ===== CHATBOT SCRIPT PROXY ===== 📦");
-  
+
   const environment = req.query.environment || process.env.NODE_ENV || 'sandbox';
-  
+
   let apiKey;
   if (environment === 'production' || environment === 'prod') {
     apiKey = process.env.PROD_API_KEY;
   } else {
     apiKey = process.env.SAND_API_KEY;
   }
-  
+
   if (!apiKey) {
     console.error('❌ Aucune clé API configurée');
     return res.status(500).send('Configuration API manquante');
   }
-  
+
   try {
-    // Récupérer le script depuis le CDN
     const scriptUrl = `https://components.liteapi.travel/chatbot/v1.js`;
     console.log(`📡 Chargement depuis: ${scriptUrl}`);
-    
-    const response = await fetch(scriptUrl);
-    
+
+    const response = await fetchWithTimeout(scriptUrl, {}, 10000);
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    
+
     let script = await response.text();
-    
-    // ✅ INJECTER LA CLÉ DANS LE SCRIPT
-    // Remplacer la façon dont le script cherche la clé
-    // La plupart des widgets LiteAPI utilisent une variable globale ou une configuration
-    
-    // Option 1: Ajouter la clé en variable globale avant le script
+
     const wrappedScript = `
-      // Configuration du chatbot
       window.LITEAPI_CONFIG = {
         apiKey: '${apiKey}',
         environment: '${environment}'
       };
-      
-      // Script original
       ${script}
     `;
-    
-    // Option 2: Si le widget utilise une fonction d'initialisation
-    // const wrappedScript = `
-    //   ${script}
-    //   if (typeof LiteAPI !== 'undefined' && LiteAPI.init) {
-    //     LiteAPI.init({ apiKey: '${apiKey}' });
-    //   }
-    // `;
-    
+
     res.setHeader('Content-Type', 'application/javascript');
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.send(wrappedScript);
-    
+
     console.log(`✅ Script chatbot envoyé avec clé (${environment})`);
   } catch (error) {
     console.error('❌ Erreur proxy chatbot:', error);
@@ -1529,13 +1445,12 @@ app.get("/api/chatbot-script", async (req, res) => {
   }
 });
 
-
 // ============================================
 // 15. LISTE DES LANGUES SUPPORTÉES
 // ============================================
 app.get("/api/languages", async (req, res) => {
   console.log("\n🌍 ===== LANGUES SUPPORTÉES ===== 🌍");
-  
+
   const environment = req.query.environment || process.env.NODE_ENV || 'sandbox';
   const apiKey = environment === "production" || environment === "prod" 
     ? process.env.PROD_API_KEY 
@@ -1543,7 +1458,7 @@ app.get("/api/languages", async (req, res) => {
 
   try {
     const data = await callLiteAPI('data/languages', 'GET', null, apiKey);
-    
+
     let languages = [];
     if (data.data && Array.isArray(data.data)) {
       languages = data.data.map(lang => ({
@@ -1553,7 +1468,7 @@ app.get("/api/languages", async (req, res) => {
         flag: getLanguageFlag(lang.code || lang.languageCode || lang)
       }));
     }
-    
+
     const defaultLanguages = [
       { code: 'fr', name: 'Français', nativeName: 'Français', flag: '🇫🇷' },
       { code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧' },
@@ -1565,16 +1480,16 @@ app.get("/api/languages", async (req, res) => {
       { code: 'ar', name: 'العربية', nativeName: 'العربية', flag: '🇦🇪' },
       { code: 'zh', name: '中文', nativeName: '中文', flag: '🇨🇳' }
     ];
-    
+
     const allLanguages = [...languages];
     defaultLanguages.forEach(function(lang) {
       if (!allLanguages.some(l => l.code === lang.code)) {
         allLanguages.push(lang);
       }
     });
-    
+
     allLanguages.sort((a, b) => a.code.localeCompare(b.code));
-    
+
     res.json({ success: true, data: allLanguages });
   } catch (error) {
     console.error("❌ Erreur récupération langues:", error);
@@ -1595,23 +1510,10 @@ app.get("/api/languages", async (req, res) => {
 
 function getLanguageFlag(code) {
   const flags = {
-    'fr': '🇫🇷',
-    'en': '🇬🇧',
-    'es': '🇪🇸',
-    'sw': '🇹🇿',
-    'pt': '🇵🇹',
-    'it': '🇮🇹',
-    'de': '🇩🇪',
-    'ar': '🇦🇪',
-    'zh': '🇨🇳',
-    'ja': '🇯🇵',
-    'ru': '🇷🇺',
-    'nl': '🇳🇱',
-    'pl': '🇵🇱',
-    'tr': '🇹🇷',
-    'sw-ke': '🇰🇪',
-    'sw-ug': '🇺🇬',
-    'sw-cd': '🇨🇩'
+    'fr': '🇫🇷', 'en': '🇬🇧', 'es': '🇪🇸', 'sw': '🇹🇿', 'pt': '🇵🇹',
+    'it': '🇮🇹', 'de': '🇩🇪', 'ar': '🇦🇪', 'zh': '🇨🇳', 'ja': '🇯🇵',
+    'ru': '🇷🇺', 'nl': '🇳🇱', 'pl': '🇵🇱', 'tr': '🇹🇷',
+    'sw-ke': '🇰🇪', 'sw-ug': '🇺🇬', 'sw-cd': '🇨🇩'
   };
   return flags[code] || '🌐';
 }
@@ -1621,7 +1523,7 @@ function getLanguageFlag(code) {
 // ============================================
 app.get("/api/currencies", async (req, res) => {
   console.log("\n💰 ===== DEVISES SUPPORTÉES ===== 💰");
-  
+
   const environment = req.query.environment || process.env.NODE_ENV || 'sandbox';
   const apiKey = environment === "production" || environment === "prod" 
     ? process.env.PROD_API_KEY 
@@ -1629,13 +1531,13 @@ app.get("/api/currencies", async (req, res) => {
 
   try {
     const data = await callLiteAPI('data/currencies', 'GET', null, apiKey);
-    
+
     const currencies = (data.data || []).map(curr => ({
       code: curr.code || curr.currencyCode || curr,
       name: curr.name || curr.currencyName || curr,
       symbol: curr.symbol || getCurrencySymbol(curr.code || curr.currencyCode || curr)
     }));
-    
+
     const defaultCurrencies = [
       { code: 'USD', name: 'US Dollar', symbol: '$' },
       { code: 'EUR', name: 'Euro', symbol: '€' },
@@ -1649,14 +1551,14 @@ app.get("/api/currencies", async (req, res) => {
       { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh' },
       { code: 'CDF', name: 'Congolese Franc', symbol: 'FC' }
     ];
-    
+
     const allCurrencies = [...currencies];
     defaultCurrencies.forEach(function(curr) {
       if (!allCurrencies.some(c => c.code === curr.code)) {
         allCurrencies.push(curr);
       }
     });
-    
+
     res.json({ success: true, data: allCurrencies });
   } catch (error) {
     console.error("❌ Erreur récupération devises:", error);
@@ -1676,23 +1578,10 @@ app.get("/api/currencies", async (req, res) => {
 
 function getCurrencySymbol(code) {
   const symbols = {
-    'USD': '$',
-    'EUR': '€',
-    'GBP': '£',
-    'CAD': 'C$',
-    'CHF': 'Fr',
-    'AUD': 'A$',
-    'JPY': '¥',
-    'CNY': '¥',
-    'RUB': '₽',
-    'BRL': 'R$',
-    'ZAR': 'R',
-    'KES': 'KSh',
-    'TZS': 'TSh',
-    'UGX': 'USh',
-    'CDF': 'FC',
-    'GHS': 'GH₵',
-    'NGN': '₦'
+    'USD': '$', 'EUR': '€', 'GBP': '£', 'CAD': 'C$', 'CHF': 'Fr',
+    'AUD': 'A$', 'JPY': '¥', 'CNY': '¥', 'RUB': '₽', 'BRL': 'R$',
+    'ZAR': 'R', 'KES': 'KSh', 'TZS': 'TSh', 'UGX': 'USh', 'CDF': 'FC',
+    'GHS': 'GH₵', 'NGN': '₦'
   };
   return symbols[code] || code;
 }
@@ -1702,9 +1591,9 @@ function getCurrencySymbol(code) {
 // ============================================
 app.get("/api/east-africa-destinations", async (req, res) => {
   console.log("\n🌍 ===== EAST AFRICA DESTINATIONS ===== 🌍");
-  
+
   const language = req.query.language || 'fr';
-  
+
   const destinations = {
     fr: [
       { name: 'Zanzibar', country: 'Tanzanie', countryCode: 'TZ', image: 'zanzibar.jpg', description: 'Île paradisiaque avec des plages de sable blanc' },
@@ -1729,7 +1618,7 @@ app.get("/api/east-africa-destinations", async (req, res) => {
       { name: 'Kampala', country: 'Uganda', countryCode: 'UG', image: 'kampala.jpg', description: 'Mji mkuu wa Uganda' }
     ]
   };
-  
+
   const data = destinations[language] || destinations.fr;
   res.json({ success: true, data: data, language: language });
 });
@@ -1739,9 +1628,9 @@ app.get("/api/east-africa-destinations", async (req, res) => {
 // ============================================
 app.post('/api/translate', async (req, res) => {
   console.log("\n🌍 ===== DEEPSEEK TRANSLATION ===== 🌍");
-  
+
   const { text, targetLang, sourceLang = 'fr', context = '' } = req.body;
-  
+
   if (!text || !targetLang) {
     return res.status(400).json({ 
       success: false, 
@@ -1776,24 +1665,24 @@ app.post('/api/translate', async (req, res) => {
 // ============================================
 app.post("/api/translate-reviews", async (req, res) => {
   console.log("\n⭐ ===== TRANSLATE REVIEWS ===== ⭐");
-  
+
   const { reviews, targetLang } = req.body;
-  
+
   if (!reviews || !Array.isArray(reviews) || reviews.length === 0) {
     return res.json({ success: true, reviews: [] });
   }
-  
+
   if (targetLang === 'fr') {
     return res.json({ success: true, reviews: reviews });
   }
-  
+
   try {
     const translatedReviews = await Promise.all(
       reviews.map(async (review) => {
         if (!review.comment || review.comment.length === 0) {
           return review;
         }
-        
+
         try {
           const translatedComment = await translateWithCache(
             review.comment,
@@ -1801,7 +1690,7 @@ app.post("/api/translate-reviews", async (req, res) => {
             'fr',
             'Avis d\'hôtel. Termes courants : "propre", "bien situé", "bon service", "confortable"'
           );
-          
+
           return {
             ...review,
             comment: translatedComment || review.comment,
@@ -1815,7 +1704,7 @@ app.post("/api/translate-reviews", async (req, res) => {
         }
       })
     );
-    
+
     res.json({
       success: true,
       reviews: translatedReviews,
@@ -1833,20 +1722,20 @@ app.post("/api/translate-reviews", async (req, res) => {
 // ============================================
 app.post("/api/translate-hotel-description", async (req, res) => {
   console.log("\n📝 ===== TRANSLATE HOTEL DESCRIPTION ===== 📝");
-  
+
   const { hotelId, description, targetLang } = req.body;
-  
+
   if (!description) {
     return res.status(400).json({ 
       success: false, 
       error: "Description is required" 
     });
   }
-  
+
   if (targetLang === 'fr') {
     return res.json({ success: true, translation: description });
   }
-  
+
   try {
     const translated = await translateWithCache(
       description,
@@ -1854,7 +1743,7 @@ app.post("/api/translate-hotel-description", async (req, res) => {
       'fr',
       'Description d\'hôtel. Termes touristiques : "chambre", "suite", "petit-déjeuner", "piscine", "spa"'
     );
-    
+
     res.json({
       success: true,
       translation: translated,
@@ -1876,9 +1765,9 @@ app.post("/api/translate-hotel-description", async (req, res) => {
 // ============================================
 app.get("/api/translations", (req, res) => {
   console.log("\n📝 ===== TRANSLATIONS ===== 📝");
-  
+
   const language = req.query.language || 'fr';
-  
+
   const translations = {
     fr: {
       welcome: 'Bienvenue sur LuviaPlace',
@@ -1921,7 +1810,7 @@ app.get("/api/translations", (req, res) => {
       packages: 'Mpaketo'
     }
   };
-  
+
   const data = translations[language] || translations.fr;
   res.json({ success: true, data: data, language: language });
 });
@@ -1931,10 +1820,10 @@ app.get("/api/translations", (req, res) => {
 // ============================================
 app.get("/api/nationality", async (req, res) => {
   console.log("\n🌍 ===== NATIONALITÉ CLIENT ===== 🌍");
-  
+
   const guestNationality = await getGuestNationality(req);
   console.log(`🌍 Nationalité détectée: ${guestNationality}`);
-  
+
   res.json({
     success: true,
     nationality: guestNationality,
@@ -1947,80 +1836,54 @@ app.get("/api/nationality", async (req, res) => {
 // ============================================
 app.get("/api/rates", async (req, res) => {
   console.log("\n💰 ===== TAUX DE CHANGE ===== 💰");
-  
+
   const baseCurrency = req.query.base || 'USD';
-  
+
   try {
-    // Appel à l'API Frankfurter (gratuite, sans clé)
-    const response = await fetch(`https://api.frankfurter.app/latest?from=${baseCurrency}`);
-    
+    const response = await fetchWithTimeout(`https://api.frankfurter.app/latest?from=${baseCurrency}`, {}, 5000);
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
-    // Ajouter les devises africaines que Frankfurter ne supporte pas toujours
+
     const africanRates = {
-      'CDF': 2800,    // Franc Congolais
-      'XAF': 600,     // FCFA (CEMAC)
-      'XOF': 600,     // FCFA (UEMOA)
-      'NGN': 1500,    // Naira Nigérian
-      'GHS': 12,      // Cedi Ghanéen
-      'TZS': 2500,    // Shilling Tanzanien
-      'UGX': 3700,    // Shilling Ougandais
-      'MAD': 10,      // Dirham Marocain
+      'CDF': 2800,
+      'XAF': 600,
+      'XOF': 600,
+      'NGN': 1500,
+      'GHS': 12,
+      'TZS': 2500,
+      'UGX': 3700,
+      'MAD': 10,
     };
-    
-    // Fusionner les taux
-    const rates = {
-      ...data.rates,
-      ...africanRates
-    };
-    
-    // Ajouter USD si pas présent
+
+    const rates = { ...data.rates, ...africanRates };
     if (!rates.USD) rates.USD = 1;
-    
+
     console.log(`✅ Taux de change chargés (base: ${baseCurrency})`);
-    
+
     res.json({
       success: true,
       base: data.base || baseCurrency,
       date: data.date || new Date().toISOString().split('T')[0],
       rates: rates
     });
-    
+
   } catch (error) {
     console.error('❌ Erreur taux de change:', error.message);
-    
-    // Fallback avec taux fixes
+
     res.json({
       success: true,
       base: baseCurrency,
       date: new Date().toISOString().split('T')[0],
       rates: {
-        'USD': 1,
-        'EUR': 0.92,
-        'GBP': 0.78,
-        'CDF': 2800,
-        'XAF': 600,
-        'XOF': 600,
-        'NGN': 1500,
-        'GHS': 12,
-        'ZAR': 18,
-        'KES': 130,
-        'TZS': 2500,
-        'UGX': 3700,
-        'MAD': 10,
-        'JPY': 150,
-        'CNY': 7.2,
-        'CHF': 0.88,
-        'CAD': 1.35,
-        'AUD': 1.5,
-        'BRL': 5.5,
-        'RUB': 90,
-        'INR': 83,
-        'KRW': 1350
+        'USD': 1, 'EUR': 0.92, 'GBP': 0.78, 'CDF': 2800, 'XAF': 600,
+        'XOF': 600, 'NGN': 1500, 'GHS': 12, 'ZAR': 18, 'KES': 130,
+        'TZS': 2500, 'UGX': 3700, 'MAD': 10, 'JPY': 150, 'CNY': 7.2,
+        'CHF': 0.88, 'CAD': 1.35, 'AUD': 1.5, 'BRL': 5.5, 'RUB': 90,
+        'INR': 83, 'KRW': 1350
       }
     });
   }
@@ -2031,47 +1894,37 @@ app.get("/api/rates", async (req, res) => {
 // ============================================
 app.post("/api/convert", async (req, res) => {
   console.log("\n🔄 ===== CONVERSION DE PRIX ===== 🔄");
-  
+
   const { amount, from, to } = req.body;
-  
+
   if (!amount || !from || !to) {
     return res.status(400).json({ 
       success: false, 
       error: "amount, from and to are required" 
     });
   }
-  
+
   try {
-    // Récupérer les taux
-    const ratesResponse = await fetch(`https://api.frankfurter.app/latest?from=${from}`);
+    const ratesResponse = await fetchWithTimeout(`https://api.frankfurter.app/latest?from=${from}`, {}, 5000);
     const ratesData = await ratesResponse.json();
-    
-    // Taux de conversion
+
     let rate = 1;
-    
+
     if (to === from) {
       rate = 1;
     } else if (ratesData.rates && ratesData.rates[to]) {
       rate = ratesData.rates[to];
     } else {
-      // Fallback pour les devises africaines
       const fallbackRates = {
-        'CDF': 2800,
-        'XAF': 600,
-        'XOF': 600,
-        'NGN': 1500,
-        'GHS': 12,
-        'ZAR': 18,
-        'KES': 130,
-        'TZS': 2500,
-        'UGX': 3700,
-        'MAD': 10
+        'CDF': 2800, 'XAF': 600, 'XOF': 600, 'NGN': 1500,
+        'GHS': 12, 'ZAR': 18, 'KES': 130, 'TZS': 2500,
+        'UGX': 3700, 'MAD': 10
       };
       rate = fallbackRates[to] || 1;
     }
-    
+
     const converted = amount * rate;
-    
+
     res.json({
       success: true,
       from: from,
@@ -2080,39 +1933,21 @@ app.post("/api/convert", async (req, res) => {
       rate: rate,
       converted: converted
     });
-    
+
   } catch (error) {
     console.error('❌ Erreur conversion:', error.message);
-    
-    // Fallback avec taux fixes
+
     const fallbackRates = {
-      'USD': 1,
-      'EUR': 0.92,
-      'GBP': 0.78,
-      'CDF': 2800,
-      'XAF': 600,
-      'XOF': 600,
-      'NGN': 1500,
-      'GHS': 12,
-      'ZAR': 18,
-      'KES': 130,
-      'TZS': 2500,
-      'UGX': 3700,
-      'MAD': 10,
-      'JPY': 150,
-      'CNY': 7.2,
-      'CHF': 0.88,
-      'CAD': 1.35,
-      'AUD': 1.5,
-      'BRL': 5.5,
-      'RUB': 90,
-      'INR': 83,
-      'KRW': 1350
+      'USD': 1, 'EUR': 0.92, 'GBP': 0.78, 'CDF': 2800, 'XAF': 600,
+      'XOF': 600, 'NGN': 1500, 'GHS': 12, 'ZAR': 18, 'KES': 130,
+      'TZS': 2500, 'UGX': 3700, 'MAD': 10, 'JPY': 150, 'CNY': 7.2,
+      'CHF': 0.88, 'CAD': 1.35, 'AUD': 1.5, 'BRL': 5.5, 'RUB': 90,
+      'INR': 83, 'KRW': 1350
     };
-    
+
     const rate = fallbackRates[to] || 1;
     const converted = amount * rate;
-    
+
     res.json({
       success: true,
       from: from,
@@ -2130,36 +1965,25 @@ app.post("/api/convert", async (req, res) => {
 // ============================================
 app.get("/api/loyalty/coins", async (req, res) => {
   console.log("\n💰 ===== LOYALTY COINS ===== 💰");
-  
+
   const { userId } = req.query;
-  
+
   if (!userId) {
     return res.status(400).json({
       success: false,
       error: 'userId est requis'
     });
   }
-  
+
   try {
-    // Si tu as une table Supabase pour les coins
-    // const { data, error } = await supabase
-    //   .from('loyalty_coins')
-    //   .select('coins')
-    //   .eq('user_id', userId)
-    //   .single();
-    
-    // Si error -> retourner 0 par défaut
-    // if (error) throw error;
-    
-    // Pour l'instant, retourner un montant fictif
     const mockCoins = Math.floor(Math.random() * 500) + 100;
-    
+
     res.json({
       success: true,
       coins: mockCoins,
       userId: userId
     });
-    
+
   } catch (error) {
     console.error('❌ Erreur récupération coins:', error.message);
     res.json({
@@ -2170,32 +1994,33 @@ app.get("/api/loyalty/coins", async (req, res) => {
     });
   }
 });
+
 // ============================================
 // HOTEL HIGHLIGHTS - PROXY
 // ============================================
 app.post("/api/hotel-highlights", async (req, res) => {
   console.log("\n✨ ===== HOTEL HIGHLIGHTS ===== ✨");
-  
+
   const { hotelId, language = 'fr', count = 3, tone, style, highlights } = req.body;
-  
+
   if (!hotelId) {
     return res.status(400).json({ success: false, error: "hotelId is required" });
   }
-  
+
   const apiKey = process.env.PROD_API_KEY;
-  
+
   try {
     const body = {
       hotelId: hotelId,
       language: language,
       count: Math.min(Math.max(count, 1), 10)
     };
-    
+
     if (tone) body.tone = tone;
     if (style) body.style = style;
     if (highlights) body.highlights = highlights;
-    
-    const response = await fetch('https://api.liteapi.travel/v3.0/data/hotel/highlights', {
+
+    const response = await fetchWithTimeout('https://api.liteapi.travel/v3.0/data/hotel/highlights', {
       method: 'POST',
       headers: {
         'X-API-Key': apiKey,
@@ -2203,8 +2028,8 @@ app.post("/api/hotel-highlights", async (req, res) => {
         'Accept': 'application/json'
       },
       body: JSON.stringify(body)
-    });
-    
+    }, 15000);
+
     if (!response.ok) {
       if (response.status === 429) {
         return res.status(429).json({ 
@@ -2215,14 +2040,14 @@ app.post("/api/hotel-highlights", async (req, res) => {
       }
       throw new Error(`HTTP ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
+
     res.json({
       success: true,
       data: data.data || data
     });
-    
+
   } catch (error) {
     console.error('❌ Erreur highlights:', error);
     res.status(500).json({ 
@@ -2232,14 +2057,15 @@ app.post("/api/hotel-highlights", async (req, res) => {
     });
   }
 });
+
 // ============================================
 // ASK AI - POSER UNE QUESTION À L'IA
 // ============================================
 app.post("/api/ask-hotel", async (req, res) => {
   console.log("\n🤖 ===== ASK AI ===== 🤖");
-  
+
   const { hotelId, question, allowWebSearch = false, language = 'fr' } = req.body;
-  
+
   if (!hotelId) {
     return res.status(400).json({ 
       success: false, 
@@ -2249,7 +2075,7 @@ app.post("/api/ask-hotel", async (req, res) => {
       } 
     });
   }
-  
+
   if (!question || question.trim().length === 0) {
     return res.status(400).json({ 
       success: false, 
@@ -2259,28 +2085,28 @@ app.post("/api/ask-hotel", async (req, res) => {
       } 
     });
   }
-  
+
   const apiKey = process.env.PROD_API_KEY;
-  
+
   try {
     const url = new URL('https://api.liteapi.travel/v3.0/data/hotel/ask');
     url.searchParams.append('hotelId', hotelId);
     url.searchParams.append('query', question);
     url.searchParams.append('allowWebSearch', String(allowWebSearch));
-    
+
     console.log(`📡 Question: "${question}"`);
     console.log(`🏨 Hôtel: ${hotelId}`);
     console.log(`🔍 Web search: ${allowWebSearch}`);
-    
-    const response = await fetch(url.toString(), {
+
+    const response = await fetchWithTimeout(url.toString(), {
       method: 'GET',
       headers: {
         'X-API-Key': apiKey,
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       }
-    });
-    
+    }, 15000);
+
     if (!response.ok) {
       let errorMsg = `HTTP ${response.status}`;
       try {
@@ -2289,18 +2115,17 @@ app.post("/api/ask-hotel", async (req, res) => {
       } catch (e) {}
       throw new Error(errorMsg);
     }
-    
+
     const data = await response.json();
-    
-    // Journaliser la réponse
+
     console.log(`✅ Réponse reçue (${data.data?.latency_ms || 0}ms)`);
     console.log(`📝 Réponse: "${data.data?.answer?.substring(0, 100)}..."`);
-    
+
     res.json({
       success: true,
       data: data.data || data
     });
-    
+
   } catch (error) {
     console.error('❌ Erreur Ask AI:', error.message);
     res.status(500).json({ 
@@ -2312,12 +2137,14 @@ app.post("/api/ask-hotel", async (req, res) => {
     });
   }
 });
+
 // ============================================
 // MOBILE MONEY - INITIER LE PAIEMENT
+// ✅ CORRECTION : pas de usePaymentSdk ni currency dans prebook
 // ============================================
 app.post("/api/payment/mobile-money/init", async (req, res) => {
   console.log("\n📱 ===== MOBILE MONEY INIT ===== 📱");
-  
+
   const { 
     offerId, 
     phoneNumber, 
@@ -2344,9 +2171,8 @@ app.post("/api/payment/mobile-money/init", async (req, res) => {
       'hotels/prebook',
       'POST',
       { 
-        offerId: offerId, 
-        usePaymentSdk: true,
-        currency: currency
+        offerId: offerId
+        // ✅ Retiré : usePaymentSdk et currency (non supportés ici)
       },
       apiKey
     );
@@ -2364,7 +2190,7 @@ app.post("/api/payment/mobile-money/init", async (req, res) => {
     // 2. Générer un ID de transaction unique
     const transactionId = `LUVIA-MM-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
-    // 3. Sauvegarder la transaction en mémoire (à remplacer par une DB)
+    // ⚠️ NOTE : En production, remplace global.* par Redis/Supabase/PostgreSQL
     const transactionData = {
       id: transactionId,
       prebookId: prebookId,
@@ -2389,7 +2215,6 @@ app.post("/api/payment/mobile-money/init", async (req, res) => {
     console.log(`   💰 Montant: $${totalAmount}`);
     console.log(`   🏢 Provider: ${provider}`);
 
-    // 4. Simuler l'envoi du paiement (à remplacer par l'API réelle)
     const paymentResponse = {
       transactionId: transactionId,
       status: 'PENDING',
@@ -2425,7 +2250,7 @@ app.post("/api/payment/mobile-money/init", async (req, res) => {
 // ============================================
 app.post("/api/payment/mobile-money/confirm", async (req, res) => {
   console.log("\n📞 ===== MOBILE MONEY CONFIRM ===== 📞");
-  
+
   const { transactionId, provider = 'MPESA', mpesaReceiptNumber } = req.body;
 
   if (!transactionId) {
@@ -2437,7 +2262,7 @@ app.post("/api/payment/mobile-money/confirm", async (req, res) => {
 
   try {
     const transaction = global.mobileMoneyTransactions?.get(transactionId);
-    
+
     if (!transaction) {
       return res.status(404).json({
         success: false,
@@ -2445,7 +2270,6 @@ app.post("/api/payment/mobile-money/confirm", async (req, res) => {
       });
     }
 
-    // Simuler la confirmation (à remplacer par l'API réelle)
     transaction.status = 'COMPLETED';
     transaction.mpesaReceiptNumber = mpesaReceiptNumber || `MM-${Date.now()}`;
     transaction.completedAt = new Date().toISOString();
@@ -2484,7 +2308,7 @@ app.post("/api/payment/mobile-money/webhook", async (req, res) => {
 
   try {
     const transaction = global.mobileMoneyTransactions?.get(transactionId);
-    
+
     if (!transaction) {
       console.warn(`⚠️ Transaction ${transactionId} non trouvée`);
       return res.status(200).json({ success: true, message: 'Transaction non trouvée' });
@@ -2512,10 +2336,11 @@ app.post("/api/payment/mobile-money/webhook", async (req, res) => {
 
 // ============================================
 // PAYPAL - INITIER LE PAIEMENT
+// ✅ CORRECTION : pas de usePaymentSdk ni currency dans prebook
 // ============================================
 app.post("/api/payment/paypal/init", async (req, res) => {
   console.log("\n🅿️ ===== PAYPAL INIT ===== 🅿️");
-  
+
   const { offerId, amount, currency = 'USD', guestInfo, environment = 'sandbox', email, returnUrl, cancelUrl } = req.body;
 
   if (!offerId || !amount) {
@@ -2532,9 +2357,8 @@ app.post("/api/payment/paypal/init", async (req, res) => {
       'hotels/prebook',
       'POST',
       { 
-        offerId: offerId, 
-        usePaymentSdk: true,
-        currency: currency
+        offerId: offerId
+        // ✅ Retiré : usePaymentSdk et currency
       },
       apiKey
     );
@@ -2568,7 +2392,6 @@ app.post("/api/payment/paypal/init", async (req, res) => {
     }
     global.paypalTransactions.set(transactionId, transactionData);
 
-    // Simuler la redirection PayPal
     const redirectUrl = returnUrl || `${req.protocol}://${req.get('host')}${req.path}?paypal=success&prebookId=${prebookId}&transactionId=${transactionId}`;
 
     console.log(`🅿️ Paiement PayPal initié: ${transactionId}`);
@@ -2608,7 +2431,7 @@ app.post("/api/payment/paypal/webhook", async (req, res) => {
 
   try {
     const transaction = global.paypalTransactions?.get(transactionId);
-    
+
     if (!transaction) {
       console.warn(`⚠️ Transaction PayPal ${transactionId} non trouvée`);
       return res.status(200).json({ success: true });
@@ -2637,10 +2460,11 @@ app.post("/api/payment/paypal/webhook", async (req, res) => {
 
 // ============================================
 // RÉSERVATION APRÈS PAIEMENT EXTERNE
+// ✅ CORRECTION : envoie aussi l'email de confirmation
 // ============================================
 app.post("/api/book-with-payment", async (req, res) => {
   console.log("\n📝 ===== BOOK WITH PAYMENT ===== 📝");
-  
+
   const { 
     prebookId, 
     guestFirstName, 
@@ -2663,9 +2487,8 @@ app.post("/api/book-with-payment", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
 
   try {
-    // Vérifier que le paiement a été effectué
     let paymentVerified = false;
-    
+
     if (paymentMethod === 'MOBILE_MONEY') {
       const transaction = global.mobileMoneyTransactions?.get(transactionId);
       paymentVerified = transaction && transaction.status === 'COMPLETED';
@@ -2676,7 +2499,6 @@ app.post("/api/book-with-payment", async (req, res) => {
 
     if (!paymentVerified) {
       console.warn(`⚠️ Paiement non vérifié pour ${transactionId}`);
-      // En sandbox, on autorise quand même pour les tests
       if (environment !== 'sandbox') {
         return res.status(400).json({
           success: false,
@@ -2685,7 +2507,6 @@ app.post("/api/book-with-payment", async (req, res) => {
       }
     }
 
-    // Réservation avec LiteAPI
     const bookingResult = await callLiteAPI(
       'hotels/book',
       'POST',
@@ -2713,6 +2534,17 @@ app.post("/api/book-with-payment", async (req, res) => {
 
     console.log(`✅ Réservation confirmée: ${bookingResult.data?.bookingId}`);
 
+    // ✅ CORRECTION : Récupérer les détails et envoyer l'email
+    const bookingData = bookingResult.data;
+    const hotelDetails = await getHotelDetails(bookingData.hotelId, apiKey);
+    const confirmationData = buildConfirmationData(bookingData, {}, hotelDetails, {
+      firstName: guestFirstName,
+      lastName: guestLastName,
+      email: guestEmail,
+      phone: guestPhone
+    });
+    await sendConfirmationEmail(confirmationData);
+
     res.json({
       success: true,
       data: {
@@ -2732,6 +2564,7 @@ app.post("/api/book-with-payment", async (req, res) => {
     });
   }
 });
+
 // ============================================
 // RÉCUPÉRER UNE RÉSERVATION PAR ID
 // ============================================
@@ -2750,7 +2583,6 @@ app.get("/booking/:id", async (req, res) => {
     const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
 
     try {
-        // 1. Récupérer la réservation depuis LiteAPI
         const bookingData = await callLiteAPI(
             `bookings/${id}`,
             'GET',
@@ -2766,11 +2598,8 @@ app.get("/booking/:id", async (req, res) => {
         }
 
         const booking = bookingData.data;
-
-        // 2. Récupérer les détails de l'hôtel
         const hotelDetails = await getHotelDetails(booking.hotelId, apiKey);
 
-        // 3. Construire les données formatées
         const formattedData = buildConfirmationData(booking, {}, hotelDetails, {
             firstName: booking.holder?.firstName || '',
             lastName: booking.holder?.lastName || '',
@@ -2791,22 +2620,20 @@ app.get("/booking/:id", async (req, res) => {
         });
     }
 });
+
 // ============================================
 // GÉNÉRER LE BON DE CONFIRMATION (HTML)
 // ============================================
 function generateVoucherHtml(bookingData) {
-    // Extraire les données
     const booking = bookingData.booking || {};
     const hotel = bookingData.hotel || {};
     const guest = bookingData.guest || {};
     const payment = bookingData.payment || {};
 
-    // Dates
     const checkinDate = new Date(booking.checkin || Date.now());
     const checkoutDate = new Date(booking.checkout || Date.now());
     const nights = Math.max(1, Math.ceil((checkoutDate - checkinDate) / 86400000));
 
-    // Formatage des dates
     const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
                     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
@@ -2821,7 +2648,6 @@ function generateVoucherHtml(bookingData) {
     const checkoutYear = checkoutDate.getFullYear();
     const checkoutDayName = days[checkoutDate.getDay()];
 
-    // Extraire le nom de la chambre
     let roomName = 'Chambre standard';
     if (booking.items && booking.items.length > 0) {
         roomName = booking.items[0].roomName || booking.items[0].name || roomName;
@@ -2829,7 +2655,6 @@ function generateVoucherHtml(bookingData) {
         roomName = booking.roomTypes[0].name || roomName;
     }
 
-    // Extraire la pension
     let boardType = 'Chambre seule';
     if (booking.items && booking.items.length > 0) {
         const item = booking.items[0];
@@ -2839,7 +2664,6 @@ function generateVoucherHtml(bookingData) {
         else if (item.boardType === 'AI') boardType = 'All Inclusive';
     }
 
-    // Extraire le nombre de voyageurs
     let adults = 1;
     let children = 0;
     if (booking.guests && booking.guests.length > 0) {
@@ -2850,7 +2674,6 @@ function generateVoucherHtml(bookingData) {
         children = booking.occupancies[0].children || 0;
     }
 
-    // Politique d'annulation
     let freeCancellationDeadline = 'Non remboursable';
     let cancellationFee = '100% du montant total';
 
@@ -2874,14 +2697,11 @@ function generateVoucherHtml(bookingData) {
         }
     }
 
-    // Prix
     const totalAmount = booking.total?.amount || 0;
     const currency = booking.total?.currency || 'USD';
     const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'CDF' ? 'FC' : currency;
 
-    // Template HTML
-    return `
-<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -2889,341 +2709,103 @@ function generateVoucherHtml(bookingData) {
     <title>Bon de Confirmation - LuviaPlace</title>
     <style>
         :root {
-            --primary-color: #0d6efd;
-            --primary-dark: #0a58ca;
-            --secondary-color: #059669;
-            --text-dark: #1f2937;
-            --text-muted: #6b7280;
-            --bg-light: #f8fafc;
-            --border-color: #e5e7eb;
-            --card-bg: #ffffff;
-            --warning-bg: #fffbeb;
-            --warning-border: #fef3c7;
-            --warning-text: #b45309;
+            --primary-color: #0d6efd; --primary-dark: #0a58ca; --secondary-color: #059669;
+            --text-dark: #1f2937; --text-muted: #6b7280; --bg-light: #f8fafc;
+            --border-color: #e5e7eb; --card-bg: #ffffff; --warning-bg: #fffbeb;
+            --warning-border: #fef3c7; --warning-text: #b45309;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f3f4f6;
-            color: var(--text-dark);
-            line-height: 1.5;
-            padding: 20px;
+            background-color: #f3f4f6; color: var(--text-dark); line-height: 1.5; padding: 20px;
         }
-
         .voucher-container {
-            max-width: 850px;
-            margin: 0 auto;
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            padding: 32px;
+            max-width: 850px; margin: 0 auto; background: var(--card-bg); border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; padding: 32px;
         }
-
         .voucher-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 20px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-            gap: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 24px;
+            flex-wrap: wrap; gap: 12px;
         }
-
-        .brand-logo {
-            font-size: 28px;
-            font-weight: 800;
-            color: var(--primary-color);
-            letter-spacing: -0.5px;
-            text-transform: lowercase;
-        }
-
+        .brand-logo { font-size: 28px; font-weight: 800; color: var(--primary-color); letter-spacing: -0.5px; text-transform: lowercase; }
         .brand-logo span { color: var(--text-dark); }
-
         .voucher-title-box { text-align: right; }
-
-        .voucher-title {
-            font-size: 20px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .booking-id {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
+        .voucher-title { font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .booking-id { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
         .booking-id strong { color: var(--text-dark); }
-
         .status-bar {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-            background-color: var(--bg-light);
-            padding: 12px 16px;
-            border-radius: 8px;
-            align-items: center;
-            flex-wrap: wrap;
+            display: flex; gap: 12px; margin-bottom: 24px; background-color: var(--bg-light);
+            padding: 12px 16px; border-radius: 8px; align-items: center; flex-wrap: wrap;
         }
-
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .status-badge.confirmed {
-            background-color: #d1fae5;
-            color: #059669;
-        }
-
-        .status-badge.paid {
-            background-color: #dbeafe;
-            color: #2563eb;
-        }
-
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; text-transform: uppercase; }
+        .status-badge.confirmed { background-color: #d1fae5; color: #059669; }
+        .status-badge.paid { background-color: #dbeafe; color: #2563eb; }
         .hotel-info-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-            margin-bottom: 24px;
-            background: var(--bg-light);
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
+            display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px;
+            background: var(--bg-light); padding: 20px; border-radius: 10px; border: 1px solid var(--border-color);
         }
-
-        .hotel-name {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 8px;
-        }
-
-        .hotel-address, .hotel-phone {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-
-        .hotel-media-placeholders {
-            display: flex;
-            gap: 10px;
-        }
-
+        .hotel-name { font-size: 22px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
+        .hotel-address, .hotel-phone { font-size: 14px; color: var(--text-muted); margin-bottom: 4px; }
+        .hotel-media-placeholders { display: flex; gap: 10px; }
         .img-placeholder {
-            width: 100%;
-            height: 100px;
-            background-color: #e2e8f0;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #94a3b8;
-            font-size: 12px;
-            text-align: center;
+            width: 100%; height: 100px; background-color: #e2e8f0; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px; text-align: center;
         }
-
         .dates-container {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            gap: 16px;
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 10px;
-            padding: 20px;
-            align-items: center;
-            text-align: center;
-            margin-bottom: 28px;
+            display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; background: #eff6ff;
+            border: 1px solid #bfdbfe; border-radius: 10px; padding: 20px; align-items: center;
+            text-align: center; margin-bottom: 28px;
         }
-
-        .date-box .label {
-            font-size: 12px;
-            text-transform: uppercase;
-            color: #3b82f6;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-
-        .date-box .day-num {
-            font-size: 32px;
-            font-weight: 800;
-            color: #1e3a8a;
-            line-height: 1.1;
-        }
-
-        .date-box .month-year {
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e40af;
-            text-transform: uppercase;
-        }
-
-        .date-box .subtext {
-            font-size: 12px;
-            color: #60a5fa;
-            margin-top: 4px;
-        }
-
+        .date-box .label { font-size: 12px; text-transform: uppercase; color: #3b82f6; font-weight: 700; letter-spacing: 0.5px; }
+        .date-box .day-num { font-size: 32px; font-weight: 800; color: #1e3a8a; line-height: 1.1; }
+        .date-box .month-year { font-size: 14px; font-weight: 600; color: #1e40af; text-transform: uppercase; }
+        .date-box .subtext { font-size: 12px; color: #60a5fa; margin-top: 4px; }
         .stay-duration {
-            background: #ffffff;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 700;
-            color: #1e40af;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            background: #ffffff; padding: 8px 16px; border-radius: 20px; font-size: 13px;
+            font-weight: 700; color: #1e40af; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-
-        .details-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-bottom: 28px;
-        }
-
-        .section-box {
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 18px;
-        }
-
+        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+        .section-box { border: 1px solid var(--border-color); border-radius: 8px; padding: 18px; }
         .section-title {
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--text-dark);
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 8px;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 15px; font-weight: 700; color: var(--text-dark); border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;
         }
-
-        .info-list {
-            list-style: none;
-        }
-
-        .info-list li {
-            font-size: 13.5px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-        }
-
+        .info-list { list-style: none; }
+        .info-list li { font-size: 13.5px; margin-bottom: 8px; display: flex; justify-content: space-between; }
         .info-list li span.label { color: var(--text-muted); }
         .info-list li span.value { font-weight: 600; text-align: right; }
-
-        .price-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
-        }
-
-        .price-table td {
-            padding: 8px 0;
-            font-size: 14px;
-            border-bottom: 1px dashed var(--border-color);
-        }
-
+        .price-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        .price-table td { padding: 8px 0; font-size: 14px; border-bottom: 1px dashed var(--border-color); }
         .price-table tr:last-child td { border-bottom: none; }
-
-        .price-table .total-row td {
-            font-weight: 700;
-            font-size: 16px;
-            color: var(--primary-color);
-            border-top: 2px solid var(--border-color);
-            padding-top: 12px;
-        }
-
+        .price-table .total-row td { font-weight: 700; font-size: 16px; color: var(--primary-color); border-top: 2px solid var(--border-color); padding-top: 12px; }
         .pay-at-hotel {
-            background-color: var(--warning-bg);
-            border: 1px solid var(--warning-border);
-            border-radius: 6px;
-            padding: 10px;
-            margin-top: 12px;
-            font-size: 13px;
-            color: var(--warning-text);
+            background-color: var(--warning-bg); border: 1px solid var(--warning-border);
+            border-radius: 6px; padding: 10px; margin-top: 12px; font-size: 13px; color: var(--warning-text);
         }
-
         .pay-at-hotel strong { color: var(--warning-text); }
-
-        .policy-box {
-            background-color: #f9fafb;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 24px;
-        }
-
-        .policy-box h3 {
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-
-        .policy-text {
-            font-size: 12.5px;
-            color: var(--text-muted);
-            line-height: 1.6;
-        }
-
+        .policy-box { background-color: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+        .policy-box h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+        .policy-text { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
         .policy-text strong { color: var(--text-dark); }
-
         .voucher-footer {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            border-top: 2px solid var(--border-color);
-            padding-top: 20px;
-            font-size: 12px;
-            color: var(--text-muted);
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border-top: 2px solid var(--border-color);
+            padding-top: 20px; font-size: 12px; color: var(--text-muted);
         }
-
-        .footer-column h4 {
-            font-size: 13px;
-            color: var(--text-dark);
-            margin-bottom: 6px;
-        }
-
+        .footer-column h4 { font-size: 13px; color: var(--text-dark); margin-bottom: 6px; }
         .footer-column p { margin-bottom: 4px; }
-
-        .provider-tag {
-            text-align: center;
-            margin-top: 24px;
-            font-size: 12px;
-            color: #9ca3af;
-            font-weight: 500;
-        }
-
-        @media print {
-            body { background: #fff; padding: 0; }
-            .voucher-container { box-shadow: none; padding: 0; }
-        }
-
+        .provider-tag { text-align: center; margin-top: 24px; font-size: 12px; color: #9ca3af; font-weight: 500; }
+        @media print { body { background: #fff; padding: 0; } .voucher-container { box-shadow: none; padding: 0; } }
         @media (max-width: 640px) {
-            .hotel-info-grid, .details-grid, .dates-container, .voucher-footer {
-                grid-template-columns: 1fr;
-            }
-            .voucher-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
+            .hotel-info-grid, .details-grid, .dates-container, .voucher-footer { grid-template-columns: 1fr; }
+            .voucher-header { flex-direction: column; align-items: flex-start; }
             .voucher-title-box { text-align: left; }
             .hotel-media-placeholders { flex-direction: column; }
         }
     </style>
 </head>
 <body>
-
 <div class="voucher-container">
-
     <header class="voucher-header">
         <div class="brand-logo">Luvia<span>Place</span></div>
         <div class="voucher-title-box">
@@ -3231,13 +2813,11 @@ function generateVoucherHtml(bookingData) {
             <div class="booking-id">ID Réservation: <strong>${booking.bookingId || '---'}</strong></div>
         </div>
     </header>
-
     <div class="status-bar">
         <span>Statut de la réservation :</span>
         <span class="status-badge confirmed">Confirmée</span>
         <span class="status-badge paid">Paiement : ${payment.status || 'Confirmé'}</span>
     </div>
-
     <section class="hotel-info-grid">
         <div>
             <h1 class="hotel-name">${hotel.name || 'Hôtel'}</h1>
@@ -3249,7 +2829,6 @@ function generateVoucherHtml(bookingData) {
             <div class="img-placeholder">Carte Lieu</div>
         </div>
     </section>
-
     <section class="dates-container">
         <div class="date-box">
             <div class="label">Arrivée</div>
@@ -3257,11 +2836,9 @@ function generateVoucherHtml(bookingData) {
             <div class="month-year">${checkinMonth} ${checkinYear}</div>
             <div class="subtext">${checkinDayName} à partir de 15:00</div>
         </div>
-
         <div class="stay-duration">
             ⏱️ ${nights} Nuit(s) | 1 Chambre(s) | ${adults + children} Client(s)
         </div>
-
         <div class="date-box">
             <div class="label">Départ</div>
             <div class="day-num">${String(checkoutDay).padStart(2, '0')}</div>
@@ -3269,58 +2846,30 @@ function generateVoucherHtml(bookingData) {
             <div class="subtext">${checkoutDayName} jusqu'à 12:00</div>
         </div>
     </section>
-
     <div class="details-grid">
         <div class="section-box">
             <h2 class="section-title">Détails de la Réservation</h2>
             <ul class="info-list">
-                <li>
-                    <span class="label">Titulaire :</span>
-                    <span class="value">${guest.firstName || ''} ${guest.lastName || ''}</span>
-                </li>
-                <li>
-                    <span class="label">Nombre de clients :</span>
-                    <span class="value">${adults} adulte(s)${children > 0 ? `, ${children} enfant(s)` : ''}</span>
-                </li>
-                <li>
-                    <span class="label">Type de chambre :</span>
-                    <span class="value">${roomName}</span>
-                </li>
-                <li>
-                    <span class="label">Type de pension :</span>
-                    <span class="value">${boardType}</span>
-                </li>
-                <li>
-                    <span class="label">Nombre d'unités :</span>
-                    <span class="value">1</span>
-                </li>
+                <li><span class="label">Titulaire :</span><span class="value">${guest.firstName || ''} ${guest.lastName || ''}</span></li>
+                <li><span class="label">Nombre de clients :</span><span class="value">${adults} adulte(s)${children > 0 ? `, ${children} enfant(s)` : ''}</span></li>
+                <li><span class="label">Type de chambre :</span><span class="value">${roomName}</span></li>
+                <li><span class="label">Type de pension :</span><span class="value">${boardType}</span></li>
+                <li><span class="label">Nombre d'unités :</span><span class="value">1</span></li>
             </ul>
         </div>
-
         <div class="section-box">
             <h2 class="section-title">Détail du Paiement</h2>
             <table class="price-table">
-                <tr>
-                    <td>1 chambre x ${nights} nuits</td>
-                    <td style="text-align: right;">${currencySymbol} ${(totalAmount / nights).toFixed(2)}</td>
-                </tr>
-                <tr>
-                    <td>Taxes et frais inclus</td>
-                    <td style="text-align: right;">${currencySymbol} 0.00</td>
-                </tr>
-                <tr class="total-row">
-                    <td>Total Réglé</td>
-                    <td style="text-align: right;">${currencySymbol} ${totalAmount.toFixed(2)}</td>
-                </tr>
+                <tr><td>1 chambre x ${nights} nuits</td><td style="text-align: right;">${currencySymbol} ${(totalAmount / nights).toFixed(2)}</td></tr>
+                <tr><td>Taxes et frais inclus</td><td style="text-align: right;">${currencySymbol} 0.00</td></tr>
+                <tr class="total-row"><td>Total Réglé</td><td style="text-align: right;">${currencySymbol} ${totalAmount.toFixed(2)}</td></tr>
             </table>
-
             <div class="pay-at-hotel">
                 <strong>Frais à payer sur place :</strong> ${currencySymbol} 0.00
                 <br><small style="font-size: 11px; opacity: 0.9;">Taxes locales estimées variables selon les taux de change.</small>
             </div>
         </div>
     </div>
-
     <div class="policy-box">
         <h3>Politique d'annulation</h3>
         <p class="policy-text">
@@ -3329,7 +2878,6 @@ function generateVoucherHtml(bookingData) {
             <em>Tous les horaires sont indiqués en heure locale. Vous pouvez gérer votre réservation sur : https://luviaplace.com</em>
         </p>
     </div>
-
     <footer class="voucher-footer">
         <div class="footer-column">
             <h4>Notes au client</h4>
@@ -3342,16 +2890,10 @@ function generateVoucherHtml(bookingData) {
             <p>📞 Téléphone : <strong>+243 85 444 2103</strong></p>
         </div>
     </footer>
-
-    <div class="provider-tag">
-        Powered by LiteAPI
-    </div>
-
+    <div class="provider-tag">Powered by LiteAPI</div>
 </div>
-
 </body>
-</html>
-    `;
+</html>`;
 }
 
 // ============================================
@@ -3362,7 +2904,6 @@ async function sendConfirmationEmail(confirmationData) {
 
     const htmlContent = generateVoucherHtml(confirmationData);
 
-    // En développement, on simule
     if (process.env.NODE_ENV !== 'production') {
         console.log('📧 EMAIL SIMULÉ:');
         console.log(`   À: ${confirmationData.guest?.email || 'client@email.com'}`);
@@ -3371,7 +2912,6 @@ async function sendConfirmationEmail(confirmationData) {
         return;
     }
 
-    // En production, utiliser SendGrid
     try {
         const sgMail = require('@sendgrid/mail');
         sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -3406,7 +2946,6 @@ app.get("/booking/:id/voucher", async (req, res) => {
     const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
 
     try {
-        // 1. Récupérer la réservation
         const bookingData = await callLiteAPI(`bookings/${id}`, 'GET', null, apiKey);
 
         if (!bookingData.data) {
@@ -3414,11 +2953,8 @@ app.get("/booking/:id/voucher", async (req, res) => {
         }
 
         const booking = bookingData.data;
-
-        // 2. Récupérer les détails de l'hôtel
         const hotelData = await callLiteAPI(`data/hotel?hotelId=${booking.hotelId}&language=fr`, 'GET', null, apiKey);
 
-        // 3. Construire les données
         const confirmationData = {
             booking: booking,
             hotel: hotelData.data || {},
@@ -3426,9 +2962,7 @@ app.get("/booking/:id/voucher", async (req, res) => {
             payment: booking.payment || { status: 'Confirmé' }
         };
 
-        // 4. Générer le HTML
         const html = generateVoucherHtml(confirmationData);
-
         res.send(html);
 
     } catch (error) {
@@ -3439,6 +2973,7 @@ app.get("/booking/:id/voucher", async (req, res) => {
         });
     }
 });
+
 // ============================================
 // ROUTES FRONTEND
 // ============================================

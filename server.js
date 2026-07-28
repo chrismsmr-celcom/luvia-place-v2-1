@@ -347,8 +347,8 @@ app.get("/search-hotels", async (req, res) => {
     checkin, checkout, adults, children, childrenAges,
     placeId, city, countryCode, hotelIds,
     lat, lon, radius, iataCode, aiSearch,
-    environment, limit = 200, language = 'fr', currency = 'USD',
-    maxRatesPerHotel = 1, timeout = 12,
+    environment, limit = 5000, language = 'fr', currency = 'USD',
+    maxRatesPerHotel = 1, timeout = 25,
     refundableOnly, boardTypes, stars, facilities,
     minRating, minReviews, hotelTypes, chains,
     sortBy, sessionId
@@ -414,8 +414,8 @@ app.get("/search-hotels", async (req, res) => {
       occupancies,
       ...locationParam,
       maxRatesPerHotel: parseInt(maxRatesPerHotel) || 1,
-      limit: Math.min(parseInt(limit) || 200, 5000),
-      timeout: parseInt(timeout) || 12,
+      limit: Math.min(parseInt(limit) || 5000, 5000), // ✅ MAX 5000
+      timeout: Math.min(parseInt(timeout) || 25, 30), // ✅ MAX 30s
       includeHotelData: true,
       roomMapping: true,
       language
@@ -481,7 +481,7 @@ app.get("/search-hotels", async (req, res) => {
     hotels = hotels.filter(h => h.minPrice > 0).sort((a, b) => a.minPrice - b.minPrice);
     console.log(`   → Après filtre minPrice>0: ${hotels.length}/${beforeFilter}`);
 
-    const finalHotels = hotels.slice(0, Math.min(parseInt(limit) || 200, hotels.length));
+    const finalHotels = hotels.slice(0, Math.min(parseInt(limit) || 5000, hotels.length));
 
     // Traduction DeepSeek pour langues non supportées nativement
     const nativeLangs = ['fr','en','es','pt','it','de','ar','zh','ja','ru','nl','pl','tr','sv','no','da','fi','cs','hu','ro','bg','hr','sr','sl','sk','lt','lv','et','uk','ko'];
@@ -521,8 +521,8 @@ app.get("/search-hotels-stream", async (req, res) => {
     checkin, checkout, adults, children, childrenAges,
     placeId, city, countryCode, hotelIds,
     lat, lon, radius, iataCode, aiSearch,
-    environment, limit = 200, language = 'fr', currency = 'USD',
-    maxRatesPerHotel = 1, timeout = 12,
+    environment, limit = 5000, language = 'fr', currency = 'USD',
+    maxRatesPerHotel = 1, timeout = 25,
     refundableOnly, boardTypes, stars, facilities,
     minRating, minReviews, hotelTypes, chains,
     sortBy, sessionId
@@ -588,8 +588,8 @@ app.get("/search-hotels-stream", async (req, res) => {
       occupancies,
       ...locationParam,
       maxRatesPerHotel: parseInt(maxRatesPerHotel) || 1,
-      limit: Math.min(parseInt(limit) || 200, 5000),
-      timeout: parseInt(timeout) || 12,
+      limit: Math.min(parseInt(limit) || 5000, 5000), // ✅ MAX 5000
+      timeout: Math.min(parseInt(timeout) || 25, 30), // ✅ MAX 30s
       includeHotelData: true,
       roomMapping: true,
       language

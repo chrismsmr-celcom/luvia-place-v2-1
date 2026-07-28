@@ -1094,7 +1094,7 @@ async function loadHighlights(hotelId, language) {
 }
 
 // ============================================
-// RENDU DES HIGHLIGHTS
+// RENDU DES HIGHLIGHTS - CORRIGÉ
 // ============================================
 function renderHighlights(highlights, generated) {
     const container = document.getElementById('highlightGrid');

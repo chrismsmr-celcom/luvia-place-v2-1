@@ -180,22 +180,30 @@
             </div>
         </div>
 
-        <!-- ========== CONTENU REEL ========== -->
-        <div id="hotelContent" class="hidden">
-            <div class="top-row">
-                <a class="back-link" href="javascript:history.back()"><span class="back-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></span>Voir toutes les propriétés</a>
-                <button class="save-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/></svg>Sauvegarder</button>
-            </div>
+         <!-- ========== CONTENU REEL ========== -->
+    <div id="hotelContent" class="hidden">
+        <div class="top-row">
+            <a class="back-link" href="javascript:history.back()"><span class="back-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></span>Voir toutes les propriétés</a>
+            <button class="save-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/></svg>Sauvegarder</button>
+        </div>
 
-            <h1 class="hotel-name"><span id="hName"></span><span class="stars" id="hStars"></span></h1>
-            <div class="addr-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg><span id="hAddress"></span>&nbsp;•&nbsp;<a id="mapLink" href="#" target="_blank" rel="noopener">Afficher la carte</a></div>
+        <h1 class="hotel-name"><span id="hName"></span><span class="stars" id="hStars"></span></h1>
+        <div class="addr-row">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/>
+        <circle cx="12" cy="9" r="2.4"/>
+    </svg>
+    <span id="hAddress"></span>
+    <span style="color:var(--ink-soft);">•</span>
+    <a id="mapLink" href="#" style="color:var(--blue);font-weight:600;text-decoration:underline;cursor:pointer;">Afficher la carte</a>
+</div>
+        </div>
+        <div class="coins-banner" id="coinsBanner" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>
+            Validez votre commande et gagnez <span id="coinsAmount">&nbsp;</span> LuviaCoins
+        </div>
 
-            <div class="coins-banner" id="coinsBanner" style="display:none;">
-                <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>
-                Validez votre commande et gagnez <span id="coinsAmount">&nbsp;</span> LuviaCoins
-            </div>
-
-            <div class="gallery" id="gallery"></div>
+        <div class="gallery" id="gallery"></div>
 
             <!-- MODAL GALERIE -->
             <div class="modal-overlay" id="galleryModal">

@@ -229,7 +229,44 @@ header.results-header {
         display: none;
     }
 }
+/* ============================================
+   BADGE CONNEXION - STYLE ORIGINAL
+   ============================================ */
+.member-badge {
+    border-radius: 24px;
+    border: 1px solid #91e067;
+    background: #c1ebab;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 0;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+    letter-spacing: -0.12px;
+    width: max-content;
+    padding: 6px 12px 6px 10px;
+    color: #1A360B;
+}
 
+.member-badge svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.member-badge .badge-text {
+    font-size: 11px;
+    font-weight: 600;
+    color: #1A360B;
+}
+
+/* Version alternative avec émoji (si tu préfères) */
+.member-badge .badge-icon {
+    font-size: 14px;
+}
 /* ========== SQUELLETTES ========== */
 .skeleton {
     animation: pulse 1.5s ease-in-out infinite;

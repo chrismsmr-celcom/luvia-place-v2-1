@@ -366,7 +366,7 @@ async function loadHotel() {
     if (starDisplay > 0) {
         starHtml = ICONS.star.repeat(starDisplay);
     }
-    document.getElementById('hStars').textContent = starHtml;
+    document.getElementById('hStars').innerHTML = starHtml;
 
     // Galerie
     const galleryHtml = images.slice(0, 5).map(function(url, i) {

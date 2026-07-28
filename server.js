@@ -6,7 +6,7 @@ const liteApi = require("liteapi-node-sdk");
 require("dotenv").config();
 
 // ============================================
-// ✅ CORS - Configuration corrigée pour Render
+// ✅ CORS - Configuration corrigée (Version 1)
 // ============================================
 const allowedOrigins = [
   'https://luvia-place-v2-1.onrender.com',
@@ -51,16 +51,15 @@ const sandbox_apiKey = process.env.SAND_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
 // ============================================
-// ✅ Express natif (body-parser déprécié)
+// ✅ Express natif (Version 1)
 // ============================================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ============================================
-// ✅ SERVIR LES FICHIERS STATIQUES — DANS UN SOUS-DOSSIER
-// ⚠️ Crée un dossier /public/ et mets tes fichiers frontend dedans
+// ✅ SERVIR LES FICHIERS STATIQUES
 // ============================================
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname)));
 
 // ============================================
 // LOG MIDDLEWARE
@@ -77,7 +76,7 @@ app.use((req, res, next) => {
 });
 
 // ============================================
-// FONCTION : fetch avec timeout (AbortController)
+// FONCTION : fetch avec timeout (Version 1)
 // ============================================
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   const controller = new AbortController();
@@ -144,7 +143,6 @@ async function getCountryFromIP(ip) {
     console.warn('⚠️ Toutes les APIs de géolocalisation ont échoué');
     return null;
 }
-
 
 // ============================================
 // MIDDLEWARE : Récupérer la nationalité
@@ -248,8 +246,7 @@ function normalizeCountryCode(code) {
 }
 
 // ============================================
-// FONCTION UTILITAIRE : Appel REST LiteAPI
-// ✅ CORRECTION : vérifie response.ok + timeout
+// FONCTION UTILITAIRE : Appel REST LiteAPI (Version 1 avec corrections)
 // ============================================
 async function callLiteAPI(endpoint, method = 'GET', body = null, apiKey) {
   const url = `https://api.liteapi.travel/v3.0/${endpoint}`;
@@ -397,7 +394,7 @@ app.get("/search-places", async (req, res) => {
 });
 
 // ============================================
-// 2. RECHERCHE HÔTELS - LISTING (beaucoup d'hôtels, 1 prix)
+// 2. RECHERCHE HÔTELS - LISTING (FUSIONNÉE Version 1 + Version 2)
 // ============================================
 app.get("/search-hotels", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS (LISTING) ===== 🔍");
@@ -432,7 +429,7 @@ app.get("/search-hotels", async (req, res) => {
 
     const requestedLimit = Math.min(parseInt(limit) || 500, 5000);
 
-    // ✅ Gestion des occupancies avec enfants
+    // ✅ Gestion des occupancies avec enfants (Version 1)
     const occupancies = [{ adults: parseInt(adults, 10) || 2 }];
     if (children && parseInt(children) > 0) {
       occupancies[0].children = parseInt(children);
@@ -458,17 +455,24 @@ app.get("/search-hotels", async (req, res) => {
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);
 
     const rateEntries = Array.isArray(ratesResponse.data) ? ratesResponse.data : [];
+    const hotelInfoList = Array.isArray(ratesResponse.hotels) ? ratesResponse.hotels : [];
 
+    // ---- Diagnostic ----
     const withRoomTypes = rateEntries.filter(e => Array.isArray(e.roomTypes) && e.roomTypes.length > 0).length;
     const withRates = rateEntries.filter(e => e.roomTypes?.[0]?.rates?.length > 0).length;
     console.log(`📊 Diagnostic /search-hotels :`);
     console.log(`   - data[] reçues de LiteAPI : ${rateEntries.length}`);
+    console.log(`   - hotels[] (infos hôtel) reçues : ${hotelInfoList.length}`);
     console.log(`   - avec roomTypes non vide : ${withRoomTypes}`);
     console.log(`   - avec au moins 1 rate : ${withRates}`);
 
+    // ✅ Indexer les infos hôtel (Version 2 - CORRECT)
+    const hotelInfoMap = {};
+    hotelInfoList.forEach(h => { hotelInfoMap[h.id || h.hotelId] = h; });
+
     let hotels = rateEntries.map(function (entry) {
       const hotelId = entry.hotelId || entry.id;
-      const info = entry.hotel || {};  // ✅ CORRECTION : pas de ratesResponse.hotels
+      const info = hotelInfoMap[hotelId] || entry.hotel || {};
       const bestRate = entry.roomTypes?.[0]?.rates?.[0];
 
       const stars = info.stars ?? info.starRating ?? entry.stars ?? entry.starRating ?? 0;
@@ -502,6 +506,7 @@ app.get("/search-hotels", async (req, res) => {
 
     const finalHotels = hotels.slice(0, Math.min(parseInt(limit) || 500, hotels.length));
 
+    // Traduction DeepSeek...
     const supportedLangs = ['fr', 'en', 'es', 'pt', 'it', 'de', 'ar', 'zh', 'ja', 'ru', 'nl', 'pl', 'tr'];
 
     if (!supportedLangs.includes(language) && language !== 'fr') {
@@ -616,17 +621,14 @@ app.get("/search-hotels-stream", async (req, res) => {
     const ratesResponse = await callLiteAPI('hotels/rates', 'POST', ratesBody, apiKey);
 
     const rateEntries = Array.isArray(ratesResponse.data) ? ratesResponse.data : [];
+    const hotelInfoList = Array.isArray(ratesResponse.hotels) ? ratesResponse.hotels : [];
 
-    const withRoomTypes = rateEntries.filter(e => Array.isArray(e.roomTypes) && e.roomTypes.length > 0).length;
-    const withRates = rateEntries.filter(e => e.roomTypes?.[0]?.rates?.length > 0).length;
-    console.log(`📊 Diagnostic /search-hotels-stream :`);
-    console.log(`   - data[] reçues de LiteAPI : ${rateEntries.length}`);
-    console.log(`   - avec roomTypes non vide : ${withRoomTypes}`);
-    console.log(`   - avec au moins 1 rate : ${withRates}`);
+    const hotelInfoMap = {};
+    hotelInfoList.forEach(h => { hotelInfoMap[h.id || h.hotelId] = h; });
 
     let allHotels = rateEntries.map(function (entry) {
       const hotelId = entry.hotelId || entry.id;
-      const info = entry.hotel || {};  // ✅ CORRECTION
+      const info = hotelInfoMap[hotelId] || entry.hotel || {};
       const bestRate = entry.roomTypes?.[0]?.rates?.[0];
       const stars = info.stars ?? info.starRating ?? entry.stars ?? entry.starRating ?? 0;
 
@@ -843,7 +845,7 @@ app.post("/prebook", async (req, res) => {
 });
 
 // ============================================
-// 6. BOOK - Réservation finale
+// 6. BOOK - Réservation finale (CORRIGÉ)
 // ============================================
 app.post("/book", async (req, res) => {
   console.log("\n📝 ===== BOOK ===== 📝");
@@ -2140,7 +2142,6 @@ app.post("/api/ask-hotel", async (req, res) => {
 
 // ============================================
 // MOBILE MONEY - INITIER LE PAIEMENT
-// ✅ CORRECTION : pas de usePaymentSdk ni currency dans prebook
 // ============================================
 app.post("/api/payment/mobile-money/init", async (req, res) => {
   console.log("\n📱 ===== MOBILE MONEY INIT ===== 📱");
@@ -2166,13 +2167,11 @@ app.post("/api/payment/mobile-money/init", async (req, res) => {
   const apiKey = environment === "sandbox" ? sandbox_apiKey : prod_apiKey;
 
   try {
-    // 1. Pré-réservation pour vérifier la disponibilité
     const prebookResult = await callLiteAPI(
       'hotels/prebook',
       'POST',
       { 
         offerId: offerId
-        // ✅ Retiré : usePaymentSdk et currency (non supportés ici)
       },
       apiKey
     );
@@ -2187,10 +2186,8 @@ app.post("/api/payment/mobile-money/init", async (req, res) => {
     const prebookId = prebookResult.data.prebookId;
     const totalAmount = prebookResult.data.total?.amount || amount;
 
-    // 2. Générer un ID de transaction unique
     const transactionId = `LUVIA-MM-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
-    // ⚠️ NOTE : En production, remplace global.* par Redis/Supabase/PostgreSQL
     const transactionData = {
       id: transactionId,
       prebookId: prebookId,
@@ -2336,7 +2333,6 @@ app.post("/api/payment/mobile-money/webhook", async (req, res) => {
 
 // ============================================
 // PAYPAL - INITIER LE PAIEMENT
-// ✅ CORRECTION : pas de usePaymentSdk ni currency dans prebook
 // ============================================
 app.post("/api/payment/paypal/init", async (req, res) => {
   console.log("\n🅿️ ===== PAYPAL INIT ===== 🅿️");
@@ -2358,7 +2354,6 @@ app.post("/api/payment/paypal/init", async (req, res) => {
       'POST',
       { 
         offerId: offerId
-        // ✅ Retiré : usePaymentSdk et currency
       },
       apiKey
     );
@@ -2460,7 +2455,6 @@ app.post("/api/payment/paypal/webhook", async (req, res) => {
 
 // ============================================
 // RÉSERVATION APRÈS PAIEMENT EXTERNE
-// ✅ CORRECTION : envoie aussi l'email de confirmation
 // ============================================
 app.post("/api/book-with-payment", async (req, res) => {
   console.log("\n📝 ===== BOOK WITH PAYMENT ===== 📝");
@@ -2534,7 +2528,6 @@ app.post("/api/book-with-payment", async (req, res) => {
 
     console.log(`✅ Réservation confirmée: ${bookingResult.data?.bookingId}`);
 
-    // ✅ CORRECTION : Récupérer les détails et envoyer l'email
     const bookingData = bookingResult.data;
     const hotelDetails = await getHotelDetails(bookingData.hotelId, apiKey);
     const confirmationData = buildConfirmationData(bookingData, {}, hotelDetails, {
@@ -3032,10 +3025,20 @@ app.listen(port, () => {
   console.log(`   ⭐ POST /api/translate-reviews         - Traduction avis`);
   console.log(`   📝 POST /api/translate-hotel-description - Traduction description`);
   console.log(`   🌍 GET  /api/nationality               - Nationalité du client`);
+  console.log(`   📱 POST /api/payment/mobile-money/init - Initier paiement Mobile Money`);
+  console.log(`   📱 POST /api/payment/mobile-money/confirm - Confirmer paiement Mobile Money`);
+  console.log(`   📨 POST /api/payment/mobile-money/webhook - Webhook Mobile Money`);
+  console.log(`   🅿️ POST /api/payment/paypal/init       - Initier paiement PayPal`);
+  console.log(`   📨 POST /api/payment/paypal/webhook    - Webhook PayPal`);
+  console.log(`   📝 POST /api/book-with-payment         - Réservation après paiement externe`);
+  console.log(`   📋 GET  /booking/:id                   - Récupérer une réservation`);
+  console.log(`   📄 GET  /booking/:id/voucher           - Bon de confirmation HTML`);
   console.log(`\n✅ Serveur prêt !`);
   console.log(`🌍 Langues: FR, EN, ES, SW (Kiswahili), PT, IT, DE, AR, ZH`);
   console.log(`💰 Devises: USD, EUR, GBP, KES, TZS, CDF, ...`);
   console.log(`🤖 DeepSeek intégré pour les langues non supportées par LiteAPI`);
   console.log(`🌍 Nationalité: Détection automatique par IP + Override`);
+  console.log(`📱 Mobile Money: M-Pesa, Orange Money, Airtel Money`);
+  console.log(`🅿️ PayPal: Intégré`);
   console.log(`\n🇹🇿 Karibu sana! Swahili supporté !\n`);
 });

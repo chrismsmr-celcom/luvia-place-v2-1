@@ -23,54 +23,34 @@ let amenitiesVisible = false;
 let aiConversationHistory = [];
 let isAiLoading = false;
 let isLoggedIn = false;
+let mapInstance = null;
+let mapInitialized = false;
 
 // ============================================
 // ICONS SVG
 // ============================================
 const ICONS = {
-    // Capacité
     capacity: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-    // Taille chambre
     size: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>',
-    // Lit
     bed: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M6 6h.01"/><path d="M18 6h.01"/><path d="M8 14h8"/></svg>',
-    // Économie
     savings: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 6h6l-5 4 2 6-6-4-6 4 2-6-5-4h6z"/></svg>',
-    // Annulation gratuite
     freeCancellation: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
-    // Non remboursable
     nonRefundable: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-    // Verrou (membre)
     lock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
-    // Étoile
     star: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
-    // Flèche droite
     arrowRight: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
-    // Flèche gauche
     arrowLeft: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
-    // Coins (LuviaCoins)
     coins: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 8h8M8 16h8" stroke="#fff" stroke-width="1.5"/></svg>',
-    // Check (confirmation)
     check: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-    // Fermer (close)
     close: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
-    // Localisation
     location: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
-    // Menu hamburger
     menu: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>',
-    // Langue
     globe: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-    // Favoris (cœur)
     heart: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
-    // Retour
     back: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
-    // Info (alerte)
     info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
-    // Plus
     plus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-    // Moins
     minus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-    // Cadenas badge (style original)
     lockBadge: '<svg width="14" height="14" viewBox="0 0 13 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.668 15.72H2.33464C1.4138 15.72 0.667969 14.9741 0.667969 14.0533V7.38664C0.667969 6.4658 1.4138 5.71997 2.33464 5.71997H10.668C11.5888 5.71997 12.3346 6.4658 12.3346 7.38664V14.0533C12.3346 14.9741 11.5888 15.72 10.668 15.72Z" fill="#1A360B"/><path d="M6.50391 12.2658L6.50391 10.009" stroke="#C1EBAB" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.50115 9.17432C6.18661 9.17432 5.93133 9.4296 5.93361 9.74414C5.93361 10.0587 6.18889 10.314 6.50343 10.314C6.81797 10.314 7.07325 10.0587 7.07325 9.74414C7.07325 9.4296 6.81797 9.17432 6.50115 9.17432Z" stroke="#C1EBAB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.66406 6.53335L3.66406 4.76074" stroke="#1A360B" stroke-width="1.4031" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.66345 4.76077C3.09185 3.30289 3.81042 1.65743 5.2683 1.08583C6.72619 0.514223 8.37164 1.2328 8.94325 2.69068" stroke="#1A360B" stroke-width="1.4031" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 };
 
@@ -91,6 +71,91 @@ function checkIfLoggedIn() {
         }
     } catch (e) {}
     return false;
+}
+
+// ============================================
+// CARTE - INITIALISATION
+// ============================================
+function initMap(lat, lng, hotelName, address) {
+    const container = document.getElementById('mapModalContainer');
+    if (!container) return;
+    
+    if (mapInstance) {
+        mapInstance.remove();
+        mapInstance = null;
+        mapInitialized = false;
+    }
+    
+    setTimeout(function() {
+        try {
+            mapInstance = L.map(container, {
+                center: [lat || -4.325, lng || 15.322],
+                zoom: 15,
+                zoomControl: true
+            });
+            
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(mapInstance);
+            
+            L.marker([lat || -4.325, lng || 15.322])
+                .addTo(mapInstance)
+                .bindPopup('<strong>' + escapeHtml(hotelName || 'Hôtel') + '</strong><br>' + escapeHtml(address || 'Adresse non disponible'))
+                .openPopup();
+            
+            mapInitialized = true;
+            
+            setTimeout(function() {
+                if (mapInstance) mapInstance.invalidateSize();
+            }, 400);
+            
+        } catch (error) {
+            console.error('❌ Erreur carte:', error);
+        }
+    }, 300);
+}
+
+// ============================================
+// CARTE - MODALE
+// ============================================
+function openMapModal() {
+    const modal = document.getElementById('mapModal');
+    if (!modal) return;
+    
+    const hotel = currentHotel || {};
+    let lat = hotel.latitude || hotel.lat;
+    let lng = hotel.longitude || hotel.lon;
+    const name = hotel.name || 'Hôtel';
+    const address = hotel.address || '';
+    
+    if (!lat || !lng) {
+        const city = hotel.city || '';
+        lat = -4.325;
+        lng = 15.322;
+    }
+    
+    document.getElementById('mapModalTitle').textContent = name;
+    document.getElementById('mapModalAddress').textContent = address || 'Adresse non disponible';
+    
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    
+    initMap(lat, lng, name, address);
+}
+
+function closeMapModal() {
+    const modal = document.getElementById('mapModal');
+    if (!modal) return;
+    
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    
+    if (mapInstance) {
+        mapInstance.remove();
+        mapInstance = null;
+        mapInitialized = false;
+    }
 }
 
 // ============================================
@@ -263,18 +328,10 @@ function escapeHtml(str) {
 
 function getCurrencySymbol(currency) {
     const symbols = {
-        'USD': '$',
-        'EUR': '€',
-        'GBP': '£',
-        'CDF': 'FC',
-        'XAF': 'FCFA',
-        'XOF': 'FCFA',
-        'NGN': '₦',
-        'GHS': 'GH₵',
-        'ZAR': 'R',
-        'KES': 'KSh',
-        'TZS': 'TSh',
-        'UGX': 'USh'
+        'USD': '$', 'EUR': '€', 'GBP': '£', 'CDF': 'FC',
+        'XAF': 'FCFA', 'XOF': 'FCFA', 'NGN': '₦',
+        'GHS': 'GH₵', 'ZAR': 'R', 'KES': 'KSh',
+        'TZS': 'TSh', 'UGX': 'USh'
     };
     return symbols[currency] || currency + ' ';
 }
@@ -290,7 +347,6 @@ async function loadHotel() {
 
     isLoggedIn = checkIfLoggedIn();
 
-    // Affichage du résumé
     document.getElementById('sumDestSeg').textContent = qp.get('hotelName') || 'Hôtel';
     document.getElementById('sumDatesSeg').textContent = (checkin && checkout) ? (fmtDate(checkin) + ' - ' + fmtDate(checkout)) : '—';
     
@@ -359,7 +415,21 @@ async function loadHotel() {
     document.title = name + ' — LuviaPlace';
     document.getElementById('hName').textContent = name;
     document.getElementById('hAddress').textContent = fullAddress;
-    document.getElementById('mapLink').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(fullAddress);
+
+    // ✅ CORRECTION : Ouvre la modale au lieu de Google Maps
+    const mapLink = document.getElementById('mapLink');
+    if (mapLink) {
+        mapLink.removeAttribute('target');
+        mapLink.removeAttribute('rel');
+        mapLink.href = '#';
+        const newMapLink = mapLink.cloneNode(true);
+        mapLink.parentNode.replaceChild(newMapLink, mapLink);
+        newMapLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openMapModal();
+        });
+    }
 
     const starDisplay = starRating > 0 ? Math.min(Math.round(starRating), 5) : 3;
     let starHtml = '';
@@ -595,13 +665,9 @@ function renderQuotePills(reviews) {
     }
 
     const themes = {
-        'Propreté': 0,
-        'Service': 0,
-        'Emplacement': 0,
-        'Qualité de la chambre': 0,
-        'Équipements': 0,
-        'Rapport qualité-prix': 0,
-        'Alimentation et boissons': 0
+        'Propreté': 0, 'Service': 0, 'Emplacement': 0,
+        'Qualité de la chambre': 0, 'Équipements': 0,
+        'Rapport qualité-prix': 0, 'Alimentation et boissons': 0
     };
 
     reviews.forEach(function(rv) {
@@ -699,7 +765,7 @@ function renderTravelerTypes(reviews) {
 }
 
 // ============================================
-// AFFICHAGE DES CHAMBRES (CORRIGÉ avec prix membre)
+// AFFICHAGE DES CHAMBRES
 // ============================================
 function renderRooms(rateInfo, hotel) {
     const roomsById = {};
@@ -727,7 +793,6 @@ function renderRooms(rateInfo, hotel) {
     const breakfastOnly = document.getElementById('breakfastFilter').checked;
     const currentCurrency = localStorage.getItem('luviaplace_currency') || 'USD';
 
-    // Grouper par type de chambre
     const groups = {};
     rateInfo.forEach(function(rate) {
         const key = rate.mappedRoomId || rate.rateName || 'chambre';
@@ -783,18 +848,15 @@ function renderRooms(rateInfo, hotel) {
             const publicPricePerNight = pricePerNight + (pricePerNight * 0.10);
             const publicTotalPrice = totalPrice + (totalPrice * 0.10);
             
-            const displayPricePerNight = pricePerNight;
-            const displayTotalPrice = totalPrice;
-            
-            let displayPrice = displayPricePerNight;
+            let displayPrice = pricePerNight;
             let publicPrice = publicPricePerNight;
-            let displayTotal = displayTotalPrice;
+            let displayTotal = totalPrice;
             let publicTotal = publicTotalPrice;
             
             if (typeof window.convertPrice === 'function') {
-                displayPrice = window.convertPrice(displayPricePerNight, 'USD', currentCurrency);
+                displayPrice = window.convertPrice(pricePerNight, 'USD', currentCurrency);
                 publicPrice = window.convertPrice(publicPricePerNight, 'USD', currentCurrency);
-                displayTotal = window.convertPrice(displayTotalPrice, 'USD', currentCurrency);
+                displayTotal = window.convertPrice(totalPrice, 'USD', currentCurrency);
                 publicTotal = window.convertPrice(publicTotalPrice, 'USD', currentCurrency);
             }
             
@@ -833,7 +895,6 @@ function renderRooms(rateInfo, hotel) {
 
         if (!ratesHtml) return '';
 
-        // Préparer les données pour le modal
         const roomData = {
             roomName: roomName,
             maxOccupancy: room.maxOccupancy || 0,
@@ -1094,7 +1155,7 @@ async function loadHighlights(hotelId, language) {
 }
 
 // ============================================
-// RENDU DES HIGHLIGHTS - CORRIGÉ
+// RENDU DES HIGHLIGHTS
 // ============================================
 function renderHighlights(highlights, generated) {
     const container = document.getElementById('highlightGrid');
@@ -1258,5 +1319,6 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeGalleryModal();
         closeRoomDetailModal();
+        closeMapModal();
     }
 });

@@ -673,7 +673,7 @@ app.get("/search-rates", async (req, res) => {
   const {
     checkin, checkout, adults, children, childrenAges,
     hotelId, environment, language = 'fr', currency = 'USD',
-    maxRates = 30, timeout = 15
+    maxRates = 100, timeout = 25
   } = req.query;
 
   if (!hotelId) {
@@ -700,8 +700,8 @@ app.get("/search-rates", async (req, res) => {
       currency: currency.toUpperCase(),
       guestNationality,
       occupancies,
-      maxRatesPerHotel: Math.min(parseInt(maxRates) || 30, 100),
-      timeout: parseInt(timeout) || 15,
+      maxRatesPerHotel: Math.min(parseInt(maxRates) || 100, 100), // ✅ MAX 100
+      timeout: Math.min(parseInt(timeout) || 25, 30),              // ✅ MAX 30s
       includeHotelData: true,
       roomMapping: true,
       language

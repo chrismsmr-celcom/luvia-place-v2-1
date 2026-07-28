@@ -4,1345 +4,965 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#155EEF">
-<title data-i18n="page.sejours">Séjours — LuviaPlace</title>
+<title>Résultats — LuviaPlace</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
   :root{
-    --blue:#155EEF; --blue-dark:#0E3FB0; --blue-light:#E8F0FE; --ink:#101828; --ink-soft:#475467;
-    --line:#E7EAF0; --bg:#FFFFFF; --bg-soft:#F7F9FC; --green:#12805C; --green-bg:#E7F6EF;
-    --amber:#F5A623; --river:#1B6E6A;
-    --font-head:'Manrope', sans-serif; --font-body:'Inter', sans-serif;
-    --radius-lg:20px; --radius-md:14px; --radius-sm:10px;
-    --transition: all .2s cubic-bezier(.4,0,.2,1);
+    --blue:#155EEF; --blue-dark:#1047B8; --blue-light:#EFF4FF;
+    --ink:#0C111D; --ink-soft:#475467; --ink-muted:#98A2B3;
+    --line:#E4E7EC; --bg:#FFFFFF; --bg-soft:#F9FAFB; --bg-hover:#F2F4F7;
+    --green:#12B76A; --green-light:#D1FADF; --amber:#F79009; --red:#F04438;
+    --radius-xl:16px; --radius-lg:12px; --radius-md:10px; --radius-sm:8px;
+    --shadow-sm:0 1px 2px rgba(16,24,40,0.05); --shadow-md:0 4px 12px rgba(16,24,40,0.08); --shadow-lg:0 12px 24px rgba(16,24,40,0.12);
+    --font-head:'Plus Jakarta Sans', sans-serif; --font-body:'Inter', sans-serif;
   }
-  *{ box-sizing:border-box; margin:0; padding:0; }
-  body{ font-family:var(--font-body); color:var(--ink); background:var(--bg); line-height:1.5; overflow-x:hidden; }
-  a{ text-decoration:none; color:inherit; }
-  img{ display:block; width:100%; height:100%; object-fit:cover; }
-  button{ font-family:inherit; cursor:pointer; color:inherit; }
-  .wrap{ max-width:1240px; margin:0 auto; padding:0 clamp(20px,4vw,48px); }
-  :focus-visible{ outline:2px solid var(--blue); outline-offset:2px; border-radius:4px; }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{font-family:var(--font-body); color:var(--ink); background:var(--bg-soft); line-height:1.5; -webkit-font-smoothing:antialiased}
+  button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit}
+  a{color:var(--blue); text-decoration:none}
+  img{display:block; max-width:100%}
+  ::-webkit-scrollbar{width:6px; height:6px}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:10px}
 
-  /* ============================================
-   HEADER - CORRIGÉ
-   ============================================ */
+  /* Header */
+  .header{position:sticky; top:0; z-index:100; background:rgba(255,255,255,0.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--line)}
+  .header-inner{max-width:1280px; margin:0 auto; padding:12px 24px; display:flex; align-items:center; gap:16px}
+  .logo{display:flex; align-items:center; gap:8px; font-family:var(--font-head); font-weight:800; font-size:20px; color:var(--ink); flex-shrink:0}
+  .logo img{height:32px; width:auto}
+  .search-pill{flex:1; max-width:520px; display:flex; align-items:center; gap:0; background:#fff; border:1px solid var(--line); border-radius:100px; padding:6px 6px 6px 18px; box-shadow:var(--shadow-sm); cursor:pointer; transition:box-shadow .2s}
+  .search-pill:hover{box-shadow:var(--shadow-md)}
+  .search-pill .seg{padding:0 14px; font-size:13px; font-weight:600; border-right:1px solid var(--line); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--ink-soft)}
+  .search-pill .seg:last-of-type{border-right:none}
+  .search-pill .seg strong{color:var(--ink); font-weight:700}
+  .search-pill .go{width:32px; height:32px; border-radius:50%; background:var(--blue); color:#fff; display:flex; align-items:center; justify-content:center; margin-left:auto; flex-shrink:0}
+  .header-actions{display:flex; align-items:center; gap:8px; margin-left:auto}
+  .icon-btn{width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); border:1px solid var(--line); background:#fff; transition:all .15s}
+  .icon-btn:hover{background:var(--bg-soft); color:var(--ink)}
+  .btn-primary{background:var(--blue); color:#fff; font-weight:700; font-size:14px; padding:10px 18px; border-radius:10px; transition:background .2s}
+  .btn-primary:hover{background:var(--blue-dark)}
 
-header.results-header {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    padding: 14px clamp(20px, 4vw, 48px);
-    border-bottom: 1px solid var(--line);
-    position: sticky;
-    top: 0;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    z-index: 100;
-    flex-wrap: wrap;
-    min-height: 64px;
-}
+  /* Layout */
+  .layout{max-width:1280px; margin:0 auto; padding:24px; display:grid; grid-template-columns:280px 1fr; gap:24px; align-items:start}
 
-.rh-left {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
+  /* Sidebar */
+  .sidebar{position:sticky; top:80px; display:flex; flex-direction:column; gap:16px}
+  .panel{background:#fff; border:1px solid var(--line); border-radius:var(--radius-xl); padding:20px; box-shadow:var(--shadow-sm)}
+  .panel h3{font-family:var(--font-head); font-size:14px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between}
+  .panel h3 .badge{font-size:11px; background:var(--blue-light); color:var(--blue); padding:2px 8px; border-radius:20px; font-weight:700}
 
-.rh-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-left: auto;
-    flex-shrink: 0;
-}
+  /* Map */
+  .map-wrap{height:200px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--line); background:var(--bg-soft)}
+  .map-wrap .leaflet-container{height:100%; width:100%; border-radius:inherit}
 
-/* ============================================
-   ACCOUNT DROPDOWN
-   ============================================ */
+  /* Filters */
+  .filter-group{margin-bottom:18px}
+  .filter-group:last-child{margin-bottom:0}
+  .filter-label{font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:10px; display:block}
+  .filter-input{width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:var(--radius-md); font-size:13.5px; font-family:inherit; transition:border-color .2s, box-shadow .2s}
+  .filter-input:focus{outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(21,94,239,0.08)}
+  .check-list{display:flex; flex-direction:column; gap:8px}
+  .check-item{display:flex; align-items:center; gap:10px; font-size:13.5px; cursor:pointer; padding:4px 0; color:var(--ink-soft); transition:color .15s}
+  .check-item:hover{color:var(--ink)}
+  .check-item input{width:16px; height:16px; accent-color:var(--blue); flex-shrink:0; cursor:pointer}
+  .check-item .count{margin-left:auto; font-size:11px; color:var(--ink-muted); font-weight:500}
 
-.account-dropdown-container {
-    position: relative;
-    display: inline-block;
-}
+  /* Price slider */
+  .price-labels{display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:10px}
+  .range-wrap{position:relative; height:4px; background:var(--line); border-radius:100px; margin:18px 6px}
+  .range-fill{position:absolute; left:0%; right:0%; top:0; bottom:0; background:var(--blue); border-radius:100px}
+  .range-handle{position:absolute; top:50%; width:20px; height:20px; background:#fff; border:2px solid var(--blue); border-radius:50%; transform:translate(-50%,-50%); cursor:grab; box-shadow:0 1px 4px rgba(0,0,0,0.1); z-index:2}
+  .range-handle:active{cursor:grabbing}
 
-.account-dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    min-width: 260px;
-    background: #fff;
-    border-radius: 12px;
-    border: 1px solid var(--line);
-    box-shadow: 0 12px 40px rgba(16, 24, 40, 0.18);
-    padding: 8px 0;
-    z-index: 1000;
-    display: none;
-    overflow: hidden;
-}
+  .clear-filters{width:100%; padding:10px; border:1px solid var(--line); border-radius:var(--radius-md); background:#fff; font-weight:600; font-size:13px; color:var(--ink-soft); display:flex; align-items:center; justify-content:center; gap:8px; transition:all .15s}
+  .clear-filters:hover{background:var(--bg-soft); color:var(--red); border-color:var(--red)}
 
-.account-dropdown.active {
-    display: block;
-    animation: dropdownFadeIn 0.2s ease;
-}
+  /* Results top */
+  .results-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:12px}
+  .results-count{font-size:16px; font-weight:700; font-family:var(--font-head)}
+  .results-count span{color:var(--ink-soft); font-weight:500}
+  .sort-btn{display:flex; align-items:center; gap:8px; padding:8px 14px; border:1px solid var(--line); border-radius:var(--radius-md); background:#fff; font-size:13.5px; font-weight:600; color:var(--ink); cursor:pointer; box-shadow:var(--shadow-sm)}
+  .sort-btn:hover{background:var(--bg-soft)}
 
-@keyframes dropdownFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-8px) scale(0.96);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
+  /* Hotel Card */
+  .hotel-card{display:grid; grid-template-columns:260px 1fr auto; gap:0; background:#fff; border:1px solid var(--line); border-radius:var(--radius-xl); overflow:hidden; margin-bottom:16px; transition:box-shadow .2s, border-color .2s; cursor:pointer; box-shadow:var(--shadow-sm)}
+  .hotel-card:hover{box-shadow:var(--shadow-md); border-color:#D0D5DD}
+  .hotel-card.active{border-color:var(--blue); box-shadow:0 0 0 3px rgba(21,94,239,0.08)}
 
-.account-dropdown .user-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px 16px;
-    border-bottom: 1px solid var(--line);
-}
+  .h-photo{position:relative; height:100%; min-height:200px; background:var(--bg-soft); overflow:hidden}
+  .h-photo img{width:100%; height:100%; object-fit:cover; transition:transform .4s ease}
+  .hotel-card:hover .h-photo img{transform:scale(1.04)}
+  .h-wishlist{position:absolute; top:12px; left:12px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.95); display:flex; align-items:center; justify-content:center; color:var(--ink-soft); box-shadow:0 2px 8px rgba(0,0,0,0.1); transition:all .2s; z-index:2}
+  .h-wishlist:hover{background:#fff; color:var(--red); transform:scale(1.1)}
+  .h-wishlist.active{color:var(--red)}
 
-.account-dropdown .user-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: var(--blue-light);
-    color: var(--blue);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 18px;
-    flex-shrink: 0;
-}
+  .h-info{padding:20px; display:flex; flex-direction:column; justify-content:center; min-width:0}
+  .h-stars{color:var(--amber); font-size:15px; letter-spacing:1px; margin-bottom:6px}
+  .h-name{font-family:var(--font-head); font-weight:700; font-size:18px; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .h-addr{display:flex; align-items:center; gap:6px; color:var(--ink-soft); font-size:13px; margin-bottom:4px}
+  .h-room{display:flex; align-items:center; gap:6px; color:var(--ink-muted); font-size:12.5px; margin-bottom:14px}
+  .h-badges{display:flex; flex-wrap:wrap; gap:6px}
+  .badge-pill{font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; background:var(--bg-soft); color:var(--ink-soft); border:1px solid var(--line)}
+  .badge-pill.green{background:var(--green-light); color:var(--green); border-color:#A6F4C5}
+  .badge-pill.blue{background:var(--blue-light); color:var(--blue); border-color:#B2CCFF}
 
-.account-dropdown .user-details {
-    flex: 1;
-    min-width: 0;
-}
+  .h-side{padding:20px; display:flex; flex-direction:column; align-items:flex-end; justify-content:center; text-align:right; border-left:1px solid var(--line); background:var(--bg-soft); min-width:180px}
+  .h-score{display:flex; align-items:center; gap:8px; margin-bottom:12px}
+  .score-box{font-family:var(--font-head); font-weight:800; font-size:13px; padding:5px 10px; border-radius:8px; background:var(--ink); color:#fff}
+  .score-box.good{background:#027A48}
+  .score-box.ok{background:var(--amber)}
+  .score-box.bad{background:var(--red)}
+  .score-text{font-size:12.5px; font-weight:600; color:var(--ink-soft)}
+  .score-reviews{font-size:12px; color:var(--ink-muted)}
 
-.account-dropdown .user-details .name {
-    font-weight: 700;
-    font-size: 14px;
-    color: var(--ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+  .h-price{font-family:var(--font-head); font-weight:800; font-size:24px; color:var(--ink); line-height:1}
+  .h-price .per{font-size:12.5px; color:var(--ink-muted); font-weight:500}
+  .h-total{font-size:12px; color:var(--ink-muted); margin:4px 0 12px}
+  .h-public{font-size:12px; color:var(--ink-muted); text-decoration:line-through; margin-bottom:12px}
+  .h-cta{width:100%; padding:10px 16px; border-radius:var(--radius-md); background:var(--blue); color:#fff; font-weight:700; font-size:13.5px; display:flex; align-items:center; justify-content:center; gap:6px; transition:background .2s}
+  .h-cta:hover{background:var(--blue-dark)}
+  .h-cta svg{width:14px; height:14px}
 
-.account-dropdown .user-details .email {
-    font-size: 12px;
-    color: var(--ink-soft);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+  /* Skeleton */
+  .skeleton{animation:skeletonPulse 1.6s ease-in-out infinite}
+  @keyframes skeletonPulse{0%,100%{opacity:.45} 50%{opacity:.85}}
+  .sk-photo{background:var(--bg-hover); height:200px}
+  .sk-line{height:12px; background:var(--bg-hover); border-radius:6px; margin-bottom:10px}
+  .sk-line.w80{width:80%} .sk-line.w60{width:60%} .sk-line.w40{width:40%}
 
-.account-dropdown .p-menu-list {
-    list-style: none;
-    padding: 4px 0;
-    margin: 0;
-}
+  /* Empty state */
+  .empty-state{text-align:center; padding:80px 20px; color:var(--ink-soft)}
+  .empty-state h3{font-family:var(--font-head); font-size:20px; margin-bottom:8px; color:var(--ink)}
+  .empty-state p{font-size:14px; margin-bottom:20px}
+  .retry-btn{padding:10px 24px; background:var(--blue); color:#fff; border-radius:var(--radius-md); font-weight:700}
 
-.account-dropdown .p-menuitem-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--ink-soft);
-    transition: all 0.15s ease;
-    cursor: pointer;
-    text-decoration: none;
-    border: none;
-    background: none;
-    width: 100%;
-    text-align: left;
-}
+  /* Toast */
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(100px); background:var(--ink); color:#fff; padding:12px 24px; border-radius:var(--radius-lg); font-size:13.5px; font-weight:600; box-shadow:var(--shadow-lg); opacity:0; transition:all .3s cubic-bezier(.32,.72,0,1); z-index:500; pointer-events:none}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 
-.account-dropdown .p-menuitem-link:hover {
-    background: var(--bg-soft);
-    color: var(--ink);
-}
+  /* Bottom sheet */
+  .sheet-overlay{position:fixed; inset:0; background:rgba(12,17,29,0.45); z-index:200; opacity:0; pointer-events:none; transition:opacity .25s ease}
+  .sheet-overlay.open{opacity:1; pointer-events:auto}
+  .bottom-sheet{position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:20px 20px 0 0; z-index:201; max-height:85vh; display:flex; flex-direction:column; transform:translateY(100%); transition:transform .35s cubic-bezier(.32,.72,0,1); box-shadow:0 -8px 30px rgba(16,24,40,.15)}
+  .bottom-sheet.open{transform:translateY(0)}
+  .sheet-handle{width:36px; height:4px; background:var(--line); border-radius:100px; margin:10px auto 0}
+  .sheet-header{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--line)}
+  .sheet-header h3{font-family:var(--font-head); font-weight:700; font-size:16px}
+  .sheet-close{width:32px; height:32px; border-radius:50%; background:var(--bg-soft); display:flex; align-items:center; justify-content:center}
+  .sheet-body{padding:16px 20px; overflow-y:auto; flex:1}
+  .sheet-footer{padding:14px 20px; border-top:1px solid var(--line); display:flex; gap:10px}
+  .btn-secondary{flex:1; padding:12px; border-radius:var(--radius-md); border:1px solid var(--line); font-weight:700; background:#fff}
+  .btn-primary-full{flex:2; padding:12px; border-radius:var(--radius-md); background:var(--blue); color:#fff; font-weight:700}
+  .btn-primary-full:hover{background:var(--blue-dark)}
+  .sheet-sort-item{text-align:left; padding:12px 14px; border-radius:var(--radius-md); font-size:14px; font-weight:600; border:none; background:transparent; width:100%; color:var(--ink-soft)}
+  .sheet-sort-item:hover{background:var(--bg-soft)}
+  .sheet-sort-item.active{background:var(--blue-light); color:var(--blue)}
 
-.account-dropdown .p-menuitem-link .menu-icon {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    color: var(--ink-soft);
-    transition: color 0.2s ease;
-}
+  /* Mobile toolbar */
+  .mobile-toolbar{display:none; gap:8px; overflow-x:auto; padding:12px 0; scrollbar-width:none}
+  .mobile-toolbar::-webkit-scrollbar{display:none}
+  .mt-chip{display:flex; align-items:center; gap:6px; padding:8px 14px; border:1px solid var(--line); border-radius:100px; font-size:13px; font-weight:700; background:#fff; white-space:nowrap; flex-shrink:0; box-shadow:var(--shadow-sm)}
+  .mt-chip svg{width:14px; height:14px; color:var(--ink-soft)}
+  .mt-chip.active{border-color:var(--blue); color:var(--blue); background:var(--blue-light)}
 
-.account-dropdown .p-menuitem-link:hover .menu-icon {
-    color: var(--blue);
-}
+  /* Mobile search summary */
+  .mobile-summary{display:none; background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); padding:12px 16px; margin-bottom:12px; cursor:pointer; box-shadow:var(--shadow-sm)}
+  .mobile-summary .m-dest{font-weight:700; font-size:14px; margin-bottom:2px}
+  .mobile-summary .m-sub{font-size:12.5px; color:var(--ink-soft)}
 
-.account-dropdown .p-menuitem-link.logout-link {
-    color: var(--red);
-    border-top: 1px solid var(--line);
-    margin-top: 4px;
-    padding-top: 12px;
-}
+  /* Footer */
+  footer{background:var(--ink); color:rgba(255,255,255,0.65); padding:48px 24px 24px; margin-top:60px}
+  .footer-inner{max-width:1280px; margin:0 auto}
+  .footer-grid{display:grid; grid-template-columns:1.5fr repeat(4,1fr); gap:32px; margin-bottom:40px}
+  .footer-grid .logo{color:#fff; margin-bottom:12px}
+  .footer-grid p{font-size:13.5px; line-height:1.6; max-width:280px}
+  .footer-col h5{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,0.45); margin-bottom:14px; font-weight:700}
+  .footer-col a{display:block; font-size:13.5px; margin-bottom:10px; color:rgba(255,255,255,0.8); transition:color .15s}
+  .footer-col a:hover{color:#fff}
+  .footer-bottom{display:flex; justify-content:space-between; padding-top:24px; border-top:1px solid rgba(255,255,255,0.1); font-size:12.5px; color:rgba(255,255,255,0.45); flex-wrap:wrap; gap:10px}
 
-.account-dropdown .p-menuitem-link.logout-link:hover {
-    background: #FEF3F2;
-}
-
-.account-dropdown .p-menuitem-link.logout-link .menu-icon {
-    color: var(--red);
-}
-
-.account-dropdown .p-menuitem-link.logout-link:hover .menu-icon {
-    color: #B91C1C;
-}
-
-/* ============================================
-   ACCOUNT TRIGGER (AVATAR)
-   ============================================ */
-
-.account-trigger {
-    display: none;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    padding: 4px 12px 4px 6px;
-    border-radius: 100px;
-    border: 1.5px solid var(--line);
-    background: #fff;
-    transition: all 0.2s ease;
-}
-
-.account-trigger:hover {
-    border-color: var(--blue);
-    box-shadow: 0 2px 8px rgba(21, 94, 239, 0.1);
-}
-
-.account-trigger .avatar-section {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.account-trigger .avatar-initials {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--blue);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 13px;
-    flex-shrink: 0;
-}
-
-.account-trigger .avatar-text {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink);
-    max-width: 120px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Overlay */
-.account-dropdown-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.3);
-    z-index: 999;
-    display: none;
-}
-
-.account-dropdown-overlay.active {
-    display: block;
-}
-
-/* Mobile */
-@media (max-width: 600px) {
-    .account-trigger {
-        padding: 4px 8px 4px 4px;
-    }
-    .account-trigger .avatar-text {
-        font-size: 12px;
-        max-width: 80px;
-    }
-    .account-trigger .avatar-initials {
-        width: 28px;
-        height: 28px;
-        font-size: 11px;
-    }
-    
-    .account-dropdown {
-        position: fixed;
-        top: auto;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        min-width: 100%;
-        border-radius: 16px 16px 0 0;
-        max-height: 70vh;
-    }
-    
-    .account-dropdown.active {
-        animation: slideUp 0.3s ease;
-    }
-    
-    @keyframes slideUp {
-        from {
-            transform: translateY(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-}
-  .logo-img{ height:34px; width:auto; flex-shrink:0; }
-  .rh-left{ display:flex; align-items:center; gap:6px; flex-shrink:0; }
-  .service-switcher{ position:relative; }
-  .service-switcher-btn{
-    display:flex; align-items:center; gap:6px; font-weight:700; font-size:14.5px; font-family:var(--font-head);
-    padding:8px 10px; border-radius:8px; border:none; background:transparent; color:var(--ink);
-  }
-  .service-switcher-btn:hover{ background:var(--bg-soft); }
-  .service-switcher-btn svg{ width:14px; height:14px; color:var(--ink-soft); }
-  .service-switcher-menu{
-    position:absolute; top:calc(100% + 8px); left:0; background:#fff; border:1px solid var(--line);
-    border-radius:12px; box-shadow:0 16px 40px rgba(16,24,40,0.16); min-width:190px; display:none; overflow:hidden; z-index:120;
-  }
-  .service-switcher-menu.open{ display:block; }
-  .service-switcher-menu a{ display:flex; align-items:center; gap:10px; padding:11px 14px; font-size:13.5px; font-weight:600; }
-  .service-switcher-menu a:hover{ background:var(--bg-soft); }
-  .service-switcher-menu a.current{ color:var(--blue); background:var(--bg-soft); }
-  .service-switcher-menu svg{ width:15px; height:15px; }
-
-  .search-condensed{
-    flex:1; display:flex; align-items:center; gap:0; border:1px solid var(--line); border-radius:100px;
-    padding:6px 6px 6px 18px; max-width:640px; min-width:280px;
-  }
-  .search-condensed .seg{ padding:0 14px; font-size:13.5px; font-weight:700; border-right:1px solid var(--line); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .search-condensed .seg:last-of-type{ border-right:none; }
-  .search-condensed .go-btn{ margin-left:auto; width:34px; height:34px; border-radius:100px; background:var(--blue); color:#fff; display:flex; align-items:center; justify-content:center; border:none; flex-shrink:0; }
-  .search-condensed .go-btn svg{ width:15px; height:15px; }
-  .rh-right{ display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0; }
-  .icon-btn{ width:40px; height:40px; border-radius:10px; background:var(--bg-soft); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
-  .icon-btn svg{ width:18px; height:18px; }
-  .btn-primary{ background:var(--blue); color:#fff; font-weight:700; font-size:14.5px; padding:11px 20px; border-radius:10px; border:none; transition:background .18s ease; }
-  .btn-primary:hover{ background:var(--blue-dark); }
-/* ============================================
-   MAP STYLES
-   ============================================ */
-.map-thumb {
-    height: 250px;
-    min-height: 250px;
-    border-radius: var(--radius-md, 14px);
-    overflow: hidden;
-    border: 2px solid #e6e6e6;
-    box-shadow: 0 2px 12px #e7eaf0;
-    transition: box-shadow 0.3s ease, border-color 0.3s ease;
-    position: relative;
-}
-
-.map-thumb:hover {
-    box-shadow: 0 4px 24px rgba(21, 94, 239, 0.25);
-    border-color: var(--blue-dark, #0E3FB0);
-}
-
-.map-thumb .leaflet-container {
-    height: 100%;
-    width: 100%;
-    border-radius: inherit;
-}
-
-/* ============================================
-   MAP SUR MOBILE
-   ============================================ */
-@media (max-width: 960px) {
-    .map-thumb {
-        height: 180px;
-        min-height: 180px;
-        border-width: 1.5px;
-    }
-}
-  /* ============================================
-     ÉLÉMENTS MOBILES (cachés par défaut)
-     ============================================ */
-  .mobile-search-summary{ display:none; }
-  .mobile-toolbar{ display:none; }
-  .map-fab{ display:none; }
-
-  .mt-btn{
-    display:flex; align-items:center; gap:6px; padding:9px 14px; border:1px solid var(--line);
-    border-radius:100px; font-size:13px; font-weight:700; color:var(--ink); white-space:nowrap;
-    background:#fff; flex-shrink:0; transition:var(--transition);
-  }
-  .mt-btn svg{ width:14px; height:14px; color:var(--ink-soft); }
-  .mt-btn.has-active{ border-color:var(--blue); color:var(--blue); background:var(--blue-light); }
-  .mt-btn.has-active svg{ color:var(--blue); }
-
-  /* ============================================
-     INFO BANNER
-     ============================================ */
-  .info-banner {
-    display: flex;
-    gap: 10px;
-    background: #FFF6E5;
-    border: 1px solid #FDE9BD;
-    color: #d33908;
-    border-radius: 12px;
-    padding: 6px 14px;
-    font-size: 12px;
-    line-height: 1.4;
-    margin-bottom: 16px;
-    align-items: center;
-}
-  .info-banner svg{ width:16px; height:16px; flex-shrink:0; margin-top:1px; }
-
-  /* ============================================
-     BOTTOM SHEETS
-     ============================================ */
-  .sheet-overlay{
-    position:fixed; inset:0; background:rgba(16,24,40,.5); z-index:200;
-    opacity:0; pointer-events:none; transition:opacity .25s ease;
-  }
-  .sheet-overlay.open{ opacity:1; pointer-events:auto; }
-  .bottom-sheet{
-    position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:20px 20px 0 0;
-    z-index:201; max-height:85vh; display:flex; flex-direction:column;
-    transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1);
-    box-shadow:0 -8px 30px rgba(16,24,40,.2);
-  }
-  .bottom-sheet.open{ transform:translateY(0); }
-  .sheet-handle{ width:36px; height:4px; background:var(--line); border-radius:100px; margin:10px auto 0; flex-shrink:0; }
-  .sheet-header{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--line); flex-shrink:0; }
-  .sheet-header h3{ font-family:var(--font-head); font-weight:800; font-size:16px; }
-  .sheet-close{ width:32px; height:32px; border-radius:100px; background:var(--bg-soft); display:flex; align-items:center; justify-content:center; border:none; }
-  .sheet-close svg{ width:14px; height:14px; }
-  .sheet-body{ padding:16px 18px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:14px; }
-  .sheet-footer{ padding:14px 18px; border-top:1px solid var(--line); display:flex; gap:10px; flex-shrink:0; }
-  .btn-secondary{ flex:1; padding:12px; border-radius:10px; border:1px solid var(--line); font-weight:700; background:#fff; }
-  .btn-primary-full{ flex:2; padding:12px; border-radius:10px; background:var(--blue); color:#fff; font-weight:700; border:none; }
-  .btn-primary-full:hover{ background:var(--blue-dark); }
-  .sheet-sort-item{ text-align:left; padding:12px 14px; border-radius:10px; font-size:14px; font-weight:600; border:none; background:transparent; width:100%; }
-  .sheet-sort-item.active{ background:var(--blue-light); color:var(--blue); }
-  .sheet-section-label{ font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; }
-
-  /* ============================================
-     CARTE PLEIN ÉCRAN MOBILE - DÉSACTIVÉ SUR MOBILE
-     ============================================ */
-  .mobile-map-overlay{ 
-    position:fixed; inset:0; background:#fff; z-index:300; display:none; flex-direction:column; 
-  }
-  .mobile-map-overlay.open{ display:flex; }
-  .mmo-header{ display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--line); flex-shrink:0; }
-  .mmo-header button{ width:36px; height:36px; border-radius:100px; background:var(--bg-soft); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:none; }
-  .mmo-header button svg{ width:16px; height:16px; }
-  .mmo-header h3{ font-family:var(--font-head); font-weight:800; font-size:15px; }
-  #mobileMapContainer{ flex:1; width:100%; }
-
-  /* ============================================
-     LAYOUT PRINCIPAL - UN SEUL BREAKPOINT MOBILE (960px)
-     ============================================ */
-  .results-layout{ 
-    display:grid; 
-    grid-template-columns:290px 1fr; 
-    gap:26px; 
-    max-width:1320px; 
-    margin:0 auto; 
-    padding:26px clamp(20px,4vw,48px) 96px; 
-    align-items:start; 
-  }
-
-  .sidebar{ 
-    position:sticky; 
-    top:90px; 
-    display:flex; 
-    flex-direction:column; 
-    gap:14px; 
-  }
-
-  details.filter-group{ border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff; line-height: 2.5; }
-  details.filter-group summary{ display:flex; justify-content:space-between; align-items:center; padding:14px 16px; font-weight:700; font-size:14.5px; cursor:pointer; list-style:none; font-family:var(--font-head); }
-  details.filter-group summary::-webkit-details-marker{ display:none; }
-  details.filter-group summary::after{ content:'⌄'; color:var(--ink-soft); font-size:16px; transition:transform .15s ease; }
-  details.filter-group[open] summary::after{ transform:rotate(180deg); }
-  .fg-body{ padding:0 16px 16px; display:flex; flex-direction:column; gap:10px; }
-  .clear-btn{ display:flex; align-items:center; gap:8px; width:100%; padding:11px; border:1px solid var(--line); border-radius:10px; background:#fff; font-weight:600; font-size:13.5px; color:var(--ink-soft); cursor:pointer; }
-  .clear-btn:hover{ background:var(--bg-soft); }
-  .clear-btn svg{ width:14px; height:14px; }
-  .fg-input{ width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:9px; font-size:13.5px; font-family:inherit; }
-  .price-range-label{ display:flex; justify-content:space-between; font-size:13px; font-weight:700; }
-  .range-track{ height:4px; background:var(--line); border-radius:100px; position:relative; margin:14px 4px; touch-action:none; }
-  .range-track .fill{ position:absolute; left:0%; right:0%; top:0; bottom:0; background:var(--blue); border-radius:100px; }
-  .range-track .handle{ position:absolute; top:50%; width:22px; height:22px; border-radius:100px; background:#fff; border:2px solid var(--blue); transform:translate(-50%,-50%); touch-action:none; cursor:grab; }
-  .range-track .handle:active{ cursor:grabbing; }
-  .check-item{ display:flex; align-items:center; gap:10px; font-size:13.5px; cursor:pointer; }
-  .check-item input{ accent-color:var(--blue); width:16px; height:16px; flex-shrink:0; }
-
-  .stepper-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-  .stepper-controls{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
-  .step-btn{ width:30px; height:30px; border-radius:100px; border:1px solid var(--line); background:#fff; color:var(--blue); font-weight:700; font-size:16px; line-height:1; }
-  .step-btn:hover{ background:var(--blue-light); }
-  .step-count{ min-width:18px; text-align:center; font-weight:700; font-size:14px; }
-
-  .results-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:12px; }
-  .results-count{ font-size:16px; font-weight:600; line-height:24px; letter-spacing:.08px; }
-  .results-actions{ display:flex; align-items:center; gap:10px; }
-  .sort-select{
-    display:flex; align-items:center; gap:8px; font-size:.875rem; font-weight:600; background:#fff; cursor:pointer; position:relative;
-  }
-  .sort-select:hover{ background:var(--bg-soft); }
-  .sort-select svg{ width:14px; height:14px; color:var(--ink-soft); }
-  .sort-dropdown{
-    position:absolute; top:calc(100% + 4px); left:0; background:#fff; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12); min-width:200px; display:none; overflow:hidden; z-index:50;
-  }
-  .sort-dropdown.open{ display:block; }
-  .sort-dropdown .sort-item{ padding:12px 16px; font-size:10.5px; font-weight:500; cursor:pointer; transition:background .15s; }
-  .sort-dropdown .sort-item:hover{ background:var(--bg-soft); }
-  .sort-dropdown .sort-item.active{ color:var(--blue); background:var(--bg-soft); }
-
-  .view-toggle{ display:flex; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
-  .view-toggle button{ display:flex; align-items:center; gap:6px; padding:9px 14px; font-size:13px; font-weight:600; background:#fff; border:none; color:var(--ink-soft); cursor:pointer; }
-  .view-toggle button.active{ background:var(--bg-soft); color:var(--ink); }
-  .view-toggle button:hover:not(.active){ background:var(--bg-soft); }
-  .view-toggle svg{ width:14px; height:14px; }
-
-  .hotel-result {
-    display: flex;
-    gap: 0;
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    margin-bottom: 16px;
-    background: #fff;
-    transition: box-shadow .2s ease, border-color .2s ease;
-    cursor: pointer;
-    overflow: hidden;
-    min-height: 180px;
-}
-.hotel-result:hover{ box-shadow:0 4px 20px rgba(0,0,0,0.06); }
-.hotel-result.active{ border-color:var(--blue); }
-
-.hotel-result .photo {
-    width: 230px;
-    min-height: 180px;
-    flex-shrink: 0;
-    position: relative;
-    background: var(--bg-soft);
-    overflow: hidden;
-    align-self: stretch;
-}
-.hotel-result .photo img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform .3s ease;
-}
-.hotel-result:hover .photo img{ transform:scale(1.03); }
-
-.hotel-result .info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    padding: 16px 18px;
-    justify-content: center;
-}
-
-.hotel-result .side {
-    width: 220px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    text-align: right;
-    padding: 16px 18px;
-    justify-content: center;
-    gap: 8px;
-    border-left: 1px solid var(--line);
-}
-
-@media (max-width: 700px) {
-    .hotel-result {
-        flex-direction: column;
-        padding: 0;
-        overflow: hidden;
-        min-height: auto;
-    }
-    .hotel-result .photo {
-        width: 100%;
-        height: 200px;
-        min-height: 200px;
-        border-radius: 0;
-        align-self: auto;
-    }
-    .hotel-result .info {
-        padding: 14px 14px 0;
-    }
-    .hotel-result .side {
-        width: 100%;
-        align-items: flex-start;
-        text-align: left;
-        padding: 8px 14px 14px;
-        border-left: none;
-        border-top: 1px solid var(--line);
-    }
-}
-  .wishlist-btn{ position:absolute; top:10px; left:10px; width:32px; height:32px; border-radius:100px; background:#fff; display:flex; align-items:center; justify-content:center; color:var(--ink); box-shadow:0 2px 6px rgba(0,0,0,0.15); border:none; cursor:pointer; transition:background .2s; }
-  .wishlist-btn:hover{ background:var(--bg-soft); }
-  .wishlist-btn svg{ width:15px; height:15px; }
-  .stars{ color:var(--amber); font-size:19px; margin-bottom:6px; }
-  .hotel-result h3{ font-family:var(--font-head); font-weight:700; font-size:17px; margin-bottom:4px; }
-  .addr-row{ display:flex; align-items:center; gap:6px; color:var(--ink-soft); font-size:13.5px; margin-bottom:4px; }
-  .addr-row svg{ width:13px; height:13px; flex-shrink:0; }
-  .dist-row{ display:flex; align-items:center; gap:6px; color:var(--ink-soft); font-size:13px; margin-bottom:12px; }
-  .dist-row svg{ width:13px; height:13px; flex-shrink:0; }
-
-  .score-chip{ 
-    display:inline-flex; 
-    align-items:center; 
-    gap:8px; 
-    padding:6px 10px; 
-    border-radius:8px; 
-    font-size:12px; 
-    font-weight:600; 
-    align-self:flex-start; 
-    margin-bottom:10px; 
-    background:transparent;
-  }
-  .score-chip .score-num{ 
-    font-size:13px; 
-    font-weight:800; 
-    padding:4px 8px; 
-    border-radius:18px 56px 56px; 
-    color:#fff;
-  }
-  .score-chip .score-num.good{ background:#10961d; }
-  .score-chip .score-num.ok{ background:#F5A623; }
-  .score-chip .score-num.bad{ background:#D92D20; }
-  .score-chip .score-text{ color:var(--ink); font-weight:500; }
-  .score-chip .sep{ opacity:0.7; color:var(--ink-soft); }
-  .score-chip .review-count{ color:var(--ink-soft); font-weight:400; }
-  
-  .savings-pill{ margin: 0;
-    display: flex;
-    padding: 6px 12px 6px 10px;
-    justify-content: flex-end;
-    align-items: center;
-    border-radius: 24px;
-    border: 1px solid #91e067;
-    background: #c1ebab;
-    height: 32px;
-    width: fit-content;
-    flex-wrap: nowrap;
-}
-  .savings-pill svg{ width:12px; height:12px; }
-  .price-block{ margin-top:auto; }
-  @media (max-width:700px){ .price-block{ margin-top:0; } }
-  .price-block .amount{ font-family:var(--font-head); font-weight:800; font-size:22px; }
-  .price-block .per{ font-size:12px; color:var(--ink-soft); font-weight:600; }
-  .price-block .note{ font-size:11.5px; color:var(--ink-soft); margin:2px 0 6px; }
-  .public-price{ font-size:11px; color:var(--ink-soft); border:1px solid var(--line); border-radius:8px; padding:4px 8px; display:inline-block; }
-  .public-price s{ color:var(--ink-soft); }
-  .cta-btn-sm{ background:var(--blue); color:#fff; font-weight:700; font-size:13.5px; padding:10px 18px; border-radius:9px; border:none; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; transition:background .2s; width:100%; margin-top:6px; }
-  .cta-btn-sm:hover{ background:var(--blue-dark); }
-  .cta-btn-sm svg{ width:13px; height:13px; }
-  .cta-btn-sm:disabled{ opacity:0.5; cursor:not-allowed; }
-
-  .skeleton{ animation:pulse 1.5s ease-in-out infinite; }
-  @keyframes pulse{ 0%,100%{ opacity:.4; } 50%{ opacity:.8; } }
-  @media (prefers-reduced-motion:reduce){ .skeleton{ animation:none; opacity:.6; } }
-  .skeleton-photo{ width:230px; height:180px; border-radius:12px; background:var(--bg-soft); }
-  @media (max-width:700px){ .skeleton-photo{ width:100%; height:200px; } }
-  .skeleton-line{ height:14px; border-radius:8px; background:var(--bg-soft); margin-bottom:8px; }
-  .skeleton-line.w70{ width:70%; } .skeleton-line.w50{ width:50%; } .skeleton-line.w40{ width:40%; } .skeleton-line.w30{ width:30%; } .skeleton-line.w90{ width:90%; }
-  .hotel-result.skeleton .info .skeleton-line:last-child{ margin-bottom:0; }
-  .hotel-result.skeleton .side .skeleton-line{ margin-bottom:6px; }
-  @media (max-width:700px){ .hotel-result.skeleton .info, .hotel-result.skeleton .side{ padding:14px; } }
-
-  .marker-pin{ background:#155EEF; color:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; box-shadow:0 2px 8px rgba(21,94,239,.35); border:2px solid #fff; transition:transform .2s ease, box-shadow .2s ease; }
-  .marker-pin-active{ transform:scale(1.3); box-shadow:0 2px 16px rgba(21,94,239,.7); border-color:#155EEF; }
-
-  footer{ background:var(--ink); color:rgba(255,255,255,0.7); padding:56px 0 28px; }
-  .footer-grid{ display:grid; grid-template-columns:1.4fr repeat(4,1fr); gap:32px; margin-bottom:40px; }
-  @media (max-width:820px){ .footer-grid{ grid-template-columns:1fr 1fr; } }
-  @media (max-width:480px){ .footer-grid{ grid-template-columns:1fr; } }
-  .footer-grid .logo-img{ filter:brightness(0) invert(1); margin-bottom:14px; }
-  .footer-grid p{ font-size:13.5px; max-width:260px; }
-  .footer-col h5{ font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:14px; font-weight:700; }
-  .footer-col a{ display:block; font-size:13.5px; margin-bottom:10px; color:rgba(255,255,255,0.85); }
-  .footer-bottom{ display:flex; justify-content:space-between; padding-top:24px; border-top:1px solid rgba(255,255,255,0.12); font-size:12.5px; flex-wrap:wrap; gap:10px; color:rgba(255,255,255,0.55); }
-
-  /* ============================================
-     MODALE LANGUE + DEVISES
-     ============================================ */
-  .lang-modal-overlay{
-    position:fixed; top:0; left:0; right:0; bottom:0;
-    background:rgba(0,0,0,0.5); backdrop-filter:blur(8px);
-    z-index:1000; display:none; align-items:center; justify-content:center;
-    animation:fadeIn 0.3s ease;
-  }
-  .lang-modal-overlay.open{ display:flex; }
-  .lang-modal{ background:#fff; border-radius:16px; padding:32px; max-width:560px; width:95%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 50px rgba(16,24,40,0.16); animation:slideUp 0.3s ease; }
-  .lang-modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-  .lang-modal-header h3{ font-family:'Manrope', sans-serif; font-weight:700; font-size:18px; color:#101828; margin:0; }
-  .lang-modal-close{ width:32px; height:32px; border-radius:50%; background:#F7F9FC; border:none; font-size:20px; color:#475467; cursor:pointer; transition:all 0.2s ease; display:flex; align-items:center; justify-content:center; }
-  .lang-modal-close:hover{ background:#FEE4E2; color:#D92D20; }
-
-  .lang-currency-tabs{ display:flex; gap:8px; margin-bottom:20px; background:#F7F9FC; padding:4px; border-radius:10px; }
-  .lang-currency-tab{ flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 16px; border-radius:8px; font-size:14px; font-weight:600; color:#475467; background:transparent; cursor:pointer; transition:all 0.2s ease; border:none; }
-  .lang-currency-tab.active{ background:#fff; color:#155EEF; box-shadow:0 1px 3px rgba(16,24,40,0.06); }
-  .lang-currency-tab:hover:not(.active){ color:#101828; background:rgba(255,255,255,0.5); }
-  .lang-currency-tab svg{ flex-shrink:0; }
-
-  .lang-panel{ display:none; max-height:400px; overflow-y:auto; }
-  .lang-panel.active{ display:block; }
-  .lang-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:6px; }
-  .lang-option{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:8px; border:1.5px solid #E7EAF0; background:#fff; cursor:pointer; transition:all 0.2s ease; font-size:14px; font-weight:500; color:#101828; width:100%; text-align:left; }
-  .lang-option:hover{ border-color:#155EEF; background:#E8F0FE; }
-  .lang-option.active{ border-color:#155EEF; background:#E8F0FE; }
-  .lang-option .flag{ font-size:20px; }
-  .lang-option .lang-name{ flex:1; }
-  .lang-option .lang-check{ color:#155EEF; font-weight:700; font-size:16px; display:none; }
-  .lang-option.active .lang-check{ display:inline; }
-
-  .currency-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:6px; }
-  .currency-group-label{ grid-column:1/-1; font-size:12px; font-weight:700; color:#667085; text-transform:uppercase; letter-spacing:0.04em; padding:12px 4px 6px 4px; border-bottom:1px solid #E7EAF0; }
-  .currency-option{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:8px; border:1.5px solid #E7EAF0; background:#fff; cursor:pointer; transition:all 0.2s ease; font-size:14px; font-weight:500; color:#101828; width:100%; text-align:left; }
-  .currency-option:hover{ border-color:#155EEF; background:#E8F0FE; }
-  .currency-option.active{ border-color:#155EEF; background:#E8F0FE; }
-  .currency-option .currency-symbol{ font-weight:700; font-size:16px; color:#155EEF; min-width:30px; }
-  .currency-option .currency-name{ flex:1; font-size:13px; }
-  .currency-option .currency-code{ font-size:11px; font-weight:700; color:#667085; background:#F7F9FC; padding:1px 8px; border-radius:4px; }
-  .currency-option.active .currency-code{ background:#E8F0FE; color:#155EEF; }
-  .currency-option .lang-check{ color:#155EEF; font-weight:700; font-size:16px; display:none; }
-  .currency-option.active .lang-check{ display:inline; }
-
-  .lang-modal-apply{ width:100%; padding:12px; margin-top:16px; border-radius:8px; border:none; background:#155EEF; color:#fff; font-weight:700; font-size:15px; cursor:pointer; transition:all 0.2s ease; }
-  .lang-modal-apply:hover{ background:#0E3FB0; transform:translateY(-1px); }
-
-  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
-  @keyframes slideUp{ from{ opacity:0; transform:translateY(20px) scale(0.95); } to{ opacity:1; transform:translateY(0) scale(1); } }
-
-  @media (max-width:600px){
-    .lang-modal{ padding:20px; max-width:100%; border-radius:12px; margin:10px; max-height:95vh; }
-    .lang-grid, .currency-grid{ grid-template-columns:1fr; }
-    .lang-modal-header h3{ font-size:16px; }
-    .lang-option, .currency-option{ padding:8px 12px; font-size:13px; }
-    .lang-currency-tab{ font-size:12px; padding:8px 12px; }
-    .currency-option .currency-name{ font-size:12px; }
-  }
-
-  /* ============================================
-     UN SEUL BREAKPOINT MOBILE (960px)
-     TOUT EST FUSIONNÉ ICI
-     ============================================ */
+  /* Responsive */
   @media (max-width:960px){
-    /* Éléments desktop à masquer */
-    .search-condensed{ display:none; }
-    .results-actions{ display:none !important; }
-    .view-toggle{ display:none !important; }
-
-    /* Layout général */
-    .results-layout{ 
-      grid-template-columns:1fr !important; 
-      padding:14px 0 96px 0;
-      gap:0;
-    }
-
-    /* Sidebar : on cache complètement sur mobile (pas de carte) */
-    .sidebar{ 
-      display:none !important; 
-    }
-
-    .results-top{ 
-      flex-wrap:wrap; 
-      padding:0 clamp(16px,4vw,32px);
-      margin-bottom:12px;
-    }
-    #resultsContainer{
-      padding:0 clamp(16px,4vw,32px);
-    }
-    main{
-      display:flex;
-      flex-direction:column;
-      width:100%;
-    }
-    .mobile-search-summary{
-      margin-left:clamp(16px,4vw,32px);
-      margin-right:clamp(16px,4vw,32px);
-    }
-    .mobile-toolbar{
-      padding-left:clamp(16px,4vw,32px);
-      padding-right:clamp(16px,4vw,32px);
-    }
-    .results-count{
-      font-size:16px;
-    }
-
-    /* Éléments mobiles à afficher */
-    .mobile-search-summary{ 
-      display:flex; 
-      align-items:center; 
-      justify-content:space-between; 
-      gap:12px;
-      background:#fff; 
-      border:1px solid var(--line); 
-      border-radius:14px; 
-      padding:12px 14px;
-      margin-top:14px; 
-      cursor:pointer;
-    }
-    .mobile-toolbar{ 
-      display:flex; 
-      gap:8px; 
-      overflow-x:auto; 
-      padding-top:12px;
-      scrollbar-width:none; 
-      -webkit-overflow-scrolling:touch;
-    }
-    .mobile-toolbar::-webkit-scrollbar{ display:none; }
-
-    /* PAS DE MAP FAB SUR MOBILE - DÉSACTIVÉ */
-    .map-fab{ 
-      display:none !important; 
-    }
-
-    /* Correction pour l'input de type date sur mobile */
-    .fg-input[type="date"]{
-      -webkit-appearance:none;
-      appearance:none;
-      min-height:44px;
-    }
-
-    /* Info banner sur mobile */
-    .info-banner{
-      margin-left:clamp(16px,4vw,32px);
-      margin-right:clamp(16px,4vw,32px);
-      border-radius:12px;
-    }
+    .layout{grid-template-columns:1fr; padding:16px}
+    .sidebar{display:none}
+    .results-top{padding:0}
+    .mobile-toolbar{display:flex}
+    .mobile-summary{display:block}
+    .hotel-card{grid-template-columns:140px 1fr}
+    .h-photo{min-height:140px; height:100%}
+    .h-side{display:none}
+    .h-info{padding:14px}
+    .h-name{font-size:15px}
+    .footer-grid{grid-template-columns:1fr 1fr}
   }
-  /* ============================================
-   HEADER SYNC AVEC L'INDEX
-   ============================================ */
-
-.rh-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-left: auto;
-    flex-shrink: 0;
-}
-
-.account-dropdown-container {
-    position: relative;
-    display: inline-block;
-}
-
-.account-trigger {
-    display: none;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    padding: 4px 12px 4px 6px;
-    border-radius: 100px;
-    border: 1.5px solid var(--line);
-    background: #fff;
-    transition: all 0.2s ease;
-}
-
-.account-trigger:hover {
-    border-color: var(--blue);
-    box-shadow: 0 2px 8px rgba(21,94,239,0.1);
-}
-
-.account-trigger .avatar-section {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.account-trigger .avatar-initials {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--blue);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 13px;
-    flex-shrink: 0;
-}
-
-.account-trigger .avatar-text {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink);
-    max-width: 120px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Mobile */
-@media (max-width: 600px) {
-    .account-trigger {
-        padding: 4px 8px 4px 4px;
-    }
-    .account-trigger .avatar-text {
-        font-size: 12px;
-        max-width: 80px;
-    }
-    .account-trigger .avatar-initials {
-        width: 28px;
-        height: 28px;
-        font-size: 11px;
-    }
-}
+  @media (max-width:640px){
+    .header-inner{padding:10px 16px}
+    .search-pill{display:none}
+    .hotel-card{grid-template-columns:1fr}
+    .h-photo{height:220px; min-height:auto}
+    .footer-grid{grid-template-columns:1fr}
+  }
 </style>
+<base target="_blank">
 </head>
 <body>
 
-<!-- ========== HEADER ========== -->
-<!-- ========== HEADER CORRIGÉ ========== -->
-<header class="results-header">
-  <div class="rh-left">
-    <img class="logo-img" src="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png" alt="LuviaPlace">
-    <div class="service-switcher" id="serviceSwitcher">
-      <button class="service-switcher-btn" id="switcherBtn" type="button" data-i18n="nav.hotels">Séjours <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="service-switcher-menu" id="switcherMenu">
-        <a href="resultats-hebergement.html" class="current"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg><span data-i18n="nav.hotels">Séjours</span></a>
-        <a href="resultats-vols.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16l20-8-8 20-3-8-9-4z"/></svg><span data-i18n="nav.flights">Vols</span></a>
-        <a href="resultats-voiture.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13l2-6h14l2 6M5 13h14v5H5z"/><circle cx="7.5" cy="18" r="1.2"/><circle cx="16.5" cy="18" r="1.2"/></svg><span data-i18n="nav.cars">Voiture</span></a>
-        <a href="resultats-experiences.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span data-i18n="nav.experiences">Expériences</span></a>
-        <a href="resultats-assurance.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg><span data-i18n="nav.insurance">Assurance</span></a>
-      </div>
-    </div>
-  </div>
-  
-  <div class="search-condensed" id="searchSummary">
-    <div class="seg" id="sumDest">—</div>
-    <div class="seg" id="sumDates">—</div>
-    <div class="seg" id="sumGuests">—</div>
-    <button class="go-btn" id="condensedEditBtn" aria-label="Modifier la recherche">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-        <circle cx="11" cy="11" r="7"/>
-        <path d="M21 21l-4.3-4.3"/>
-      </svg>
-    </button>
-  </div>
-  
-  <div class="rh-right">
-    <button class="icon-btn" id="langToggleBtn" aria-label="Changer de langue">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <circle cx="12" cy="12" r="9"/>
-        <path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/>
-      </svg>
-    </button>
-    <button class="icon-btn" aria-label="Favoris">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/>
-      </svg>
-    </button>
-    
-    <!-- ============================================
-         ACCOUNT DROPDOWN - MENU UTILISATEUR
-         ============================================ -->
-    <div class="account-dropdown-container">
-      <!-- Bouton "Se connecter" (visible quand déconnecté) -->
-      <button class="btn-primary" id="loginBtn" data-i18n="nav.login">Se connecter</button>
-      
-      <!-- Avatar utilisateur (visible quand connecté) -->
-      <div class="account-trigger" id="accountTrigger" style="display:none;">
-        <div class="avatar-section">
-          <div class="avatar-initials" id="avatarInitials">U</div>
-          <span class="avatar-text" id="avatarName">Utilisateur</span>
-        </div>
+<!-- ===== HEADER ===== -->
+<header class="header">
+  <div class="header-inner">
+    <a href="/" class="logo">
+      <img src="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png" alt="LuviaPlace">
+      <span>LuviaPlace</span>
+    </a>
+
+    <div class="search-pill" id="searchPill">
+      <span class="seg" id="pillDest"><strong>—</strong></span>
+      <span class="seg" id="pillDates">—</span>
+      <span class="seg" id="pillGuests">—</span>
+      <div class="go">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       </div>
     </div>
 
-    <!-- Dropdown compte -->
-    <div class="account-dropdown" id="accountDropdown">
-      <div class="user-info">
-        <div class="user-avatar" id="accountAvatar">U</div>
-        <div class="user-details">
-          <div class="name" id="accountName">Utilisateur</div>
-          <div class="email" id="accountEmail">email@exemple.com</div>
-        </div>
-      </div>
-      <ul class="p-menu-list">
-        <li class="p-menuitem">
-          <a class="p-menuitem-link" href="index.html">
-            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/>
-            </svg>
-            <span class="p-menuitem-text" data-i18n="nav.home">Accueil</span>
-          </a>
-        </li>
-        <li class="p-menuitem">
-          <a class="p-menuitem-link" href="favorites.html">
-            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-            </svg>
-            <span class="p-menuitem-text" data-i18n="nav.favorites">Mes favoris</span>
-          </a>
-        </li>
-        <li class="p-menuitem">
-          <a class="p-menuitem-link" href="#">
-            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-              <path d="M16 3.13a4 4 0 010 7.75"/>
-            </svg>
-            <span class="p-menuitem-text">Parrainages</span>
-          </a>
-        </li>
-        <li class="p-menuitem">
-          <a class="p-menuitem-link" href="bookings.html">
-            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-              <line x1="16" y1="2" x2="16" y2="6"/>
-              <line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            <span class="p-menuitem-text" data-i18n="booking.my_bookings">Mes réservations</span>
-          </a>
-        </li>
-        <li class="p-menuitem">
-          <a class="p-menuitem-link logout-link" id="accountLogoutBtn">
-            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            <span class="p-menuitem-text" data-i18n="auth.logout">Se déconnecter</span>
-          </a>
-        </li>
-      </ul>
+    <div class="header-actions">
+      <button class="icon-btn" id="currencyBtn" title="Devise">$</button>
+      <button class="icon-btn" title="Favoris">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+      </button>
+      <button class="btn-primary" id="loginBtn">Se connecter</button>
     </div>
   </div>
 </header>
 
-<!-- Overlay pour fermer le dropdown -->
-<div class="account-dropdown-overlay" id="accountDropdownOverlay"></div>
-
-<!-- ========== MOBILE : résumé de recherche + barre d'outils ========== -->
-<div class="mobile-search-summary" id="mobileSearchSummary" role="button" tabindex="0">
-  <div class="mss-text">
-    <div class="mss-dest" id="mssDest">—</div>
-    <div class="mss-sub" id="mssSub">—</div>
+<!-- ===== MOBILE SUMMARY ===== -->
+<div class="layout">
+  <div class="mobile-summary" id="mobileSummary">
+    <div class="m-dest" id="mDest">—</div>
+    <div class="m-sub" id="mSub">—</div>
   </div>
-  <button class="mss-edit" id="mssEditBtn" aria-label="Modifier la recherche"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
-</div>
-<div class="mobile-toolbar" id="mobileToolbar">
-  <button class="mt-btn" id="mtFilters" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span data-i18n="common.filters">Filtres</span></button>
-  <button class="mt-btn" id="mtAccessibility" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="4.5" r="1.6"/><path d="M12 8v6M12 8l-4 2M12 8l4 2M8 10v9M16 10v9M8 19h8"/></svg><span data-i18n="accessibility.filters">Filtres d'accessibilité</span></button>
-  <button class="mt-btn" id="mtSort" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11M3 12h7M3 17h4M17 4v16M17 4l-4 4M17 4l4 4M17 20l-4-4M17 20l4-4"/></svg><span data-i18n="common.sort">Trier</span></button>
-</div>
 
-<!-- ========== RÉSULTATS LAYOUT ========== -->
-<div class="results-layout">
-  <!-- Sidebar desktop uniquement (cachée sur mobile) -->
-  <aside class="sidebar">
-    <div class="map-thumb" id="mapContainer" style="height:250px; min-height:250px;"></div>
+  <!-- ===== SIDEBAR (Desktop) ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="panel" style="padding:0; overflow:hidden">
+      <div class="map-wrap" id="mapContainer"></div>
+    </div>
 
-    <details class="filter-group" open id="filtersMainGroup">
-      <summary data-i18n="common.filters">Filtres</summary>
-      <div class="fg-body" id="filtersSlotDesktop">
-        <div id="filtersPanelContent" style="display:flex; flex-direction:column; gap:10px;">
-          <button class="clear-btn" onclick="clearFilters()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-            <span data-i18n="common.clear_filters">Effacer les filtres</span>
-          </button>
-          
-          <!-- Nom de la propriété -->
-          <div class="filter dynamic-filter">
-            <label style="font-size:12px;font-weight:700;" data-i18n="hotel.property_name">Nom de la propriété</label>
-            <input class="fg-input" type="text" placeholder="Par exemple : Fleuve Congo Palace" id="filterName" oninput="applyFilters()">
-          </div>
-          
-          <!-- Prix (par nuit) - Dynamique -->
-          <div class="filter dynamic-filter" id="priceFilterContainer">
-            <div class="price-range-label"><span data-i18n="hotel.price_per_night">Prix (par nuit)</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);">
-              <span id="priceMinLabel">$0</span> <span>→</span> <span id="priceMaxLabel">$1000+</span>
-            </div>
-            <div class="range-track" id="priceTrack">
-              <div class="fill" id="priceFill" style="left:0%; right:0%;"></div>
-              <div class="handle" id="priceMinHandle" style="left:0%;" role="slider" aria-label="Prix minimum" tabindex="0"></div>
-              <div class="handle" id="priceMaxHandle" style="left:100%;" role="slider" aria-label="Prix maximum" tabindex="0"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-top:4px;">
-              <span id="priceMinValue">$0</span>
-              <span id="priceMaxValue">$1000+</span>
-            </div>
-          </div>
-          
-          <!-- Filtres populaires -->
-          <div class="filter dynamic-filter">
-            <label style="font-size:12px;font-weight:700;margin-top:6px;" data-i18n="hotel.popular_filters">Filtres populaires</label>
-            <div id="popularFiltersContainer">
-              <label class="check-item"><input type="checkbox" id="filterFreeCancellation" onchange="applyFilters()"><span data-i18n="hotel.free_cancellation">Annulation gratuite</span></label>
-              <label class="check-item"><input type="checkbox" id="filterParking" onchange="applyFilters()"><span data-i18n="hotel.parking">Parking</span></label>
-              <label class="check-item"><input type="checkbox" id="filterBreakfast" onchange="applyFilters()"><span data-i18n="hotel.breakfast_included">Petit déjeuner inclus</span></label>
-              <label class="check-item"><input type="checkbox" id="filterPool" onchange="applyFilters()"><span data-i18n="hotel.pool">Piscine</span></label>
-              <label class="check-item"><input type="checkbox" id="filterWifi" onchange="applyFilters()"><span data-i18n="hotel.wifi">Wi-Fi gratuit</span></label>
-            </div>
-          </div>
-          
-          <!-- Filtres dynamiques (marques, types, étoiles, etc.) -->
-          <div id="dynamicFiltersContainer"></div>
+    <div class="panel">
+      <h3>Filtres <span class="badge" id="filterBadge">0</span></h3>
+      <button class="clear-filters" id="clearFilters" style="margin-bottom:16px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+        Effacer les filtres
+      </button>
+
+      <div class="filter-group">
+        <label class="filter-label">Nom de l'hôtel</label>
+        <input type="text" class="filter-input" id="fName" placeholder="Rechercher...">
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Prix par nuit</label>
+        <div class="price-labels"><span id="priceMinLabel">$0</span><span id="priceMaxLabel">$1000+</span></div>
+        <div class="range-wrap" id="priceTrack">
+          <div class="range-fill" id="priceFill"></div>
+          <div class="range-handle" id="priceMinHandle" style="left:0%" role="slider" tabindex="0"></div>
+          <div class="range-handle" id="priceMaxHandle" style="left:100%" role="slider" tabindex="0"></div>
         </div>
       </div>
-    </details>
 
-    <details class="filter-group">
-      <summary data-i18n="accessibility.filters">Filtres d'accessibilité</summary>
-      <div class="fg-body">
-        <label class="check-item"><input type="checkbox" id="accessWheelchair"><span data-i18n="accessibility.wheelchair">Chambre accessible en fauteuil roulant</span></label>
-        <label class="check-item"><input type="checkbox" id="accessElevator"><span data-i18n="accessibility.elevator">Ascenseur disponible</span></label>
-        <label class="check-item"><input type="checkbox" id="accessBathroom"><span data-i18n="accessibility.bathroom">Salle de bain adaptée</span></label>
-        <label class="check-item"><input type="checkbox" id="accessParking"><span data-i18n="accessibility.parking">Stationnement accessible</span></label>
-        <label class="check-item"><input type="checkbox" id="accessTrained"><span data-i18n="accessibility.trained_staff">Personnel formé</span></label>
+      <div class="filter-group">
+        <label class="filter-label">Étoiles</label>
+        <div class="check-list" id="starList"></div>
       </div>
-    </details>
 
-    <details class="filter-group" id="propertyTypeGroup">
-      <summary data-i18n="hotel.property_type">Type d'hébergement</summary>
-      <div class="fg-body" id="propertyTypeContainer">
-        <label class="check-item"><input type="checkbox" checked id="typeHotel"><span data-i18n="hotel.hotel">Hôtel</span></label>
-        <label class="check-item"><input type="checkbox" id="typeApartment"><span data-i18n="hotel.apartment">Appartement</span></label>
-        <label class="check-item"><input type="checkbox" id="typeVilla"><span data-i18n="hotel.villa">Villa</span></label>
-        <label class="check-item"><input type="checkbox" id="typeGuestHouse"><span data-i18n="hotel.guest_house">Maison d'hôtes</span></label>
+      <div class="filter-group">
+        <label class="filter-label">Note clients</label>
+        <div class="check-list" id="ratingList"></div>
       </div>
-    </details>
+
+      <div class="filter-group">
+        <label class="filter-label">Repas</label>
+        <div class="check-list" id="mealList"></div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Options</label>
+        <div class="check-list">
+          <label class="check-item"><input type="checkbox" id="fCancel"><span>Annulation gratuite</span></label>
+        </div>
+      </div>
+    </div>
   </aside>
 
+  <!-- ===== MAIN ===== -->
   <main>
-    <div class="info-banner" id="infoBanner" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
-      <span id="infoBannerText" data-i18n="hotel.price_warning">Les prix et disponibilités peuvent varier rapidement pour ces dates.</span>
+    <div class="mobile-toolbar" id="mobileToolbar">
+      <button class="mt-chip" id="mtFilters"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>Filtres</button>
+      <button class="mt-chip" id="mtSort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11M3 12h7M3 17h4M17 4v16M17 4l-4 4M17 4l4 4"/></svg>Trier</button>
     </div>
 
     <div class="results-top">
-      <div class="results-count" id="resultsCount">Recherche en cours...</div>
-      <div class="results-actions">
-        <div class="sort-select" id="sortSelect" onclick="toggleSortDropdown()">
-          <span id="sortLabel" data-i18n="hotel.sort_by">Trier par : nos meilleures ventes</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
-          <div class="sort-dropdown" id="sortDropdown">
-            <div class="sort-item active" data-sort="popularity" onclick="applySort('popularity')">Nos meilleurs choix</div>
-            <div class="sort-item" data-sort="price_asc" onclick="applySort('price_asc')">Prix (du plus bas au plus élevé)</div>
-            <div class="sort-item" data-sort="price_desc" onclick="applySort('price_desc')">Prix (du plus élevé au plus bas)</div>
-            <div class="sort-item" data-sort="stars_asc" onclick="applySort('stars_asc')">Étoiles (du plus bas au plus haut)</div>
-            <div class="sort-item" data-sort="stars_desc" onclick="applySort('stars_desc')">Étoiles (du plus haut au plus bas)</div>
-            <div class="sort-item" data-sort="distance" onclick="applySort('distance')">Distance depuis centre</div>
-            <div class="sort-item" data-sort="rating" onclick="applySort('rating')">Note (du plus élevé au plus bas)</div>
-            <div class="sort-item" data-sort="favorites" onclick="applySort('favorites')">Favoris</div>
-            <div class="sort-item" data-sort="travaxy" onclick="applySort('travaxy')">Score de travaxy</div>
-          </div>
-        </div>
-      </div>
+      <div class="results-count" id="resultsCount"><span>Recherche en cours...</span></div>
+      <button class="sort-btn" id="sortBtn">
+        <span id="sortLabel">Trier : Meilleurs choix</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
     </div>
 
     <div id="resultsContainer"></div>
   </main>
 </div>
 
-<!-- MAP FAB - CACHÉ SUR MOBILE -->
-<button class="map-fab" id="mapFab" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v18M3 9h18"/></svg><span data-i18n="common.map_view">Vue carte</span></button>
-
-<!-- ========== FOOTER ========== -->
+<!-- ===== FOOTER ===== -->
 <footer>
-  <div class="wrap">
+  <div class="footer-inner">
     <div class="footer-grid">
       <div>
-        <img class="logo-img" src="https://ukbekfcjfcjcqrpxfpmq.supabase.co/storage/v1/object/public/logo%20luvia/LUVIA%20TRAVEL%20LOGO%20SANS%20BACKGROUND.png" alt="LuviaPlace">
-        <p data-i18n="footer.desc">La plateforme de voyage pensée depuis et pour l'Afrique centrale — hébergement, vols, expériences, assurance et voiture.</p>
+        <div class="logo">LuviaPlace</div>
+        <p>La plateforme de voyage pensée depuis et pour l'Afrique centrale — hébergement, vols, expériences et plus.</p>
       </div>
-      <div class="footer-col"><h5 data-i18n="footer.explore">Explorer</h5><a href="resultats-hebergement.html" data-i18n="nav.hotels">Hébergement</a><a href="resultats-vols.html" data-i18n="nav.flights">Vols</a><a href="resultats-experiences.html" data-i18n="nav.experiences">Expériences</a></div>
-      <div class="footer-col"><h5 data-i18n="footer.services">Services</h5><a href="resultats-assurance.html" data-i18n="nav.insurance">Assurance</a><a href="resultats-voiture.html" data-i18n="nav.cars">Voiture</a><a href="#">Rewards</a></div>
-      <div class="footer-col"><h5 data-i18n="footer.company">Entreprise</h5><a href="#" data-i18n="footer.about">À propos</a><a href="#" data-i18n="footer.careers">Carrières</a><a href="#" data-i18n="footer.contact">Contact</a></div>
-      <div class="footer-col"><h5 data-i18n="footer.legal">Légal</h5><a href="#" data-i18n="footer.terms">Conditions générales</a><a href="#" data-i18n="footer.privacy">Confidentialité</a></div>
+      <div class="footer-col"><h5>Explorer</h5><a href="#">Hébergement</a><a href="#">Vols</a><a href="#">Expériences</a></div>
+      <div class="footer-col"><h5>Services</h5><a href="#">Assurance</a><a href="#">Voiture</a><a href="#">Rewards</a></div>
+      <div class="footer-col"><h5>Entreprise</h5><a href="#">À propos</a><a href="#">Carrières</a><a href="#">Contact</a></div>
+      <div class="footer-col"><h5>Légal</h5><a href="#">CGV</a><a href="#">Confidentialité</a></div>
     </div>
     <div class="footer-bottom">
       <span>© 2026 LuviaPlace — Kinshasa, RDC</span>
-      <span data-i18n="central_africa">Fait pour l'Afrique centrale</span>
+      <span>Fait pour l'Afrique centrale</span>
     </div>
   </div>
 </footer>
 
-<!-- ========== BOTTOM SHEETS ========== -->
+<!-- ===== BOTTOM SHEETS ===== -->
 <div class="sheet-overlay" id="sheetOverlay"></div>
 
 <div class="bottom-sheet" id="filtersSheet">
   <div class="sheet-handle"></div>
-  <div class="sheet-header"><h3 data-i18n="common.filters">Filtres</h3><button class="sheet-close" data-close-sheet aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-  <div class="sheet-body">
-    <div id="filtersSlotMobile"></div>
-    <div>
-      <div class="sheet-section-label" style="margin-bottom:10px;" data-i18n="hotel.property_type">Type d'hébergement</div>
-      <div style="display:flex; flex-direction:column; gap:10px;">
-        <label class="check-item"><input type="checkbox" checked><span data-i18n="hotel.hotel">Hôtel</span></label>
-        <label class="check-item"><input type="checkbox"><span data-i18n="hotel.apartment">Appartement</span></label>
-        <label class="check-item"><input type="checkbox"><span data-i18n="hotel.villa">Villa</span></label>
-        <label class="check-item"><input type="checkbox"><span data-i18n="hotel.guest_house">Maison d'hôtes</span></label>
-      </div>
-    </div>
-  </div>
+  <div class="sheet-header"><h3>Filtres</h3><button class="sheet-close" data-close-sheet><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="sheet-body" id="filtersSheetBody"></div>
   <div class="sheet-footer">
-    <button class="btn-secondary" onclick="clearFilters()" data-i18n="common.reset">Réinitialiser</button>
-    <button class="btn-primary-full" data-close-sheet data-i18n="common.apply">Appliquer</button>
-  </div>
-</div>
-
-<div class="bottom-sheet" id="accessibilitySheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header"><h3 data-i18n="accessibility.filters">Filtres d'accessibilité</h3><button class="sheet-close" data-close-sheet aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-  <div class="sheet-body">
-    <label class="check-item"><input type="checkbox"><span data-i18n="accessibility.wheelchair">Chambre accessible en fauteuil roulant</span></label>
-    <label class="check-item"><input type="checkbox"><span data-i18n="accessibility.elevator">Ascenseur disponible</span></label>
-    <label class="check-item"><input type="checkbox"><span data-i18n="accessibility.bathroom">Salle de bain adaptée</span></label>
-    <label class="check-item"><input type="checkbox"><span data-i18n="accessibility.parking">Stationnement accessible</span></label>
-    <label class="check-item"><input type="checkbox"><span data-i18n="accessibility.trained_staff">Personnel formé</span></label>
-  </div>
-  <div class="sheet-footer">
-    <button class="btn-primary-full" data-close-sheet style="flex:1;" data-i18n="common.apply">Appliquer</button>
+    <button class="btn-secondary" onclick="clearAllFilters()">Réinitialiser</button>
+    <button class="btn-primary-full" data-close-sheet>Appliquer</button>
   </div>
 </div>
 
 <div class="bottom-sheet" id="sortSheet">
   <div class="sheet-handle"></div>
-  <div class="sheet-header"><h3 data-i18n="common.sort">Trier par</h3><button class="sheet-close" data-close-sheet aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-  <div class="sheet-body" style="gap:4px;">
-    <button class="sheet-sort-item sort-item active" data-sort="popularity" data-i18n="hotel.sort_popularity">Nos meilleures ventes</button>
-    <button class="sheet-sort-item sort-item" data-sort="price_asc" data-i18n="hotel.sort_price_asc">Prix croissant</button>
-    <button class="sheet-sort-item sort-item" data-sort="price_desc" data-i18n="hotel.sort_price_desc">Prix décroissant</button>
-    <button class="sheet-sort-item sort-item" data-sort="rating" data-i18n="hotel.sort_rating">Note des clients</button>
-    <button class="sheet-sort-item sort-item" data-sort="stars" data-i18n="hotel.sort_stars">Nombre d'étoiles</button>
+  <div class="sheet-header"><h3>Trier par</h3><button class="sheet-close" data-close-sheet><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="sheet-body" style="gap:4px">
+    <button class="sheet-sort-item active" data-sort="popularity">Nos meilleurs choix</button>
+    <button class="sheet-sort-item" data-sort="price_asc">Prix croissant</button>
+    <button class="sheet-sort-item" data-sort="price_desc">Prix décroissant</button>
+    <button class="sheet-sort-item" data-sort="rating">Note des clients</button>
+    <button class="sheet-sort-item" data-sort="stars_desc">Étoiles décroissant</button>
   </div>
 </div>
 
-<div class="bottom-sheet" id="editSearchSheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header"><h3 data-i18n="search.modify">Modifier la recherche</h3><button class="sheet-close" data-close-sheet aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-  <div class="sheet-body">
-    <div>
-      <label style="font-size:12px;font-weight:700;" for="editDestination" data-i18n="search.destination">Destination</label>
-      <input class="fg-input" type="text" id="editDestination" style="margin-top:6px;">
-    </div>
-    <div style="display:flex; gap:10px;">
-      <div style="flex:1;"><label style="font-size:12px;font-weight:700;" for="editCheckin" data-i18n="search.checkin">Arrivée</label><input class="fg-input" type="date" id="editCheckin" style="margin-top:6px;"></div>
-      <div style="flex:1;"><label style="font-size:12px;font-weight:700;" for="editCheckout" data-i18n="search.checkout">Départ</label><input class="fg-input" type="date" id="editCheckout" style="margin-top:6px;"></div>
-    </div>
-    <div>
-      <label style="font-size:12px;font-weight:700;" data-i18n="search.guests">Voyageurs</label>
-      <div class="stepper-row" style="border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin-top:6px;">
-        <div style="font-size:13px; font-weight:600;" data-i18n="search.adults">Adultes</div>
-        <div class="stepper-controls">
-          <button class="step-btn" type="button" id="editAdultsMinus" aria-label="Moins d'adultes">−</button>
-          <span class="step-count" id="editAdultsCount">2</span>
-          <button class="step-btn" type="button" id="editAdultsPlus" aria-label="Plus d'adultes">+</button>
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  // ==================== CONFIG ====================
+  const API_BASE = 'https://luvia-place-v2-1.onrender.com';
+  const params = new URLSearchParams(window.location.search);
+
+  // ==================== STATE ====================
+  let allHotels = [];
+  let displayedHotels = [];
+  let currentSort = 'popularity';
+  let selectedHotelId = null;
+  let currency = localStorage.getItem('lp_currency') || 'USD';
+  let wishlist = JSON.parse(localStorage.getItem('lp_wishlist') || '[]');
+  let map = null, markers = [], markerMap = {};
+  let isDragging = null;
+  let priceRange = { min: 0, max: 1000 };
+
+  // ==================== UTILS ====================
+  const $ = id => document.getElementById(id);
+  const fmtDate = str => str ? new Date(str).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
+  const nightsBetween = (a,b) => { const s=new Date(a), e=new Date(b); return Math.max(1,Math.ceil((e-s)/86400000)) };
+  const debounce = (fn,ms) => { let t; return (...a) => { clearTimeout(t); t=setTimeout(()=>fn(...a),ms) }; };
+
+  const currencySymbols = { USD:'$', EUR:'€', GBP:'£', CDF:'FC', XAF:'FCFA', XOF:'FCFA', NGN:'₦', GHS:'GH₵', ZAR:'R', KES:'KSh', TZS:'TSh', UGX:'USh' };
+  const sym = c => currencySymbols[c] || c + ' ';
+
+  function showToast(msg) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  function getNights() {
+    const ci = params.get('checkin');
+    const co = params.get('checkout');
+    return ci && co ? nightsBetween(ci,co) : 3;
+  }
+
+  function convertPrice(amountUSD) {
+    // Taux approximatifs côté client pour l'affichage rapide
+    const rates = { USD:1, EUR:0.92, GBP:0.78, CDF:2800, XAF:600, XOF:600, NGN:1500, GHS:12, ZAR:18, KES:130, TZS:2500, UGX:3700 };
+    const r = rates[currency] || 1;
+    return amountUSD * r;
+  }
+
+  function formatPrice(amountUSD) {
+    const conv = convertPrice(amountUSD);
+    return sym(currency) + Math.round(conv).toLocaleString('fr-FR');
+  }
+
+  // ==================== SEARCH SUMMARY ====================
+  function updateSummary() {
+    const dest = params.get('destination') || 'Destination';
+    const ci = params.get('checkin'), co = params.get('checkout');
+    const adults = parseInt(params.get('adults')||2);
+    const children = parseInt(params.get('children')||0);
+    const dates = ci && co ? fmtDate(ci) + ' – ' + fmtDate(co) : 'Dates';
+    const guests = (adults+children) + ' voyageur' + (adults+children>1?'s':'');
+
+    $('pillDest').innerHTML = '<strong>' + dest + '</strong>';
+    $('pillDates').textContent = dates;
+    $('pillGuests').textContent = guests;
+    $('mDest').textContent = dest;
+    $('mSub').textContent = dates + ' · ' + guests;
+  }
+
+  // ==================== MAP ====================
+  function initMap() {
+    if (map) return;
+    const container = $('mapContainer');
+    if (!container) return;
+    map = L.map(container, { center:[-4.325,15.322], zoom:13, zoomControl:false });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'}).addTo(map);
+    L.control.zoom({position:'bottomright'}).addTo(map);
+  }
+
+  function buildMarkerIcon(num, active) {
+    return L.divIcon({
+      className:'custom-marker',
+      html: '<div style="background:'+(active?'#1047B8':'#155EEF')+';color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;box-shadow:0 2px 8px rgba(21,94,239,.35);border:2px solid #fff;transform:'+(active?'scale(1.25)':'scale(1)')+';transition:transform .2s">' + num + '</div>',
+      iconSize:[32,32], iconAnchor:[16,16]
+    });
+  }
+
+  function updateMap(hotels) {
+    if (!map) initMap();
+    markers.forEach(m => map.removeLayer(m));
+    markers = []; markerMap = {};
+    const bounds = [];
+    hotels.forEach((h,i) => {
+      const lat = parseFloat(h.latitude), lng = parseFloat(h.longitude);
+      if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+      const marker = L.marker([lat,lng], {icon:buildMarkerIcon(i+1,false)}).addTo(map)
+        .bindPopup('<strong style="font-size:13px">' + (h.name||'Hôtel') + '</strong><br><span style="font-size:12px;color:#666">' + (h.address||'') + '</span>');
+      marker.hotelId = h.id;
+      marker.on('click', () => selectHotel(h.id));
+      markers.push(marker); markerMap[h.id] = marker; bounds.push([lat,lng]);
+    });
+    if (bounds.length) map.fitBounds(bounds, {padding:[40,40]});
+  }
+
+  function highlightMarker(hotelId) {
+    markers.forEach(m => m.setIcon(buildMarkerIcon(markers.indexOf(m)+1, false)));
+    if (markerMap[hotelId]) {
+      const m = markerMap[hotelId];
+      m.setIcon(buildMarkerIcon(markers.indexOf(m)+1, true));
+      m.openPopup();
+      map.setView(m.getLatLng(), Math.max(map.getZoom(), 15), {animate:true});
+    }
+  }
+
+  // ==================== RENDER HOTELS ====================
+  function renderHotels(hotels) {
+    const container = $('resultsContainer');
+    const countEl = $('resultsCount');
+    const dest = params.get('destination') || 'cette destination';
+
+    if (!hotels || !hotels.length) {
+      container.innerHTML = '<div class="empty-state"><h3>Aucun résultat</h3><p>Essayez d'élargir vos filtres ou vos dates.</p><button class="retry-btn" onclick="clearAllFilters()">Effacer les filtres</button></div>';
+      countEl.innerHTML = '0 hôtel à <span>' + dest + '</span>';
+      return;
+    }
+
+    const nights = getNights();
+    countEl.innerHTML = hotels.length + ' hôtel' + (hotels.length>1?'s':'') + ' à <span>' + dest + '</span>';
+    container.innerHTML = '';
+
+    hotels.forEach((h, idx) => {
+      const card = document.createElement('div');
+      card.className = 'hotel-card' + (selectedHotelId===h.id?' active':'');
+      card.id = 'hotel-' + h.id;
+
+      const priceNight = h.minPrice > 0 ? Math.round(h.minPrice / nights) : 0;
+      const totalPrice = h.minPrice > 0 ? Math.round(h.minPrice) : 0;
+      const publicPrice = priceNight * 1.10;
+
+      const stars = Math.min(Math.round(h.starRating||0),5);
+      const starHtml = stars > 0 ? '★'.repeat(stars) : '';
+      const rating = h.rating || 0;
+      const reviewText = (h.reviewCount||0) > 0 ? (h.reviewCount).toLocaleString('fr-FR') + ' avis' : 'Pas encore d'avis';
+
+      const scoreClass = rating>=8?'good':rating>=6?'ok':rating>0?'bad':'ok';
+      const scoreLabel = rating>=9?'Fabuleux':rating>=8?'Très bien':rating>=7?'Bien':rating>=6?'Correct':'—';
+
+      const isWished = wishlist.includes(h.id);
+
+      const boardLabels = { RO:'Chambre seule', BB:'Petit-déjeuner inclus', HB:'Demi-pension', FB:'Pension complète', AI:'Tout inclus' };
+      const boardLabel = boardLabels[h.boardType] || h.boardName || '';
+
+      card.innerHTML = `
+        <div class="h-photo">
+          <img loading="lazy" src="${h.main_photo || 'https://picsum.photos/seed/'+h.id+'/400/300'}" alt="${h.name||'Hôtel'}">
+          <button class="h-wishlist ${isWished?'active':''}" data-id="${h.id}" aria-label="Favoris">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="${isWished?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0112 6a5 5 0 019.5 5c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+          </button>
         </div>
-      </div>
-    </div>
-  </div>
-  <div class="sheet-footer">
-    <button class="btn-primary-full" id="editSearchApply" style="flex:1;" data-i18n="search.search">Rechercher</button>
-  </div>
-</div>
+        <div class="h-info">
+          <div class="h-stars">${starHtml}</div>
+          <div class="h-name">${h.name||'Hôtel'}</div>
+          <div class="h-addr">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            ${h.address || h.city || 'Adresse non disponible'}
+          </div>
+          <div class="h-room">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>
+            ${h.roomName || 'Chambre standard'}${boardLabel ? ' · ' + boardLabel : ''}
+          </div>
+          <div class="h-badges">
+            ${h.refundable ? '<span class="badge-pill green">Annulation gratuite</span>' : ''}
+            ${h.boardType && h.boardType !== 'RO' ? '<span class="badge-pill blue">' + boardLabel + '</span>' : ''}
+          </div>
+        </div>
+        <div class="h-side">
+          <div class="h-score">
+            <span class="score-box ${scoreClass}">${rating > 0 ? rating.toFixed(1) : '—'}</span>
+            <div>
+              <div class="score-text">${scoreLabel}</div>
+              <div class="score-reviews">${reviewText}</div>
+            </div>
+          </div>
+          ${priceNight > 0 ? `
+            <div class="h-price">${formatPrice(priceNight)} <span class="per">/ nuit</span></div>
+            <div class="h-total">${nights} nuits, taxes incluses</div>
+            <div class="h-public">${formatPrice(publicPrice)} public</div>
+          ` : '<div style="font-size:13px;color:var(--ink-muted)">Prix non disponible</div>'}
+          <button class="h-cta" data-hotel="${h.id}">Voir les disponibilités <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+      `;
 
-<!-- ========== CARTE PLEIN ÉCRAN MOBILE - DÉSACTIVÉ ========== -->
-<div class="mobile-map-overlay" id="mobileMapOverlay">
-  <div class="mmo-header">
-    <button id="mmoClose" aria-label="Retour à la liste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></button>
-    <h3 data-i18n="common.map">Carte</h3>
-  </div>
-  <div id="mobileMapContainer"></div>
-</div>
+      // Events
+      card.addEventListener('click', e => {
+        if (e.target.closest('.h-wishlist') || e.target.closest('.h-cta')) return;
+        selectHotel(h.id);
+      });
+      card.querySelector('.h-wishlist').addEventListener('click', e => {
+        e.stopPropagation();
+        toggleWishlist(h.id, e.currentTarget);
+      });
+      card.querySelector('.h-cta').addEventListener('click', e => {
+        e.stopPropagation();
+        goToDetail(h.id);
+      });
 
-<!-- ========== MODALE LANGUE + DEVISES ========== -->
-<div class="lang-modal-overlay" id="langModalOverlay">
-  <div class="lang-modal">
-    <div class="lang-modal-header">
-      <h3 data-i18n="language.select">Choisissez votre langue et devise</h3>
-      <button class="lang-modal-close" id="langModalClose">&times;</button>
-    </div>
-    <div class="lang-currency-tabs">
-      <button class="lang-currency-tab active" data-tab="language">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg>
-        <span data-i18n="language.tab">Langue</span>
-      </button>
-      <button class="lang-currency-tab" data-tab="currency">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M4 8h16M4 16h16M8 4v16M16 4v16"/></svg>
-        <span data-i18n="currency.tab">Devise</span>
-      </button>
-    </div>
-    <div class="lang-panel active" id="langPanel">
-      <div class="lang-grid">
-        <button class="lang-option active" data-lang="fr"><span class="flag">🇫🇷</span><span class="lang-name" data-i18n="language.fr">Français</span><span class="lang-check">✓</span></button>
-        <button class="lang-option" data-lang="en"><span class="flag">🇬🇧</span><span class="lang-name" data-i18n="language.en">English</span><span class="lang-check">✓</span></button>
-        <button class="lang-option" data-lang="es"><span class="flag">🇪🇸</span><span class="lang-name" data-i18n="language.es">Español</span><span class="lang-check">✓</span></button>
-        <button class="lang-option" data-lang="sw"><span class="flag">🇹🇿</span><span class="lang-name" data-i18n="language.sw">Kiswahili</span><span class="lang-check">✓</span></button>
-        <button class="lang-option" data-lang="pt"><span class="flag">🇵🇹</span><span class="lang-name" data-i18n="language.pt">Português</span><span class="lang-check">✓</span></button>
-        <button class="lang-option" data-lang="it"><span class="flag">🇮🇹</span><span class="lang-name" data-i18n="language.it">Italiano</span><span class="lang-check">✓</span></button>
-        <button class="lang-option" data-lang="de"><span class="flag">🇩🇪</span><span class="lang-name" data-i18n="language.de">Deutsch</span><span class="lang-check">✓</span></button>
-        <button class="lang-option" data-lang="ar"><span class="flag">🇦🇪</span><span class="lang-name" data-i18n="language.ar">العربية</span><span class="lang-check">✓</span></button>
-        <button class="lang-option" data-lang="zh"><span class="flag">🇨🇳</span><span class="lang-name" data-i18n="language.zh">中文</span><span class="lang-check">✓</span></button>
-        <button class="lang-option" data-lang="ja"><span class="flag">🇯🇵</span><span class="lang-name" data-i18n="language.ja">日本語</span><span class="lang-check">✓</span></button>
-        <button class="lang-option" data-lang="ru"><span class="flag">🇷🇺</span><span class="lang-name" data-i18n="language.ru">Русский</span><span class="lang-check">✓</span></button>
-        <button class="lang-option" data-lang="nl"><span class="flag">🇳🇱</span><span class="lang-name" data-i18n="language.nl">Nederlands</span><span class="lang-check">✓</span></button>
-      </div>
-    </div>
-    <div class="lang-panel" id="currencyPanel">
-      <div class="currency-grid">
-        <div class="currency-group-label" data-i18n="currency.africa"> Afrique</div>
-        <button class="currency-option" data-currency="CDF"><span class="currency-symbol">FC</span><span class="currency-name">Franc Congolais</span><span class="currency-code">CDF</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="XAF"><span class="currency-symbol">FCFA</span><span class="currency-name">Franc CFA (CEMAC)</span><span class="currency-code">XAF</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="XOF"><span class="currency-symbol">FCFA</span><span class="currency-name">Franc CFA (UEMOA)</span><span class="currency-code">XOF</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="NGN"><span class="currency-symbol">₦</span><span class="currency-name">Naira Nigérian</span><span class="currency-code">NGN</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="GHS"><span class="currency-symbol">GH₵</span><span class="currency-name">Cedi Ghanéen</span><span class="currency-code">GHS</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="ZAR"><span class="currency-symbol">R</span><span class="currency-name">Rand Sud-Africain</span><span class="currency-code">ZAR</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="KES"><span class="currency-symbol">KSh</span><span class="currency-name">Shilling Kenyan</span><span class="currency-code">KES</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="TZS"><span class="currency-symbol">TSh</span><span class="currency-name">Shilling Tanzanien</span><span class="currency-code">TZS</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="UGX"><span class="currency-symbol">USh</span><span class="currency-name">Shilling Ougandais</span><span class="currency-code">UGX</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="MAD"><span class="currency-symbol">DH</span><span class="currency-name">Dirham Marocain</span><span class="currency-code">MAD</span><span class="lang-check">✓</span></button>
-        <div class="currency-group-label" data-i18n="currency.international"> International</div>
-        <button class="currency-option" data-currency="USD"><span class="currency-symbol">$</span><span class="currency-name">US Dollar</span><span class="currency-code">USD</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="EUR"><span class="currency-symbol">€</span><span class="currency-name">Euro</span><span class="currency-code">EUR</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="GBP"><span class="currency-symbol">£</span><span class="currency-name">British Pound</span><span class="currency-code">GBP</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="JPY"><span class="currency-symbol">¥</span><span class="currency-name">Japanese Yen</span><span class="currency-code">JPY</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="CNY"><span class="currency-symbol">¥</span><span class="currency-name">Chinese Yuan</span><span class="currency-code">CNY</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="CHF"><span class="currency-symbol">Fr</span><span class="currency-name">Swiss Franc</span><span class="currency-code">CHF</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="CAD"><span class="currency-symbol">C$</span><span class="currency-name">Canadian Dollar</span><span class="currency-code">CAD</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="AUD"><span class="currency-symbol">A$</span><span class="currency-name">Australian Dollar</span><span class="currency-code">AUD</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="BRL"><span class="currency-symbol">R$</span><span class="currency-name">Real Brésilien</span><span class="currency-code">BRL</span><span class="lang-check">✓</span></button>
-        <button class="currency-option" data-currency="RUB"><span class="currency-symbol">₽</span><span class="currency-name">Rouble Russe</span><span class="currency-code">RUB</span><span class="lang-check">✓</span></button>
-      </div>
-    </div>
-    <button class="lang-modal-apply" data-close-popover data-i18n="common.apply">Appliquer</button>
-  </div>
-</div>
+      container.appendChild(card);
+    });
+  }
 
+  function selectHotel(id) {
+    selectedHotelId = id;
+    document.querySelectorAll('.hotel-card').forEach(c => c.classList.remove('active'));
+    const el = $('hotel-' + id);
+    if (el) { el.classList.add('active'); el.scrollIntoView({behavior:'smooth', block:'center'}); }
+    highlightMarker(id);
+  }
+
+  function goToDetail(hotelId) {
+    const ci = params.get('checkin') || '';
+    const co = params.get('checkout') || '';
+    const a = params.get('adults') || '2';
+    let url = 'hotel-detail.html?hotelId=' + encodeURIComponent(hotelId);
+    if (ci) url += '&checkin=' + ci;
+    if (co) url += '&checkout=' + co;
+    url += '&adults=' + a;
+    window.location.href = url;
+  }
+
+  function toggleWishlist(id, btn) {
+    if (wishlist.includes(id)) {
+      wishlist = wishlist.filter(x => x !== id);
+      btn.classList.remove('active');
+      btn.querySelector('svg').setAttribute('fill','none');
+      showToast('Retiré des favoris');
+    } else {
+      wishlist.push(id);
+      btn.classList.add('active');
+      btn.querySelector('svg').setAttribute('fill','currentColor');
+      showToast('Ajouté aux favoris');
+    }
+    localStorage.setItem('lp_wishlist', JSON.stringify(wishlist));
+  }
+
+  // ==================== SKELETON ====================
+  function showSkeleton() {
+    const container = $('resultsContainer');
+    let html = '';
+    for (let i=0;i<5;i++) {
+      html += '<div class="hotel-card skeleton" style="cursor:default">' +
+        '<div class="h-photo"><div class="sk-photo"></div></div>' +
+        '<div class="h-info"><div class="sk-line w80"></div><div class="sk-line w60"></div><div class="sk-line w40"></div></div>' +
+        '<div class="h-side"><div class="sk-line w60"></div><div class="sk-line w40"></div></div></div>';
+    }
+    container.innerHTML = html;
+  }
+
+  // ==================== STREAMING LOAD ====================
+  function loadResults() {
+    const destination = params.get('destination') || '';
+    const checkin = params.get('checkin') || '';
+    const checkout = params.get('checkout') || '';
+    const adults = parseInt(params.get('adults') || '2');
+    const placeId = params.get('placeId') || '';
+
+    if (!checkin || !checkout || !destination) {
+      $('resultsContainer').innerHTML = '<div class="empty-state"><h3>Paramètres manquants</h3><p>Effectuez une recherche depuis la page d'accueil.</p><a href="index.html" class="retry-btn" style="display:inline-block">Accueil</a></div>';
+      $('resultsCount').innerHTML = '<span>Recherche invalide</span>';
+      return;
+    }
+
+    showSkeleton();
+    $('resultsCount').innerHTML = '<span>Recherche en cours...</span>';
+
+    const qs = new URLSearchParams({
+      checkin, checkout, adults: adults.toString(),
+      environment: 'production', limit: '2000', currency
+    });
+    if (placeId) qs.append('placeId', placeId);
+    else qs.append('city', destination);
+
+    const url = API_BASE + '/search-hotels-stream?' + qs.toString();
+    const es = new EventSource(url);
+    let accumulated = [];
+    let completed = false;
+
+    es.addEventListener('batch', e => {
+      try {
+        const data = JSON.parse(e.data);
+        const batch = data.hotels || [];
+        accumulated = accumulated.concat(batch);
+        allHotels = accumulated;
+        displayedHotels = accumulated;
+        renderHotels(accumulated);
+        updateMap(accumulated);
+        const txt = data.total ? accumulated.length + ' / ' + data.total + ' hôtels' : accumulated.length + ' hôtels trouvés';
+        $('resultsCount').innerHTML = '<span>' + txt + '</span>';
+        buildDynamicFilters(accumulated);
+      } catch(err) { console.error('Batch error', err); }
+    });
+
+    es.addEventListener('status', e => {
+      try { const d = JSON.parse(e.data); $('resultsCount').innerHTML = '<span>' + (d.message || 'Chargement...') + '</span>'; } catch(e){}
+    });
+
+    es.addEventListener('complete', e => {
+      try {
+        const data = JSON.parse(e.data);
+        allHotels = data.hotels || accumulated;
+        displayedHotels = allHotels;
+        renderHotels(allHotels);
+        updateMap(allHotels);
+        buildDynamicFilters(allHotels);
+        applyFilters(false);
+        $('resultsCount').innerHTML = allHotels.length + ' hôtel' + (allHotels.length>1?'s':'') + ' à <span>' + destination + '</span>';
+      } catch(err) { console.error('Complete error', err); }
+      es.close(); completed = true;
+    });
+
+    es.addEventListener('error', e => {
+      if (accumulated.length > 0) {
+        $('resultsCount').innerHTML = '<span>' + accumulated.length + ' hôtels (chargement partiel)</span>';
+      } else {
+        $('resultsContainer').innerHTML = '<div class="empty-state"><h3>Erreur de connexion</h3><p>Le serveur de streaming a rencontré un problème.</p><button class="retry-btn" onclick="location.reload()">Réessayer</button></div>';
+        $('resultsCount').innerHTML = '<span>Erreur</span>';
+      }
+      es.close();
+    });
+
+    setTimeout(() => { if (!completed) { es.close(); } }, 300000);
+  }
+
+  // ==================== FILTERS ====================
+  function buildDynamicFilters(hotels) {
+    // Étoiles
+    const starCounts = {};
+    hotels.forEach(h => { const s = Math.min(Math.round(h.starRating||0),5); if(s>0) starCounts[s]=(starCounts[s]||0)+1; });
+    const starContainer = $('starList');
+    if (starContainer && starContainer.children.length === 0) {
+      [5,4,3,2,1].forEach(s => {
+        if (!starCounts[s]) return;
+        const label = document.createElement('label');
+        label.className = 'check-item';
+        label.innerHTML = '<input type="checkbox" data-filter="stars" value="' + s + '"><span>' + s + ' étoiles</span><span class="count">' + starCounts[s] + '</span>';
+        starContainer.appendChild(label);
+      });
+      starContainer.querySelectorAll('input').forEach(el => el.addEventListener('change', () => applyFilters()));
+    }
+
+    // Notes
+    const ratingContainer = $('ratingList');
+    if (ratingContainer && ratingContainer.children.length === 0) {
+      [{v:9,l:'Excellent : 9+'},{v:8,l:'Très bien : 8+'},{v:7,l:'Bien : 7+'},{v:6,l:'Correct : 6+'}].forEach(r => {
+        const count = hotels.filter(h => (h.rating||0) >= r.v).length;
+        if (!count) return;
+        const label = document.createElement('label');
+        label.className = 'check-item';
+        label.innerHTML = '<input type="checkbox" data-filter="rating" value="' + r.v + '"><span>' + r.l + '</span><span class="count">' + count + '</span>';
+        ratingContainer.appendChild(label);
+      });
+      ratingContainer.querySelectorAll('input').forEach(el => el.addEventListener('change', () => applyFilters()));
+    }
+
+    // Repas
+    const mealCounts = {};
+    hotels.forEach(h => { const b = h.boardType || 'RO'; if (b !== 'RO') mealCounts[b] = (mealCounts[b]||0)+1; });
+    const mealContainer = $('mealList');
+    if (mealContainer && mealContainer.children.length === 0) {
+      const mealLabels = { BB:'Petit-déjeuner inclus', HB:'Demi-pension', FB:'Pension complète', AI:'Tout inclus' };
+      Object.keys(mealCounts).forEach(code => {
+        const label = document.createElement('label');
+        label.className = 'check-item';
+        label.innerHTML = '<input type="checkbox" data-filter="meal" value="' + code + '"><span>' + (mealLabels[code]||code) + '</span><span class="count">' + mealCounts[code] + '</span>';
+        mealContainer.appendChild(label);
+      });
+      mealContainer.querySelectorAll('input').forEach(el => el.addEventListener('change', () => applyFilters()));
+    }
+
+    // Price slider range
+    const prices = hotels.filter(h => h.minPrice > 0).map(h => h.minPrice);
+    if (prices.length) {
+      priceRange.min = Math.floor(Math.min(...prices));
+      priceRange.max = Math.ceil(Math.max(...prices));
+      $('priceMinLabel').textContent = sym(currency) + priceRange.min;
+      $('priceMaxLabel').textContent = sym(currency) + priceRange.max;
+      $('priceMinHandle').setAttribute('aria-valuemin', priceRange.min);
+      $('priceMinHandle').setAttribute('aria-valuemax', priceRange.max);
+      $('priceMinHandle').setAttribute('aria-valuenow', priceRange.min);
+      $('priceMaxHandle').setAttribute('aria-valuemin', priceRange.min);
+      $('priceMaxHandle').setAttribute('aria-valuemax', priceRange.max);
+      $('priceMaxHandle').setAttribute('aria-valuenow', priceRange.max);
+    }
+  }
+
+  function getFilterValues(group) {
+    return Array.from(document.querySelectorAll('[data-filter="' + group + '"]')).filter(el => el.checked).map(el => el.value);
+  }
+
+  function applyFilters(updateMapToo = true) {
+    const nameVal = ($('fName')?.value || '').toLowerCase();
+    const starsChecked = getFilterValues('stars').map(Number);
+    const ratingChecked = getFilterValues('rating').map(Number);
+    const mealChecked = getFilterValues('meal');
+    const freeCancel = $('fCancel')?.checked;
+
+    // Price from handles
+    const minNow = parseFloat($('priceMinHandle').getAttribute('aria-valuenow') || priceRange.min);
+    const maxNow = parseFloat($('priceMaxHandle').getAttribute('aria-valuenow') || priceRange.max);
+
+    let filtered = allHotels.filter(h => {
+      if (nameVal && !(h.name||'').toLowerCase().includes(nameVal)) return false;
+      if (h.minPrice > 0 && (h.minPrice < minNow || h.minPrice > maxNow)) return false;
+      if (starsChecked.length && !starsChecked.includes(Math.min(Math.round(h.starRating||0),5))) return false;
+      if (ratingChecked.length && !ratingChecked.some(v => (h.rating||0) >= v)) return false;
+      if (mealChecked.length && !mealChecked.includes(h.boardType||'RO')) return false;
+      if (freeCancel && !h.refundable) return false;
+      return true;
+    });
+
+    // Sort
+    if (currentSort === 'price_asc') filtered.sort((a,b) => (a.minPrice||0) - (b.minPrice||0));
+    else if (currentSort === 'price_desc') filtered.sort((a,b) => (b.minPrice||0) - (a.minPrice||0));
+    else if (currentSort === 'rating') filtered.sort((a,b) => (b.rating||0) - (a.rating||0));
+    else if (currentSort === 'stars_desc') filtered.sort((a,b) => (b.starRating||0) - (a.starRating||0));
+
+    displayedHotels = filtered;
+    renderHotels(filtered);
+    if (updateMapToo) updateMap(filtered);
+
+    // Badge count
+    let activeCount = starsChecked.length + ratingChecked.length + mealChecked.length + (freeCancel?1:0);
+    if (minNow > priceRange.min || maxNow < priceRange.max) activeCount++;
+    if (nameVal) activeCount++;
+    $('filterBadge').textContent = activeCount;
+    $('filterBadge').style.display = activeCount > 0 ? 'inline-block' : 'none';
+  }
+
+  window.clearAllFilters = function() {
+    $('fName').value = '';
+    $('fCancel').checked = false;
+    document.querySelectorAll('[data-filter]').forEach(el => el.checked = false);
+    $('priceMinHandle').style.left = '0%';
+    $('priceMaxHandle').style.left = '100%';
+    $('priceFill').style.left = '0%';
+    $('priceFill').style.right = '0%';
+    $('priceMinHandle').setAttribute('aria-valuenow', priceRange.min);
+    $('priceMaxHandle').setAttribute('aria-valuenow', priceRange.max);
+    applyFilters();
+  };
+
+  // ==================== PRICE SLIDER ====================
+  function initSlider() {
+    const track = $('priceTrack');
+    const minH = $('priceMinHandle');
+    const maxH = $('priceMaxHandle');
+    const fill = $('priceFill');
+
+    function updateFromHandles() {
+      const minL = parseFloat(minH.style.left) || 0;
+      const maxL = parseFloat(maxH.style.left) || 100;
+      const range = priceRange.max - priceRange.min;
+      const vMin = Math.round(priceRange.min + (minL/100)*range);
+      const vMax = Math.round(priceRange.min + (maxL/100)*range);
+      minH.setAttribute('aria-valuenow', vMin);
+      maxH.setAttribute('aria-valuenow', vMax);
+      $('priceMinLabel').textContent = sym(currency) + vMin;
+      $('priceMaxLabel').textContent = sym(currency) + vMax;
+      fill.style.left = minL + '%';
+      fill.style.right = (100 - maxL) + '%';
+      applyFilters();
+    }
+
+    function startDrag(e, handle) {
+      isDragging = handle;
+      e.preventDefault();
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', stopDrag);
+      document.addEventListener('touchmove', onTouch, {passive:false});
+      document.addEventListener('touchend', stopDrag);
+    }
+
+    function onMove(e) { if (!isDragging) return; moveTo(e.clientX); }
+    function onTouch(e) { if (!isDragging) return; e.preventDefault(); moveTo(e.touches[0].clientX); }
+
+    function moveTo(clientX) {
+      const rect = track.getBoundingClientRect();
+      let x = ((clientX - rect.left) / rect.width) * 100;
+      x = Math.max(0, Math.min(100, x));
+      if (isDragging === minH) x = Math.min(x, parseFloat(maxH.style.left)||100);
+      if (isDragging === maxH) x = Math.max(x, parseFloat(minH.style.left)||0);
+      isDragging.style.left = x + '%';
+      updateFromHandles();
+    }
+
+    function stopDrag() {
+      isDragging = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', stopDrag);
+      document.removeEventListener('touchmove', onTouch);
+      document.removeEventListener('touchend', stopDrag);
+    }
+
+    minH.addEventListener('mousedown', e => startDrag(e, minH));
+    maxH.addEventListener('mousedown', e => startDrag(e, maxH));
+    minH.addEventListener('touchstart', e => startDrag(e, minH), {passive:false});
+    maxH.addEventListener('touchstart', e => startDrag(e, maxH), {passive:false});
+  }
+
+  // ==================== SORT ====================
+  function setSort(type, label) {
+    currentSort = type;
+    $('sortLabel').textContent = 'Trier : ' + label;
+    document.querySelectorAll('.sheet-sort-item').forEach(el => el.classList.toggle('active', el.dataset.sort === type));
+    applyFilters();
+  }
+
+  // ==================== BOTTOM SHEETS ====================
+  function openSheet(id) {
+    document.querySelectorAll('.bottom-sheet.open').forEach(s => s.classList.remove('open'));
+    $(id).classList.add('open');
+    $('sheetOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSheets() {
+    document.querySelectorAll('.bottom-sheet.open').forEach(s => s.classList.remove('open'));
+    $('sheetOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // ==================== MOBILE FILTER CLONE ====================
+  function cloneFiltersToSheet() {
+    const dest = $('filtersSheetBody');
+    const src = $('sidebar').querySelector('.panel:last-child');
+    if (dest && src) {
+      dest.innerHTML = '';
+      const clone = src.cloneNode(true);
+      // Re-bind events on clone
+      clone.querySelectorAll('input[type="text"]').forEach(el => {
+        el.addEventListener('input', debounce(() => applyFilters(), 300));
+      });
+      clone.querySelectorAll('input[type="checkbox"]').forEach(el => {
+        el.addEventListener('change', () => applyFilters());
+      });
+      dest.appendChild(clone);
+    }
+  }
+
+  // ==================== CURRENCY ====================
+  const currencies = ['USD','EUR','GBP','CDF','XAF','XOF','NGN','GHS','ZAR','KES','TZS','UGX'];
+  let curIdx = currencies.indexOf(currency);
+  if (curIdx < 0) curIdx = 0;
+
+  $('currencyBtn').textContent = sym(currency);
+  $('currencyBtn').addEventListener('click', () => {
+    curIdx = (curIdx + 1) % currencies.length;
+    currency = currencies[curIdx];
+    localStorage.setItem('lp_currency', currency);
+    $('currencyBtn').textContent = sym(currency);
+    renderHotels(displayedHotels);
+    applyFilters(false);
+  });
+
+  // ==================== EVENTS ====================
+  document.addEventListener('DOMContentLoaded', () => {
+    updateSummary();
+    initSlider();
+    loadResults();
+
+    $('fName').addEventListener('input', debounce(() => applyFilters(), 300));
+    $('fCancel').addEventListener('change', () => applyFilters());
+    $('clearFilters').addEventListener('click', clearAllFilters);
+
+    $('sortBtn').addEventListener('click', () => openSheet('sortSheet'));
+    $('mtSort').addEventListener('click', () => openSheet('sortSheet'));
+    $('mtFilters').addEventListener('click', () => { cloneFiltersToSheet(); openSheet('filtersSheet'); });
+
+    $('sheetOverlay').addEventListener('click', closeSheets);
+    document.querySelectorAll('[data-close-sheet]').forEach(b => b.addEventListener('click', closeSheets));
+
+    document.querySelectorAll('.sheet-sort-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setSort(btn.dataset.sort, btn.textContent);
+        closeSheets();
+      });
+    });
+
+    $('searchPill').addEventListener('click', () => showToast('Modifier la recherche — bientôt disponible'));
+    $('mobileSummary').addEventListener('click', () => showToast('Modifier la recherche — bientôt disponible'));
+  });
+
+})();
+</script>
 <!-- ========== BIBLIOTHÈQUES ET SCRIPTS ========== -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
-
+<!-- Chatbot LiteAPI : à ne charger que via un endpoint serveur qui ne révèle jamais la clé au client -->
+<!-- Dans le <head> ou avant la fermeture du </body> -->
+<script src="https://components.liteapi.travel/chatbot/v1.js?liteApiKey=prod_public_4f1ec201-76ab-4314-8a70-38916b18e161" async></script>
 <!-- Vos scripts -->
 <script src="js/i18n.js"></script>
 <script src="js/language.js"></script>

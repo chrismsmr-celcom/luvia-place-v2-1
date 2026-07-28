@@ -2109,7 +2109,8 @@ app.get("/resultats-hebergement.html", (req, res) => {
 });
 
 app.get("/hotel-detail.html", (req, res) => {
-  res.sendFile(path.join(
+  res.sendFile(path.join(__dirname, "hotel-detail.html"));
+});
 
 // ============================================================
 // ERROR HANDLERS

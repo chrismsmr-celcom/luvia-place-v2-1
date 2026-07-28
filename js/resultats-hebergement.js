@@ -1088,29 +1088,35 @@
     }
 
     function voirHotel(hotelId) {
-        if (!hotelId) {
-            console.error('❌ Aucun ID d\'hôtel spécifié');
-            showToast('Erreur : ID d\'hôtel manquant');
-            return;
-        }
-
-        var checkin = params.get('checkin') || getDefaultCheckin();
-        var checkout = params.get('checkout') || getDefaultCheckout();
-        var adults = params.get('adults') || '2';
-        var children = params.get('children') || '0';
-
-        var url = 'hotel-detail.html?hotelId=' + encodeURIComponent(hotelId);
-        url += '&checkin=' + encodeURIComponent(checkin);
-        url += '&checkout=' + encodeURIComponent(checkout);
-        url += '&adults=' + encodeURIComponent(adults);
-        if (children > 0) {
-            url += '&children=' + encodeURIComponent(children);
-        }
-
-        console.log('🔗 Navigation vers:', url);
-        window.location.href = url;
+    if (!hotelId) {
+        console.error('❌ Aucun ID d\'hôtel spécifié');
+        showToast('Erreur : ID d\'hôtel manquant');
+        return;
     }
-    window.voirHotel = voirHotel;
+
+    var checkin = params.get('checkin') || getDefaultCheckin();
+    var checkout = params.get('checkout') || getDefaultCheckout();
+    var adults = params.get('adults') || '2';
+    var children = params.get('children') || '0';
+    var childrenAges = params.get('childrenAges') || '';
+
+    var url = 'hotel-detail.html?hotelId=' + encodeURIComponent(hotelId);
+    url += '&checkin=' + encodeURIComponent(checkin);
+    url += '&checkout=' + encodeURIComponent(checkout);
+    url += '&adults=' + encodeURIComponent(adults);
+    
+    if (children > 0) {
+        url += '&children=' + encodeURIComponent(children);
+    }
+    
+    if (childrenAges) {
+        url += '&childrenAges=' + encodeURIComponent(childrenAges);
+    }
+
+    console.log('🔗 Navigation vers:', url);
+    window.location.href = url;
+}
+window.voirHotel = voirHotel;
 
     function generateSkeleton() {
         var container = document.getElementById('resultsContainer');

@@ -23,6 +23,7 @@ const path = require("path");
 const cors = require("cors");
 const liteApi = require("liteapi-node-sdk");
 require("dotenv").config();
+const paymentStore = new Map();
 
 // ============================================================
 // CONFIGURATION
@@ -861,14 +862,40 @@ app.post("/book", async (req, res) => {
     const bookingData = response.data;
     console.log('✅ Booking confirmé:', bookingData.bookingId);
 
-    // Récupération des détails pour email
-    const hotelDetails = await getHotelDetailsLite(bookingData.hotelId, apiKey);
-    const confirmationData = buildConfirmationData(bookingData, {}, hotelDetails, {
-      firstName: guestFirstName, lastName: guestLastName, email: guestEmail, phone: guestPhone
+    // ✅ 1. Récupérer les détails COMPLETS de la réservation
+    const fullBooking = await callLiteAPI(`bookings/${bookingData.bookingId}`, 'GET', null, apiKey);
+    const booking = fullBooking.data || bookingData;
+
+    // ✅ 2. Récupérer les détails de l'hôtel
+    let hotelDetails = {};
+    try {
+      hotelDetails = await getHotelDetailsLite(booking.hotelId, apiKey);
+    } catch (e) {
+      console.warn('⚠️ Impossible de récupérer les détails de l\'hôtel:', e.message);
+      // On continue avec les infos minimales
+    }
+
+    // ✅ 3. Construire les données de confirmation AVEC les données réelles
+    const confirmationData = buildConfirmationData(booking, {}, hotelDetails, {
+      firstName: guestFirstName,
+      lastName: guestLastName,
+      email: guestEmail,
+      phone: guestPhone || '+1234567890'
     });
+
+    // ✅ 4. Envoyer l'email de confirmation
     await sendConfirmationEmail(confirmationData);
 
-    res.json({ success: true, data: confirmationData });
+    // ✅ 5. Retourner la réponse
+    res.json({ 
+      success: true, 
+      data: {
+        ...confirmationData,
+        bookingId: bookingData.bookingId,
+        hotelConfirmationCode: bookingData.hotelConfirmationCode,
+        status: bookingData.status
+      }
+    });
 
   } catch (err) {
     console.error("❌ book:", err.message);
@@ -1633,7 +1660,7 @@ app.get("/api/east-africa-destinations", async (req, res) => {
 // 32. PAIMENT MOBILE MONEY — INIT
 // ✅ CORRECTION : pas de usePaymentSdk ni currency dans prebook
 // ============================================================
-app.post("/api/payment/mobile-money/init", async (req, res) => {
+
   console.log("\n📱 ===== MOBILE MONEY INIT ===== 📱");
   const { offerId, phoneNumber, provider = 'MPESA', amount, currency = 'USD', guestInfo, environment = 'sandbox' } = req.body;
 
@@ -1796,6 +1823,7 @@ app.post("/api/book-with-payment", async (req, res) => {
   const apiKey = environment === "sandbox" ? SANDBOX_API_KEY : PROD_API_KEY;
 
   try {
+    // Vérifier le paiement
     let verified = false;
     if (paymentMethod === 'MOBILE_MONEY') {
       const tx = global.mobileMoneyTransactions?.get(transactionId);
@@ -1809,6 +1837,7 @@ app.post("/api/book-with-payment", async (req, res) => {
       return res.status(400).json({ success: false, error: "Paiement non confirmé" });
     }
 
+    // ✅ 1. Confirmer la réservation
     const bookingResult = await callLiteAPI('hotels/book', 'POST', {
       prebookId,
       holder: { firstName: guestFirstName, lastName: guestLastName, email: guestEmail, phone: guestPhone || '+1234567890' },
@@ -1819,11 +1848,27 @@ app.post("/api/book-with-payment", async (req, res) => {
     const bookingData = bookingResult.data;
     console.log(`✅ Booking confirmé: ${bookingData.bookingId}`);
 
-    // ✅ Envoi email de confirmation
-    const hotelDetails = await getHotelDetailsLite(bookingData.hotelId, apiKey);
-    const confirmationData = buildConfirmationData(bookingData, {}, hotelDetails, {
-      firstName: guestFirstName, lastName: guestLastName, email: guestEmail, phone: guestPhone
+    // ✅ 2. Récupérer les détails COMPLETS
+    const fullBooking = await callLiteAPI(`bookings/${bookingData.bookingId}`, 'GET', null, apiKey);
+    const booking = fullBooking.data || bookingData;
+
+    // ✅ 3. Récupérer les détails de l'hôtel
+    let hotelDetails = {};
+    try {
+      hotelDetails = await getHotelDetailsLite(booking.hotelId, apiKey);
+    } catch (e) {
+      console.warn('⚠️ Impossible de récupérer les détails de l\'hôtel:', e.message);
+    }
+
+    // ✅ 4. Construire les données de confirmation
+    const confirmationData = buildConfirmationData(booking, {}, hotelDetails, {
+      firstName: guestFirstName,
+      lastName: guestLastName,
+      email: guestEmail,
+      phone: guestPhone || '+1234567890'
     });
+
+    // ✅ 5. Envoyer l'email
     await sendConfirmationEmail(confirmationData);
 
     res.json({
@@ -1831,9 +1876,11 @@ app.post("/api/book-with-payment", async (req, res) => {
       data: {
         bookingId: bookingData.bookingId,
         hotelConfirmationCode: bookingData.hotelConfirmationCode,
-        status: 'CONFIRMED',
+        status: bookingData.status || 'CONFIRMED',
         paymentMethod,
-        transactionId
+        transactionId,
+        emailSent: true,
+        guestEmail
       }
     });
 
@@ -1867,10 +1914,17 @@ async function getBookingDetailsLite(bookingId, apiKey) {
 }
 
 function buildConfirmationData(booking, details, hotel, guest) {
+  // ✅ Récupérer le nom de la chambre depuis différentes sources
   let roomName = 'Chambre standard';
-  if (booking.items?.length > 0) roomName = booking.items[0].roomName || booking.items[0].name || roomName;
-  else if (booking.roomTypes?.length > 0) roomName = booking.roomTypes[0].name || roomName;
+  if (booking.items?.length > 0) {
+    roomName = booking.items[0].roomName || booking.items[0].name || roomName;
+  } else if (booking.roomTypes?.length > 0) {
+    roomName = booking.roomTypes[0].name || roomName;
+  } else if (booking.roomType) {
+    roomName = booking.roomType;
+  }
 
+  // ✅ Calculer le nombre d'adultes/enfants
   let adults = 1, children = 0;
   if (booking.guests?.length > 0) {
     adults = booking.guests.reduce((s, g) => s + (g.adults || 1), 0);
@@ -1880,6 +1934,7 @@ function buildConfirmationData(booking, details, hotel, guest) {
     children = booking.occupancies[0].children || 0;
   }
 
+  // ✅ Politique d'annulation
   let cancellationPolicy = 'Non remboursable', cancellationDeadline = null;
   if (booking.items?.length > 0) {
     const policies = booking.items[0].cancellationPolicies;
@@ -1894,45 +1949,94 @@ function buildConfirmationData(booking, details, hotel, guest) {
     }
   }
 
+  // ✅ Calcul du total
+  let totalAmount = 0;
+  if (booking.total?.amount) {
+    totalAmount = booking.total.amount;
+  } else if (booking.price?.amount) {
+    totalAmount = booking.price.amount;
+  } else if (booking.amount) {
+    totalAmount = booking.amount;
+  }
+
+  let currency = 'USD';
+  if (booking.total?.currency) currency = booking.total.currency;
+  else if (booking.price?.currency) currency = booking.price.currency;
+  else if (booking.currency) currency = booking.currency;
+
+  // ✅ Nom de l'hôtel
+  const hotelName = hotel.name || booking.hotelName || booking.hotel?.name || 'Hôtel';
+  const hotelAddress = hotel.address || booking.hotelAddress || booking.hotel?.address || '';
+
   return {
-    bookingId: booking.bookingId || '',
+    bookingId: booking.bookingId || booking.id || '',
     hotelId: booking.hotelId || hotel.hotelId || '',
-    hotelName: hotel.name || booking.hotelName || 'Hôtel',
-    hotelAddress: hotel.address || booking.hotelAddress || '',
+    hotelName: hotelName,
+    hotelAddress: hotelAddress,
     hotelCity: hotel.city || booking.hotelCity || '',
     hotelCountry: hotel.country || booking.hotelCountry || '',
     hotelPhone: hotel.phone || booking.hotelPhone || '',
     hotelEmail: hotel.email || booking.hotelEmail || '',
-    roomName, adults, children,
+    roomName: roomName,
+    adults: adults,
+    children: children,
     checkin: booking.checkin || '',
     checkout: booking.checkout || '',
-    totalAmount: booking.total?.amount || 0,
-    currency: booking.total?.currency || 'USD',
+    totalAmount: totalAmount,
+    currency: currency,
     hotelConfirmationCode: booking.hotelConfirmationCode || booking.confirmationCode || '',
-    cancellationPolicy, cancellationDeadline,
-    guest
+    cancellationPolicy: cancellationPolicy,
+    cancellationDeadline: cancellationDeadline,
+    guest: guest || {}
   };
 }
-
 async function sendConfirmationEmail(data) {
   console.log("\n📧 ===== EMAIL CONFIRMATION ===== 📧");
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`📧 SIMULÉ → ${data.guest.email} | Booking #${data.bookingId}`);
+  
+  // ✅ Vérifier que l'email du client existe
+  if (!data.guest?.email) {
+    console.warn('⚠️ Pas d\'email client, impossible d\'envoyer la confirmation');
     return;
   }
+
+  // ✅ Mode développement : simulation
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`📧 [SIMULÉ] Email envoyé à ${data.guest.email}`);
+    console.log(`📋 Booking #${data.bookingId} - ${data.hotelName}`);
+    return;
+  }
+
+  // ✅ Mode production : envoi réel
   try {
     const sgMail = require('@sendgrid/mail');
+    if (!process.env.SENDGRID_API_KEY) {
+      console.warn('⚠️ SENDGRID_API_KEY manquante');
+      return;
+    }
+    
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    
+    const html = generateVoucherHtml(data);
+    const text = `
+      Confirmation de réservation #${data.bookingId}
+      Hôtel: ${data.hotelName}
+      Dates: ${data.checkin} → ${data.checkout}
+      Chambre: ${data.roomName}
+      Total: ${data.currency} ${data.totalAmount}
+    `;
+
     await sgMail.send({
       to: data.guest.email,
       from: 'reservations@luviaplace.com',
-      subject: `Confirmation #${data.bookingId} - LuviaPlace`,
-      html: generateVoucherHtml(data),
-      text: `Confirmation réservation #${data.bookingId}`
+      subject: `✅ Confirmation #${data.bookingId} - LuviaPlace`,
+      html: html,
+      text: text
     });
+    
     console.log(`✅ Email envoyé à ${data.guest.email}`);
   } catch (error) {
-    console.error('❌ Email:', error.message);
+    console.error('❌ Erreur envoi email:', error.message);
+    // Ne pas bloquer le processus si l'email échoue
   }
 }
 

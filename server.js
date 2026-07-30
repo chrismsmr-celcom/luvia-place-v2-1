@@ -43,7 +43,6 @@ const ALLOWED_ORIGINS = [
 // ============================================================
 // EMAIL — NODEMAILER (SMTP LUVIA PLACE)
 // ============================================================
-const nodemailer = require('nodemailer');
 
 // Configuration SMTP — valeurs depuis les variables Render
 const SMTP_CONFIG = {

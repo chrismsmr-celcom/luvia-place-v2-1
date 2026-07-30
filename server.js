@@ -23,6 +23,7 @@ const path = require("path");
 const cors = require("cors");
 const liteApi = require("liteapi-node-sdk");
 require("dotenv").config();
+const nodemailer = require('nodemailer');
 const paymentStore = new Map();
 
 // ============================================================
@@ -39,7 +40,40 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:10000'
 ];
+// ============================================================
+// EMAIL — NODEMAILER (SMTP LUVIA PLACE)
+// ============================================================
+const nodemailer = require('nodemailer');
 
+// Configuration SMTP — valeurs depuis les variables Render
+const SMTP_CONFIG = {
+  host: process.env.SMTP_HOST || 'mail.luviaplace.com',
+  port: parseInt(process.env.SMTP_PORT) || 465,
+  secure: process.env.SMTP_SECURE === 'true',  // true pour 465, false pour 587
+  auth: {
+    user: process.env.SMTP_USER || 'noreply.booking@luviaplace.com',
+    pass: process.env.SMTP_PASS
+  },
+  tls: {
+    rejectUnauthorized: false  // Évite les erreurs SSL
+  }
+};
+
+let transporter = null;
+
+function getTransporter() {
+  if (!transporter) {
+    transporter = nodemailer.createTransport(SMTP_CONFIG);
+    transporter.verify((error, success) => {
+      if (error) {
+        console.error('❌ SMTP connection error:', error.message);
+      } else {
+        console.log('✅ SMTP connection established');
+      }
+    });
+  }
+  return transporter;
+}
 // ============================================================
 // CORS
 // ============================================================
@@ -336,11 +370,6 @@ app.get("/search-places", async (req, res) => {
 
 // ============================================================
 // 2. RECHERCHE HÔTELS — LISTING (POST /hotels/rates)
-// ============================================================
-// Paramètres conformes LiteAPI v3.0 :
-//   checkin, checkout, currency, guestNationality, occupancies
-//   + un critère de localisation : placeId | hotelIds | cityName+countryCode | lat+lon | iataCode | aiSearch
-//   maxRatesPerHotel, limit, timeout, includeHotelData, roomMapping, sessionId
 // ============================================================
 app.get("/search-hotels", async (req, res) => {
   console.log("\n🔍 ===== SEARCH HOTELS (LISTING) ===== 🔍");
@@ -784,9 +813,6 @@ app.get("/search-rates", async (req, res) => {
 // ============================================================
 // 5. PRÉ-RÉSERVATION HÔTEL (POST /hotels/prebook)
 // ============================================================
-// Body conforme : { offerId, usePaymentSdk?, voucherCode? }
-// PAS de currency ici — le montant est figé lors du rates
-// ============================================================
 app.post("/prebook", async (req, res) => {
   console.log("\n📋 ===== PREBOOK ===== 📋");
   const { offerId, environment, voucherCode, usePaymentSdk = true } = req.body;
@@ -813,12 +839,6 @@ app.post("/prebook", async (req, res) => {
 
 // ============================================================
 // 6. RÉSERVATION FINALE HÔTEL (POST /hotels/book)
-// ============================================================
-// Body conforme LiteAPI v3.0 :
-//   prebookId, holder {firstName, lastName, email, phone?},
-//   payment {method, transactionId},
-//   guests [{occupancyNumber, firstName, lastName, email}],
-//   clientReference?, metadata?, labels?
 // ============================================================
 app.post("/book", async (req, res) => {
   console.log("\n📝 ===== BOOK ===== 📝");
@@ -1657,10 +1677,9 @@ app.get("/api/east-africa-destinations", async (req, res) => {
 });
 
 // ============================================================
-// 32. PAIMENT MOBILE MONEY — INIT
-// ✅ CORRECTION : pas de usePaymentSdk ni currency dans prebook
+// 32. PAIEMENT MOBILE MONEY — INIT
 // ============================================================
-
+app.post("/api/payment/mobile-money/init", async (req, res) => {
   console.log("\n📱 ===== MOBILE MONEY INIT ===== 📱");
   const { offerId, phoneNumber, provider = 'MPESA', amount, currency = 'USD', guestInfo, environment = 'sandbox' } = req.body;
 
@@ -1750,7 +1769,6 @@ app.post("/api/payment/mobile-money/webhook", async (req, res) => {
 
 // ============================================================
 // 35. PAYPAL — INIT
-// ✅ CORRECTION : pas de usePaymentSdk ni currency dans prebook
 // ============================================================
 app.post("/api/payment/paypal/init", async (req, res) => {
   console.log("\n🅿️ ===== PAYPAL INIT ===== 🅿️");
@@ -1810,7 +1828,6 @@ app.post("/api/payment/paypal/webhook", async (req, res) => {
 
 // ============================================================
 // 37. RÉSERVATION APRÈS PAIEMENT EXTERNE
-// ✅ CORRECTION : envoie l'email de confirmation
 // ============================================================
 app.post("/api/book-with-payment", async (req, res) => {
   console.log("\n📝 ===== BOOK WITH PAYMENT ===== 📝");
@@ -1823,7 +1840,6 @@ app.post("/api/book-with-payment", async (req, res) => {
   const apiKey = environment === "sandbox" ? SANDBOX_API_KEY : PROD_API_KEY;
 
   try {
-    // Vérifier le paiement
     let verified = false;
     if (paymentMethod === 'MOBILE_MONEY') {
       const tx = global.mobileMoneyTransactions?.get(transactionId);
@@ -1837,7 +1853,6 @@ app.post("/api/book-with-payment", async (req, res) => {
       return res.status(400).json({ success: false, error: "Paiement non confirmé" });
     }
 
-    // ✅ 1. Confirmer la réservation
     const bookingResult = await callLiteAPI('hotels/book', 'POST', {
       prebookId,
       holder: { firstName: guestFirstName, lastName: guestLastName, email: guestEmail, phone: guestPhone || '+1234567890' },
@@ -1848,11 +1863,9 @@ app.post("/api/book-with-payment", async (req, res) => {
     const bookingData = bookingResult.data;
     console.log(`✅ Booking confirmé: ${bookingData.bookingId}`);
 
-    // ✅ 2. Récupérer les détails COMPLETS
     const fullBooking = await callLiteAPI(`bookings/${bookingData.bookingId}`, 'GET', null, apiKey);
     const booking = fullBooking.data || bookingData;
 
-    // ✅ 3. Récupérer les détails de l'hôtel
     let hotelDetails = {};
     try {
       hotelDetails = await getHotelDetailsLite(booking.hotelId, apiKey);
@@ -1860,7 +1873,6 @@ app.post("/api/book-with-payment", async (req, res) => {
       console.warn('⚠️ Impossible de récupérer les détails de l\'hôtel:', e.message);
     }
 
-    // ✅ 4. Construire les données de confirmation
     const confirmationData = buildConfirmationData(booking, {}, hotelDetails, {
       firstName: guestFirstName,
       lastName: guestLastName,
@@ -1868,7 +1880,6 @@ app.post("/api/book-with-payment", async (req, res) => {
       phone: guestPhone || '+1234567890'
     });
 
-    // ✅ 5. Envoyer l'email
     await sendConfirmationEmail(confirmationData);
 
     res.json({
@@ -1990,6 +2001,7 @@ function buildConfirmationData(booking, details, hotel, guest) {
     guest: guest || {}
   };
 }
+
 async function sendConfirmationEmail(data) {
   console.log("\n📧 ===== EMAIL CONFIRMATION ===== 📧");
   
@@ -2006,34 +2018,29 @@ async function sendConfirmationEmail(data) {
     return;
   }
 
-  // ✅ Mode production : envoi réel
+  // ✅ Mode production : envoi réel via Nodemailer
   try {
-    const sgMail = require('@sendgrid/mail');
-    if (!process.env.SENDGRID_API_KEY) {
-      console.warn('⚠️ SENDGRID_API_KEY manquante');
-      return;
-    }
+    const transporter = getTransporter();
     
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    
-    const html = generateVoucherHtml(data);
-    const text = `
-      Confirmation de réservation #${data.bookingId}
-      Hôtel: ${data.hotelName}
-      Dates: ${data.checkin} → ${data.checkout}
-      Chambre: ${data.roomName}
-      Total: ${data.currency} ${data.totalAmount}
-    `;
-
-    await sgMail.send({
+    const mailOptions = {
+      from: process.env.SMTP_FROM || `"LuviaPlace" <${SMTP_CONFIG.auth.user}>`,
       to: data.guest.email,
-      from: 'reservations@luviaplace.com',
       subject: `✅ Confirmation #${data.bookingId} - LuviaPlace`,
-      html: html,
-      text: text
-    });
+      html: generateVoucherHtml(data),
+      text: `
+        Confirmation de réservation #${data.bookingId}
+        Hôtel: ${data.hotelName}
+        Dates: ${data.checkin} → ${data.checkout}
+        Chambre: ${data.roomName}
+        Total: ${data.currency} ${data.totalAmount}
+        ---
+        LuviaPlace - Votre voyage, simplifié.
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email envoyé à ${data.guest.email} (${info.messageId})`);
     
-    console.log(`✅ Email envoyé à ${data.guest.email}`);
   } catch (error) {
     console.error('❌ Erreur envoi email:', error.message);
     // Ne pas bloquer le processus si l'email échoue

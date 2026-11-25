@@ -7,15 +7,15 @@ B2B travel-agency operations workspace, mounted at `/pos` and `/api/pos/v1`.
 - PostgreSQL 14+
 - Existing LiteAPI credentials (server-side only)
 
-## First launch on Render
+## First launch (Render + Supabase)
 
-Configure these environment variables on the Render web service:
-- `DATABASE_URL`: the **Internal Database URL** of the Render PostgreSQL database (same region/project where possible).
+The application can run on Render while using Supabase PostgreSQL. Configure these environment variables on the Render web service:
+- `DATABASE_URL`: the Supabase PostgreSQL connection string. Keep it server-side; use the direct connection or a supported session pooler URL.
 - `POS_JWT_SECRET`: a randomly generated secret of at least 32 characters. Keep it private.
 - `POS_TOKEN_TTL`: optional, defaults to `12h`.
 - `SAND_API_KEY` and `PROD_API_KEY`: optional until live LiteAPI searches are needed.
 
-After creating the PostgreSQL database, execute `pos/schema.sql` once against it (Render PostgreSQL → Connect → psql, or an authenticated SQL client). Then redeploy/restart the web service. Check `/api/pos/v1/health`; it should return `database: connected` and `schema: ready`.
+In Supabase, open **SQL Editor** and execute `pos/schema.sql`. It creates a dedicated `pos` schema and keeps existing Luvia tables in `public` untouched. The POS connection sets PostgreSQL `search_path` to `pos,public`, so its unqualified queries resolve to the POS tables. Then redeploy/restart the Render web service. Check `/api/pos/v1/health`; it should return `database: connected`, `schema: ready`, and `schemaName: pos`.
 
 The POS counter now has a self-service **Create my agency** flow. It creates one organization and its first owner, then signs that owner in. The public registration endpoint is rate-limited per application instance. Do not expose `POS_JWT_SECRET` or database credentials in frontend code. The legacy protected bootstrap endpoint remains available for controlled provisioning.
 
@@ -34,7 +34,7 @@ PROD_API_KEY=...
 Set `LITEAPI_ENV=production` only after LiteAPI production access has been approved. Flight search also requires the flights product to be enabled for the selected LiteAPI key.
 
 ## Database
-Run `psql "$DATABASE_URL" -f pos/schema.sql` once. The schema is additive and safe to re-run.
+Run the contents of `pos/schema.sql` in Supabase SQL Editor (or `psql "$DATABASE_URL" -f pos/schema.sql`). The script creates tables inside the dedicated `pos` schema. It does not alter or replace existing tables in `public`. It is safe to re-run.
 
 ## First organization
 `POST /api/pos/v1/auth/bootstrap` creates the first organization and owner. It requires the `x-bootstrap-secret` header matching `POS_BOOTSTRAP_SECRET`. Disable or rotate that secret after initial provisioning.

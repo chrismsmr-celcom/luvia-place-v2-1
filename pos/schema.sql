@@ -1,5 +1,9 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- Keep POS data isolated from the existing Luvia public schema.
+CREATE SCHEMA IF NOT EXISTS pos;
+SET search_path TO pos, public;
+
 CREATE TABLE IF NOT EXISTS organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,

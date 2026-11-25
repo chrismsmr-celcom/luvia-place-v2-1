@@ -18,12 +18,46 @@ function allow(...roles){ return (req,res,next)=>roles.includes(req.user.role)?n
 async function audit(db,req,action,type,id,metadata={}){ await db.query('INSERT INTO audit_logs (organization_id,actor_id,action,entity_type,entity_id,metadata) VALUES ($1,$2,$3,$4,$5,$6)',[org(req),req.user.id,action,type,id||null,metadata]); }
 async function tx(fn){ const db=await pool.connect(); try{ await db.query('BEGIN'); const out=await fn(db); await db.query('COMMIT'); return out; }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();} }
 async function lite(path,body){ const mode=(process.env.LITEAPI_ENV||'sandbox').toLowerCase(); const key=(mode==='prod'||mode==='production')?process.env.PROD_API_KEY:process.env.SAND_API_KEY; if(!key) throw fail(503,'LiteAPI key is not configured'); const r=await fetch('https://api.liteapi.travel/v3.0/'+path,{method:'POST',headers:{'X-API-Key':key,'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)}); const data=await r.json().catch(()=>({})); if(!r.ok||data.error) throw fail(r.status>=500?502:r.status,data.error?.message||data.message||'LiteAPI request failed'); return data; }
-router.get('/health',asyncRoute(async(req,res)=>{config();await pool.query('SELECT 1');res.json({success:true,service:'luvia-pos-api',version:'1.0.0',database:'connected'});}));
+router.get('/health',asyncRoute(async(req,res)=>{
+ const missing=[];if(!process.env.DATABASE_URL)missing.push('DATABASE_URL');if(!secret||secret.length<32)missing.push('POS_JWT_SECRET');
+ if(missing.length)return res.status(503).json({success:false,error:'Configuration Render manquante : '+missing.join(', ')});
+ try{await pool.query('SELECT 1')}catch(e){throw fail(503,'Connexion PostgreSQL impossible. Vérifiez DATABASE_URL et l’état de la base Render.')}
+ const schema=await pool.query("SELECT to_regclass('public.organizations') AS organizations,to_regclass('public.users') AS users");
+ if(!schema.rows[0].organizations||!schema.rows[0].users)return res.status(503).json({success:false,error:'Schéma POS absent : exécutez pos/schema.sql sur la base PostgreSQL Render.'});
+ res.json({success:true,service:'luvia-pos-api',version:'1.1.0',database:'connected',schema:'ready'});
+}));
 router.post('/auth/bootstrap',asyncRoute(async(req,res)=>{
  config(); const supplied=String(req.headers['x-bootstrap-secret']||''), expected=String(process.env.POS_BOOTSTRAP_SECRET||'');
  if(!expected||!supplied||supplied.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(expected))) throw fail(403,'Invalid bootstrap secret');
  const b=req.body||{}; if(!b.organizationName||!b.slug||!b.fullName||!emailOK(b.email)||typeof b.password!=='string'||b.password.length<12) throw fail(400,'Organization, slug, name, valid email and password (12+ chars) required');
  const result=await tx(async db=>{const count=await db.query('SELECT COUNT(*)::int AS n FROM organizations');if(count.rows[0].n)throw fail(409,'Bootstrap already completed');const o=await db.query('INSERT INTO organizations(name,slug,country_code,default_currency) VALUES($1,$2,$3,$4) RETURNING *',[b.organizationName,b.slug.toLowerCase(),(b.countryCode||'CD').toUpperCase(),(b.currency||'USD').toUpperCase()]);const hash=await bcrypt.hash(b.password,12);const u=await db.query('INSERT INTO users(organization_id,full_name,email,password_hash,role) VALUES($1,$2,$3,$4,$5) RETURNING id,organization_id,full_name,email,role',[o.rows[0].id,b.fullName,b.email.toLowerCase(),hash,'owner']);return {organization:o.rows[0],user:u.rows[0]};});
+ res.status(201).json({success:true,...result,token:token(result.user)});
+}));
+const registrationAttempts=new Map();
+router.post('/auth/register',asyncRoute(async(req,res)=>{
+ config();
+ const ip=req.ip||req.socket.remoteAddress||'unknown',now=Date.now(),prior=registrationAttempts.get(ip)||[];
+ const recent=prior.filter(t=>now-t<15*60*1000);
+ if(recent.length>=5)throw fail(429,'Trop de tentatives. Réessayez dans 15 minutes.');
+ recent.push(now);registrationAttempts.set(ip,recent);
+ if(registrationAttempts.size>5000)for(const [key,times] of registrationAttempts)if(!times.some(t=>now-t<15*60*1000))registrationAttempts.delete(key);
+ const b=req.body||{};
+ const organizationName=String(b.organizationName||'').trim();
+ const slug=String(b.slug||'').trim().toLowerCase();
+ const fullName=String(b.fullName||'').trim();
+ const email=String(b.email||'').trim().toLowerCase();
+ const password=b.password;
+ const countryCode=String(b.countryCode||'CD').trim().toUpperCase();
+ const currency=String(b.currency||'USD').trim().toUpperCase();
+ if(!organizationName||organizationName.length>120||!fullName||fullName.length>120||!emailOK(email)||email.length>254||typeof password!=='string'||password.length<12||password.length>128||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)||slug.length>60||!/^[A-Z]{2}$/.test(countryCode)||!/^[A-Z]{3}$/.test(currency))throw fail(400,'Vérifiez les champs. Le mot de passe doit contenir au moins 12 caractères et l’identifiant agence doit utiliser lettres, chiffres et tirets.');
+ const result=await tx(async db=>{
+  const existing=await db.query('SELECT id FROM organizations WHERE slug=$1',[slug]);
+  if(existing.rowCount)throw fail(409,'Cet identifiant agence est déjà utilisé.');
+  const o=await db.query('INSERT INTO organizations(name,slug,country_code,default_currency) VALUES($1,$2,$3,$4) RETURNING id,name,slug,country_code,default_currency',[organizationName,slug,countryCode,currency]);
+  const hash=await bcrypt.hash(password,12);
+  const u=await db.query('INSERT INTO users(organization_id,full_name,email,password_hash,role) VALUES($1,$2,$3,$4,$5) RETURNING id,organization_id,full_name,email,role',[o.rows[0].id,fullName,email,hash,'owner']);
+  return {organization:o.rows[0],user:{...u.rows[0],organization_name:o.rows[0].name,organization_slug:o.rows[0].slug}};
+ }).catch(e=>{if(e.code==='23505')throw fail(409,'Cet identifiant agence ou cet e-mail existe déjà.');throw e;});
  res.status(201).json({success:true,...result,token:token(result.user)});
 }));
 router.post('/auth/login',asyncRoute(async(req,res)=>{config();const b=req.body||{};if(!emailOK(b.email)||!b.password||!b.organizationSlug)throw fail(400,'organizationSlug, email and password required');const q=await pool.query('SELECT u.*,o.name AS organization_name,o.slug AS organization_slug FROM users u JOIN organizations o ON o.id=u.organization_id WHERE u.email=$1 AND o.slug=$2',[b.email.toLowerCase(),b.organizationSlug.toLowerCase()]);const u=q.rows[0];if(!u||!u.active||!(await bcrypt.compare(b.password,u.password_hash)))throw fail(401,'Invalid credentials');delete u.password_hash;res.json({success:true,user:u,token:token(u)});}));
@@ -55,5 +89,5 @@ router.patch('/orders/:id/status',allow('owner','admin','manager'),asyncRoute(as
 
 router.post('/integrations/liteapi/hotels/search',asyncRoute(async(req,res)=>{const b=req.body||{};if(!dateOK(b.checkin)||!dateOK(b.checkout)||b.checkout<=b.checkin)throw fail(400,'Valid checkin and checkout required');if(!b.placeId&&!(b.cityName&&b.countryCode)&&!Array.isArray(b.hotelIds))throw fail(400,'placeId, cityName+countryCode or hotelIds required');const payload={checkin:b.checkin,checkout:b.checkout,currency:(b.currency||'USD').toUpperCase(),guestNationality:(b.guestNationality||'CD').toUpperCase(),occupancies:Array.isArray(b.occupancies)&&b.occupancies.length?b.occupancies:[{adults:1}],roomMapping:true,maxRatesPerHotel:Math.min(10,Math.max(1,Number(b.maxRatesPerHotel)||3)),includeHotelData:true,timeout:12};for(const k of ['placeId','cityName','countryCode','hotelIds','limit','offset'])if(b[k]!==undefined)payload[k]=b[k];const d=await lite('hotels/rates',payload);await audit(pool,req,'provider.search','liteapi_hotels',null,{checkin:b.checkin,checkout:b.checkout});res.json({success:true,provider:'liteapi',data:d.data||[],meta:{guestLevel:d.guestLevel??null}});}));
 router.post('/integrations/liteapi/flights/search',asyncRoute(async(req,res)=>{const b=req.body||{};if(!Array.isArray(b.legs)||!b.legs.length||Number(b.adults)<1)throw fail(400,'legs and adults >= 1 required');for(const l of b.legs)if(!l.origin||!l.destination||!dateOK(l.date))throw fail(400,'Each leg needs origin, destination and YYYY-MM-DD date');const payload={legs:b.legs,adults:Number(b.adults),currency:(b.currency||'USD').toUpperCase(),country:(b.country||'CD').toUpperCase()};for(const k of ['children','infants','childrenAges','infantAges','cabinClass','filters','sort'])if(b[k]!==undefined)payload[k]=b[k];const d=await lite('flights/rates',payload);await audit(pool,req,'provider.search','liteapi_flights',null,{legs:b.legs});res.json({success:true,provider:'liteapi',data:d.data||[]});}));
-router.use((err,req,res,next)=>{if((err.status||500)>=500)console.error('[Luvia POS]',err);res.status(err.status||500).json({success:false,error:(err.status||500)>=500?'Internal POS error':err.message});});
+router.use((err,req,res,next)=>{if((err.status||500)>=500)console.error('[Luvia POS]',err);const status=err.status||500;res.status(status).json({success:false,error:status===503?err.message:(status>=500?'Internal POS error':err.message)});});
 module.exports=router;

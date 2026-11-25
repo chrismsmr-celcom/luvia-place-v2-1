@@ -2211,6 +2211,7 @@ app.get("/api/chatbot-script", async (req, res) => {
 const posRouter = require('./pos');
 app.use('/api/pos/v1', posRouter);
 app.use('/pos', express.static(path.join(__dirname, 'pos', 'public')));
+app.use('/pos/counter', express.static(path.join(__dirname, 'pos', 'counter')));
 app.get('/pos/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'pos', 'public', 'index.html'));
 });

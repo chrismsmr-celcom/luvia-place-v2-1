@@ -2206,6 +2206,16 @@ app.get("/api/chatbot-script", async (req, res) => {
 });
 
 // ============================================
+// LUVIA POS — B2B AGENCY OPERATIONS
+// ============================================
+const posRouter = require('./pos');
+app.use('/api/pos/v1', posRouter);
+app.use('/pos', express.static(path.join(__dirname, 'pos', 'public')));
+app.get('/pos/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'pos', 'public', 'index.html'));
+});
+
+// ============================================
 // ROUTES FRONTEND
 // ============================================
 app.use(express.static(path.join(__dirname)));

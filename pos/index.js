@@ -24,7 +24,7 @@ router.get('/health',asyncRoute(async(req,res)=>{
  try{await pool.query('SELECT 1')}catch(e){throw fail(503,'Connexion PostgreSQL impossible. Vérifiez DATABASE_URL et les paramètres de connexion Supabase.')}
  const requiredTables=['organizations','users','customers','suppliers','travel_requests','quotes','quote_items','orders','bookings','payments','invoices','audit_logs'];
  const checks=await pool.query(
-  "SELECT name, to_regclass('pos.' || quote_ident(name)) IS NOT NULL AS present FROM unnest($1::text[]) AS name",
+  "SELECT name, to_regclass('pos.' || quote_ident(name)) IS NOT NULL AS present FROM unnest($1::text[]) AS required(name)",
   [requiredTables]
  );
  const missingTables=checks.rows.filter(row=>!row.present).map(row=>row.name);

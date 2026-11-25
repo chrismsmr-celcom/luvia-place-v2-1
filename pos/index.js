@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const crypto = require('crypto');
 const router = express.Router();
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost') ? { rejectUnauthorized: false } : false, max: 10 });
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost') ? { rejectUnauthorized: false } : false, options: '-c search_path=pos,public', max: 10 });
 const secret = process.env.POS_JWT_SECRET;
 const asyncRoute = fn => (req,res,next) => Promise.resolve(fn(req,res,next)).catch(next);
 const fail = (status,message) => Object.assign(new Error(message),{status});
@@ -20,11 +20,18 @@ async function tx(fn){ const db=await pool.connect(); try{ await db.query('BEGIN
 async function lite(path,body){ const mode=(process.env.LITEAPI_ENV||'sandbox').toLowerCase(); const key=(mode==='prod'||mode==='production')?process.env.PROD_API_KEY:process.env.SAND_API_KEY; if(!key) throw fail(503,'LiteAPI key is not configured'); const r=await fetch('https://api.liteapi.travel/v3.0/'+path,{method:'POST',headers:{'X-API-Key':key,'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)}); const data=await r.json().catch(()=>({})); if(!r.ok||data.error) throw fail(r.status>=500?502:r.status,data.error?.message||data.message||'LiteAPI request failed'); return data; }
 router.get('/health',asyncRoute(async(req,res)=>{
  const missing=[];if(!process.env.DATABASE_URL)missing.push('DATABASE_URL');if(!secret||secret.length<32)missing.push('POS_JWT_SECRET');
- if(missing.length)return res.status(503).json({success:false,error:'Configuration Render manquante : '+missing.join(', ')});
- try{await pool.query('SELECT 1')}catch(e){throw fail(503,'Connexion PostgreSQL impossible. Vérifiez DATABASE_URL et l’état de la base Render.')}
- const schema=await pool.query("SELECT to_regclass('public.organizations') AS organizations,to_regclass('public.users') AS users");
- if(!schema.rows[0].organizations||!schema.rows[0].users)return res.status(503).json({success:false,error:'Schéma POS absent : exécutez pos/schema.sql sur la base PostgreSQL Render.'});
- res.json({success:true,service:'luvia-pos-api',version:'1.1.0',database:'connected',schema:'ready'});
+ if(missing.length)return res.status(503).json({success:false,error:'Configuration manquante : '+missing.join(', ')});
+ try{await pool.query('SELECT 1')}catch(e){throw fail(503,'Connexion PostgreSQL impossible. Vérifiez DATABASE_URL et les paramètres de connexion Supabase.')}
+ const requiredTables=['organizations','users','customers','suppliers','travel_requests','quotes','quote_items','orders','bookings','payments','invoices','audit_logs'];
+ const checks=await pool.query(
+  "SELECT name, to_regclass('pos.' || quote_ident(name)) IS NOT NULL AS present FROM unnest($1::text[]) AS name",
+  [requiredTables]
+ );
+ const missingTables=checks.rows.filter(row=>!row.present).map(row=>row.name);
+ if(missingTables.length)return res.status(503).json({success:false,error:'Schéma POS incomplet. Exécutez pos/schema.sql dans Supabase SQL Editor.',missingTables});
+ const path=await pool.query("SELECT current_schema() AS current_schema, current_setting('search_path') AS search_path");
+ if(path.rows[0].current_schema!=='pos')return res.status(503).json({success:false,error:'Le search_path PostgreSQL du POS est incorrect.',searchPath:path.rows[0].search_path});
+ res.json({success:true,service:'luvia-pos-api',version:'1.2.0',database:'connected',schema:'ready',schemaName:'pos'});
 }));
 router.post('/auth/bootstrap',asyncRoute(async(req,res)=>{
  config(); const supplied=String(req.headers['x-bootstrap-secret']||''), expected=String(process.env.POS_BOOTSTRAP_SECRET||'');

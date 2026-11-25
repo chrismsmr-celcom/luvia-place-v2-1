@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101827"><title>Luvia POS — Travel operations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/pos/styles.css">
+</head>
+<body>
+  <div id="auth-screen" class="auth-shell">
+    <div class="auth-brand"><div class="brand-mark">L</div><div><b>LUVIA</b><span>TRAVEL OPERATIONS</span></div></div>
+    <div class="auth-card">
+      <div class="eyebrow">AGENCY WORKSPACE</div><h1>Welcome back.</h1><p class="muted">Sign in to manage your travel business.</p>
+      <form id="login-form">
+        <label>Agency workspace<input name="organizationSlug" placeholder="your-agency" required></label>
+        <label>Email address<input name="email" type="email" placeholder="you@agency.com" required></label>
+        <label>Password<input name="password" type="password" placeholder="Your password" required></label>
+        <button class="primary full">Sign in <span>→</span></button>
+      </form>
+      <div id="auth-error" class="error"></div>
+      <div class="auth-foot">New to Luvia? Your workspace administrator can provision your agency.</div>
+    </div>
+    <div class="auth-caption">One workspace for every part of your travel business.</div>
+  </div>
+  <div id="app" class="app hidden">
+    <aside class="sidebar">
+      <div class="side-brand"><div class="brand-mark">L</div><div><b>LUVIA</b><span>TRAVEL OPERATIONS</span></div></div>
+      <div class="workspace"><span class="workspace-dot"></span><div><small>WORKSPACE</small><strong id="org-name">Your agency</strong></div><span class="chevron">⌄</span></div>
+      <div class="nav-label">WORKSPACE</div>
+      <nav id="nav">
+        <button class="nav-item active" data-page="overview"><i>▦</i> Overview</button>
+        <button class="nav-item" data-page="customers"><i>♙</i> Customers</button>
+        <button class="nav-item" data-page="requests"><i>⌕</i> Travel requests</button>
+        <button class="nav-item" data-page="quotes"><i>▤</i> Quotes</button>
+        <button class="nav-item" data-page="orders"><i>▣</i> Orders & bookings</button>
+        <button class="nav-item" data-page="suppliers"><i>◇</i> Suppliers</button>
+      </nav>
+      <div class="nav-label integrations-label">INVENTORY & SEARCH</div>
+      <nav>
+        <button class="nav-item" data-page="hotels"><i>⌂</i> Hotel search <span class="tag">API</span></button>
+        <button class="nav-item" data-page="flights"><i>✈</i> Flight search <span class="tag">API</span></button>
+      </nav>
+      <div class="sidebar-bottom"><div class="user-avatar" id="user-avatar">A</div><div class="user-meta"><strong id="user-name">Agency user</strong><small id="user-role">Administrator</small></div><button id="logout" class="logout" title="Sign out">↗</button></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div><div class="breadcrumb">Luvia <span>/</span> <b id="crumb">Overview</b></div><div class="top-subtitle" id="today-label"></div></div><div class="top-actions"><span class="live-dot"></span><span class="top-status">Workspace operational</span><button class="icon-btn" title="Notifications">♧</button><div class="top-avatar" id="top-avatar">A</div></div></header>
+      <section id="content" class="content"><div class="loading">Loading your workspace…</div></section>
+      <div id="toast" class="toast"></div>
+    </main>
+  </div>
+  <script src="/pos/app.js"></script>
+</body></html>

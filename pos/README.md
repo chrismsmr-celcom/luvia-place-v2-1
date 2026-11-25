@@ -7,6 +7,18 @@ B2B travel-agency operations workspace, mounted at `/pos` and `/api/pos/v1`.
 - PostgreSQL 14+
 - Existing LiteAPI credentials (server-side only)
 
+## First launch on Render
+
+Configure these environment variables on the Render web service:
+- `DATABASE_URL`: the **Internal Database URL** of the Render PostgreSQL database (same region/project where possible).
+- `POS_JWT_SECRET`: a randomly generated secret of at least 32 characters. Keep it private.
+- `POS_TOKEN_TTL`: optional, defaults to `12h`.
+- `SAND_API_KEY` and `PROD_API_KEY`: optional until live LiteAPI searches are needed.
+
+After creating the PostgreSQL database, execute `pos/schema.sql` once against it (Render PostgreSQL → Connect → psql, or an authenticated SQL client). Then redeploy/restart the web service. Check `/api/pos/v1/health`; it should return `database: connected` and `schema: ready`.
+
+The POS counter now has a self-service **Create my agency** flow. It creates one organization and its first owner, then signs that owner in. The public registration endpoint is rate-limited per application instance. Do not expose `POS_JWT_SECRET` or database credentials in frontend code. The legacy protected bootstrap endpoint remains available for controlled provisioning.
+
 ## Environment
 ```env
 DATABASE_URL=postgresql://...

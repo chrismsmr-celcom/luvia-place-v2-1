@@ -21,7 +21,7 @@ async function lite(path,body){ const mode=(process.env.LITEAPI_ENV||'sandbox').
 router.get('/health',asyncRoute(async(req,res)=>{
  const missing=[];if(!process.env.DATABASE_URL)missing.push('DATABASE_URL');if(!secret||secret.length<32)missing.push('POS_JWT_SECRET');
  if(missing.length)return res.status(503).json({success:false,error:'Configuration Render manquante : '+missing.join(', ')});
- await pool.query('SELECT 1');
+ try{await pool.query('SELECT 1')}catch(e){throw fail(503,'Connexion PostgreSQL impossible. Vérifiez DATABASE_URL et l’état de la base Render.')}
  const schema=await pool.query("SELECT to_regclass('public.organizations') AS organizations,to_regclass('public.users') AS users");
  if(!schema.rows[0].organizations||!schema.rows[0].users)return res.status(503).json({success:false,error:'Schéma POS absent : exécutez pos/schema.sql sur la base PostgreSQL Render.'});
  res.json({success:true,service:'luvia-pos-api',version:'1.1.0',database:'connected',schema:'ready'});

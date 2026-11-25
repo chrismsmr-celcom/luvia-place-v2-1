@@ -11,6 +11,14 @@ services:
         sync: false
       - key: DEEPSEEK_API_KEY
         sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: POS_JWT_SECRET
+        sync: false
+      - key: POS_BOOTSTRAP_SECRET
+        sync: false
+      - key: LITEAPI_ENV
+        value: sandbox
       - key: NODE_ENV
         value: production
     plan: free

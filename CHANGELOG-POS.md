@@ -36,3 +36,15 @@ Les références fournisseur sont préfixées DEMO- : ne pas les présenter comm
 - Added API endpoints for organization profile and audit history, plus a safe-to-rerun schema extension for agency contact fields.
 - Service areas for flights, hotels, experiences, cars, insurance, email, Luvia AI and support are currently navigation placeholders linking to the existing sales counter where relevant; their dedicated workflows remain future work.
 - After deployment, re-run `pos/schema.sql` in Supabase SQL Editor so the organization profile fields exist.
+
+
+## Increment 6 — Operations modules
+
+- Replaced the flight and hotel navigation placeholders with LiteAPI rate-search forms and result cards.
+- Added quote creation from a selected flight or hotel result, with an explicit agency selling price and CRM customer.
+- Added experience, car/transfer and insurance request capture linked to CRM customers.
+- Added a travel-request pipeline with role-gated status changes (Owner/Admin/Manager).
+- Added an email composition handoff to the user's local mail client, an activity-based Luvia AI overview, and a support contact handoff. These are explicitly not presented as a native inbox, generative AI or ticketing system.
+- Connected the top-bar activity shortcut to audit history.
+- Added `npm test` syntax checks and a GitHub Actions workflow for POS JavaScript validation.
+- Documented current provider boundaries: search is not booking, and provider confirmation workflows remain future work.

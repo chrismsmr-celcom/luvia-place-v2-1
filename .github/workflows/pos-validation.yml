@@ -1,0 +1,25 @@
+name: POS validation
+
+on:
+  pull_request:
+    paths:
+      - "pos/**"
+      - "package.json"
+      - ".github/workflows/pos-validation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "pos/**"
+      - "package.json"
+      - ".github/workflows/pos-validation.yml"
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+      - name: Validate JavaScript syntax
+        run: npm test

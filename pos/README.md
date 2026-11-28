@@ -43,7 +43,7 @@ Run the contents of `pos/schema.sql` in Supabase SQL Editor (or `psql "$DATABASE
 - `POST /auth/bootstrap`, `POST /auth/login`, `GET /auth/me`
 - `GET/POST /customers`, `GET/PATCH /customers/:id`
 - `GET/POST /suppliers`
-- `GET/POST /travel-requests`
+- `GET/POST /travel-requests`, `PATCH /travel-requests/:id`
 - `GET/POST /quotes`, `POST /quotes/:id/accept`
 - `GET/POST /orders`, `GET /orders/:id`
 - `POST /orders/:id/payments`
@@ -54,5 +54,21 @@ Run the contents of `pos/schema.sql` in Supabase SQL Editor (or `psql "$DATABASE
 
 All business records are scoped to the authenticated organization. Passwords are hashed with bcrypt. JWT signing secret is mandatory. Never send LiteAPI keys to the browser.
 
+## POS workspace modules
+
+The workspace includes:
+- Dashboard, dossiers, quotes, customers, suppliers, invoices, balances and audit history.
+- Flight and hotel rate searches through the authenticated LiteAPI integration endpoints. Search results are supplier offers, not confirmed bookings.
+- Experience, car/transfer and insurance request capture, linked to an existing CRM customer and tracked in the travel-request pipeline.
+- Quote creation from returned flight/hotel offers, with the agency selling price entered by the agent.
+- Email composition via the user's local mail client. Messages are not sent or archived by the POS.
+- Luvia AI activity overview based on agency records. No generative model is connected in this increment.
+- Workspace profile and team role management.
+
+The travel-request status update endpoint is restricted to owner, admin and manager roles. All records remain scoped to the authenticated organization.
+
 ## Current boundary
-This first increment provides the agency operating system and supplier search. Search results are not bookings. A hotel/flight is only considered externally confirmed after the provider booking workflow returns a confirmation reference. Provider prebook/book/cancel flows, card processing, accounting exports, staff invitations, and Duffel are subsequent increments.
+
+Flight and hotel searches do not prebook or issue tickets. Supplier confirmation, prebook/book/cancel flows, payment processing, a native inbox/outbound email service, generative Luvia AI, support ticket storage, accounting exports, automated staff invitations, and Duffel are not implemented. Do not represent these functions as live until their provider integrations and end-to-end tests exist.
+
+Run `npm test` to validate the syntax of the POS API and browser scripts. This is a syntax check, not a substitute for database-backed integration tests or browser acceptance tests.

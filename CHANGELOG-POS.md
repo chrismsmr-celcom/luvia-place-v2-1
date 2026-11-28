@@ -26,3 +26,13 @@ Les références fournisseur sont préfixées DEMO- : ne pas les présenter comm
 - Icône Luvia (L + vague du fleuve) : favicon, icônes 192/512 et maskable, `manifest.webmanifest`, `sw.js`. Dans Edge ou Chrome : menu > « Installer l'application » (ou icône d'installation dans la barre d'adresse). Aucun avertissement Windows, aucune signature nécessaire. Aucune donnée n'est mise en cache.
 - Comptoir (`/pos/counter/`) habillé comme la console : même police (IBM Plex Sans), mêmes couleurs, textes plus lisibles, lien « Gestion », connexion partagée avec la console.
 - Numérotation lisible et séquentielle par agence : D-2026-00001 (dossiers), DV-… (devis), F-… (factures). Ré-exécuter `pos/schema.sql`.
+
+
+## Increment 5 — LuviaPlace OS workspace shell
+- Reworked the POS console into the LuviaPlace OS workspace: translucent dark sidebar, grouped navigation, sticky topbar, global in-page search, responsive layouts and reduced-motion support.
+- Added agency workspace modal with editable profile fields (name, country, default currency, contact details, address, website and logo URL).
+- Added team overview, role assignment and protected role updates for Owner/Admin.
+- Added balance overview, invoice list and organization activity history.
+- Added API endpoints for organization profile and audit history, plus a safe-to-rerun schema extension for agency contact fields.
+- Service areas for flights, hotels, experiences, cars, insurance, email, Luvia AI and support are currently navigation placeholders linking to the existing sales counter where relevant; their dedicated workflows remain future work.
+- After deployment, re-run `pos/schema.sql` in Supabase SQL Editor so the organization profile fields exist.

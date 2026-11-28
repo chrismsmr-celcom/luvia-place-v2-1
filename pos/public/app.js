@@ -53,7 +53,7 @@ function enter(u) {
   $('#user-role').textContent = ROLE[u.role] || u.role; $('#user-avatar').textContent = (u.full_name || 'U').trim().charAt(0).toUpperCase(); $('#top-user').textContent = (u.full_name || 'U').trim().charAt(0).toUpperCase();
   route();
 }
-function logout() { token = ''; localStorage.removeItem('luvia_pos_token'); me = null; $('#app').hidden = true; $('#auth').hidden = false; }
+function logout() { token = ''; localStorage.removeItem('luvia_pos_token'); me = null; saleCart=[]; saleCustomerId=''; saleFlightOffers=[]; saleHotelOffers=[]; $('#app').hidden = true; $('#auth').hidden = false; $('#register').hidden=true; $('#login').hidden=false; }
 $('#logout').onclick = logout;
 $('#login').onsubmit = async e => {
   e.preventDefault(); $('#auth-error').textContent = '';

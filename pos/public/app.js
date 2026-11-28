@@ -57,8 +57,8 @@ function logout() { token = ''; localStorage.removeItem('luvia_pos_token'); me =
 $('#logout').onclick = logout;
 $('#login').onsubmit = async e => {
   e.preventDefault(); $('#auth-error').textContent = '';
-  try { const d = await send('/auth/login', Object.fromEntries(new FormData(e.target))); token = d.token; localStorage.setItem('luvia_pos_token', token); enter(d.user); }
-  catch (x) { $('#auth-error').textContent = x.message === 'Invalid credentials' ? 'Identifiant, e-mail ou mot de passe incorrect.' : x.message; }
+  try { const d = await send('/auth/login', Object.fromEntries(new FormData(e.target))); token = d.token; localStorage.setItem('luvia_pos_token', token); const profile=await api('/auth/me'); enter(profile.user); }
+  catch (x) { token=''; localStorage.removeItem('luvia_pos_token'); $('#auth-error').textContent = x.message === 'Invalid credentials' ? 'Identifiant, e-mail ou mot de passe incorrect.' : x.message; }
 };
 
 $('#show-register').onclick = () => { $('#login').hidden = true; $('#register').hidden = false; };
@@ -70,8 +70,8 @@ $('#register-org').addEventListener('input', e => {
 $('#register-slug').addEventListener('input',e=>{e.target.dataset.edited='1';e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');});
 $('#register').onsubmit=async e=>{
  e.preventDefault();$('#register-error').textContent='';
- try{const d=await send('/auth/register',Object.fromEntries(new FormData(e.target)));token=d.token;localStorage.setItem('luvia_pos_token',token);enter(d.user);toast('Espace agence créé');}
- catch(x){$('#register-error').textContent=x.message;}
+ try{const d=await send('/auth/register',Object.fromEntries(new FormData(e.target)));token=d.token;localStorage.setItem('luvia_pos_token',token);const profile=await api('/auth/me');enter(profile.user);toast('Espace agence créé');}
+ catch(x){token='';localStorage.removeItem('luvia_pos_token');$('#register-error').textContent=x.message;}
 };
 
 /* ---------- router ---------- */

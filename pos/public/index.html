@@ -2,39 +2,72 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Luvia POS — Gestion d'agence</title>
+<title>LuviaPlace OS — Agency workspace</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/pos/styles.css"><link rel="manifest" href="/pos/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/pos/icon.svg"><link rel="apple-touch-icon" href="/pos/icon-192.png"><meta name="theme-color" content="#0f2742">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/pos/styles.css"><link rel="manifest" href="/pos/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/pos/icon.svg"><link rel="apple-touch-icon" href="/pos/icon-192.png"><meta name="theme-color" content="#101d35">
 </head>
 <body>
 <main id="auth" class="auth">
   <form id="login" class="auth-box">
-    <img class="mark" src="/pos/icon.svg" alt="" width="52" height="52"><h1>Luvia POS</h1>
-    <p>Connectez-vous à l'espace de votre agence.</p>
-    <label>Identifiant de l'agence<input name="organizationSlug" autocomplete="organization" required></label>
-    <label>Adresse e-mail<input name="email" type="email" autocomplete="username" required></label>
+    <img class="mark" src="/pos/icon.svg" alt="" width="54" height="54"><span class="eyebrow">AGENCY OPERATING SYSTEM</span><h1>LuviaPlace <em>OS</em></h1>
+    <p>Connectez-vous à l'espace de travail de votre agence.</p>
+    <label>Identifiant de l'agence<input name="organizationSlug" autocomplete="organization" placeholder="mon-agence" required></label>
+    <label>Adresse e-mail<input name="email" type="email" autocomplete="username" placeholder="vous@agence.com" required></label>
     <label>Mot de passe<input name="password" type="password" autocomplete="current-password" required></label>
-    <button class="btn primary">Se connecter</button>
+    <button class="btn primary">Accéder à mon espace <span>→</span></button>
     <p id="auth-error" class="error" role="alert"></p>
     <p class="hint">Pas encore d'espace ? <a href="/pos/counter/">Créer mon agence</a></p>
   </form>
 </main>
 <div id="app" class="app" hidden>
-  <nav class="rail" aria-label="Navigation principale">
-    <div class="brand"><img src="/pos/icon.svg" alt="" width="32" height="32"><span><b>Luvia</b> POS</span></div>
-    <a href="/pos/counter/" class="sell">Nouvelle vente</a>
-    <a data-p="dashboard" href="#/dashboard">Tableau de bord</a>
-    <a data-p="dossiers" href="#/dossiers">Dossiers</a>
-    <a data-p="devis" href="#/devis">Devis</a>
-    <a data-p="clients" href="#/clients">Clients</a>
-    <a data-p="fournisseurs" href="#/fournisseurs">Fournisseurs</a>
-    <div class="who"><b id="org"></b><span id="user"></span><button id="logout" class="link">Se déconnecter</button></div>
-  </nav>
-  <main class="main"><h1 id="title"></h1><div id="view"></div></main>
+  <aside class="rail" aria-label="Navigation principale">
+    <a class="brand" href="#/dashboard"><img src="/pos/icon.svg" alt="" width="36" height="36"><span><b>LuviaPlace</b><small>OPERATING SYSTEM</small></span></a>
+    <button id="workspace-trigger" class="workspace-switch"><span class="workspace-avatar">A</span><span class="workspace-meta"><b id="org">Mon agence</b><small>Workspace</small></span><span class="switch-chevron">⌄</span></button>
+    <a href="/pos/counter/" class="sell"><span>＋</span> Nouvelle vente</a>
+    <div class="nav-label">WORKSPACE</div>
+    <a data-p="dashboard" href="#/dashboard"><i>◫</i> Dashboard</a>
+    <a data-p="flights" href="#/flights"><i>✈</i> Vols</a>
+    <a data-p="hotels" href="#/hotels"><i>⌂</i> Hôtels</a>
+    <a data-p="experiences" href="#/experiences"><i>✧</i> Expériences</a>
+    <a data-p="cars" href="#/cars"><i>▣</i> Voitures</a>
+    <a data-p="insurance" href="#/insurance"><i>◇</i> Assurances</a>
+    <div class="nav-label">MANAGEMENT</div>
+    <a data-p="dossiers" href="#/dossiers"><i>▤</i> Dossiers</a>
+    <a data-p="devis" href="#/devis"><i>▧</i> Devis</a>
+    <a data-p="clients" href="#/clients"><i>♙</i> CRM / Clients</a>
+    <a data-p="balance" href="#/balance"><i>◉</i> Balance & factures</a>
+    <a data-p="history" href="#/history"><i>◷</i> Historique</a>
+    <div class="nav-label">COMMUNICATION</div>
+    <a data-p="email" href="#/email"><i>✉</i> Email</a>
+    <a data-p="luvia-ai" href="#/luvia-ai" class="ai-link"><i>✦</i> Luvia AI <span class="new-tag">AI</span></a>
+    <div class="nav-spacer"></div>
+    <a data-p="support" href="#/support"><i>?</i> Support</a>
+    <button id="workspace-settings" class="nav-button"><i>⚙</i> Settings</button>
+    <div class="sidebar-user"><span class="user-avatar" id="user-avatar">U</span><span><b id="user"></b><small id="user-role"></small></span><button id="logout" aria-label="Déconnexion" title="Déconnexion">↗</button></div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="mobile-brand"><img src="/pos/icon.svg" width="30" height="30" alt=""><b>LuviaPlace OS</b></div>
+      <div class="topbar-context"><span>Workspace</span><b id="top-context">Dashboard</b></div>
+      <div class="topbar-actions">
+        <label class="global-search"><span>⌕</span><input id="global-search" type="search" placeholder="Rechercher dans cet espace…" aria-label="Recherche globale"><kbd>⌘ K</kbd></label>
+        <button class="icon-button" id="feedback" title="Envoyer un feedback" aria-label="Feedback">♡</button>
+        <button class="icon-button notification" title="Notifications" aria-label="Notifications">♧</button>
+        <span class="top-user" id="top-user">U</span>
+      </div>
+    </header>
+    <section class="page-wrap">
+      <div class="page-heading"><div><span class="eyebrow" id="page-kicker">OVERVIEW</span><h1 id="title">Dashboard</h1><p id="page-subtitle">La vue d'ensemble de votre agence.</p></div><div id="page-actions"></div></div>
+      <div id="view"></div>
+    </section>
+  </main>
   <aside id="panel" class="panel" hidden aria-label="Détail du dossier"></aside>
 </div>
-<dialog id="dlg"></dialog><div id="toast" role="status"></div>
+<dialog id="dlg"></dialog>
+<dialog id="workspace-dialog" class="workspace-dialog"></dialog>
+<dialog id="feedback-dialog" class="feedback-dialog"></dialog>
+<div id="toast" role="status"></div>
 <script src="/pos/app.js"></script>
 </body>
 </html>

@@ -335,7 +335,7 @@ function openFeedback() {
 
 
 /* Unified sales workspace: one catalogue, one cart, one dossier */
-let saleCart=[],saleFlightOffers=[],saleHotelOffers=[],saleCustomers=[];
+let saleCart=[],saleFlightOffers=[],saleHotelOffers=[],saleCustomers=[],saleCustomerId='';
 const saleCurrency=()=>String(me&&me.default_currency||'USD').toUpperCase();
 const saleToday=()=>new Date().toISOString().slice(0,10);
 const saleDate=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
@@ -392,8 +392,8 @@ async function salesWorkspace(active,preset){
   }catch(x){$('#sale-results').innerHTML=empty('Recherche impossible',x.message);$('#sale-results-count').textContent='Erreur fournisseur';}finally{btn.disabled=false;btn.textContent='Rechercher les hôtels';}
  };
  $('#view').querySelectorAll('[data-sale-service]').forEach(b=>b.onclick=()=>addManualSaleService(b.dataset.saleService));
- $('#sale-new-customer').onclick=()=>ask('Ajouter un client au dossier',[{n:'firstName',l:'Prénom',req:1},{n:'lastName',l:'Nom',req:1},{n:'email',l:'E-mail',t:'email'},{n:'phone',l:'Téléphone'},{n:'nationality',l:'Nationalité',v:me&&me.country_code||'CD'}],async b=>{const r=await send('/customers',b);saleCustomers.unshift(r.data);$('#sale-customer').insertAdjacentHTML('beforeend','<option value="'+esc(r.data.id)+'">'+esc(r.data.first_name+' '+r.data.last_name)+'</option>');$('#sale-customer').value=r.data.id;renderSaleTotals();toast('Client ajouté');},'Ajouter le client');
- $('#sale-customer').onchange=renderSaleTotals;$('#sale-clear').onclick=()=>{saleCart=[];renderSaleCart();};
+ $('#sale-new-customer').onclick=()=>ask('Ajouter un client au dossier',[{n:'firstName',l:'Prénom',req:1},{n:'lastName',l:'Nom',req:1},{n:'email',l:'E-mail',t:'email'},{n:'phone',l:'Téléphone'},{n:'nationality',l:'Nationalité',v:me&&me.country_code||'CD'}],async b=>{const r=await send('/customers',b);saleCustomers.unshift(r.data);$('#sale-customer').insertAdjacentHTML('beforeend','<option value="'+esc(r.data.id)+'">'+esc(r.data.first_name+' '+r.data.last_name)+'</option>');$('#sale-customer').value=r.data.id;saleCustomerId=r.data.id;renderSaleTotals();toast('Client ajouté');},'Ajouter le client');
+ $('#sale-customer').value=saleCustomerId;$('#sale-customer').onchange=()=>{saleCustomerId=$('#sale-customer').value;renderSaleTotals();};$('#sale-clear').onclick=()=>{saleCart=[];renderSaleCart();};
  ['sale-tax','sale-fee','sale-discount'].forEach(id=>$('#'+id).oninput=renderSaleTotals);
  $('#sale-create-quote').onclick=createSaleQuote;$('#sale-create-order').onclick=createSaleOrder;renderSaleCart();
 }

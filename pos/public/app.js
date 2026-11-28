@@ -94,6 +94,7 @@ async function route() {
   if (key === 'dossiers' && id) openOrder(id); else closePanel();
 }
 window.addEventListener('hashchange', route);
+setupWorkspaceChrome();
 $('#workspace-trigger').onclick = openWorkspace;
 $('#workspace-settings').onclick = openWorkspace;
 $('#feedback').onclick = () => openFeedback();
@@ -334,6 +335,41 @@ function openFeedback() {
 }
 
 
+/* Workspace chrome: independent navigation + utility sidebars */
+let calendarCursor=new Date(),calendarSelected='';
+function setupWorkspaceChrome(){
+ const app=$('#app'),left=$('#toggle-left-rail'),right=$('#toggle-right-rail');
+ left.onclick=()=>{app.classList.toggle('left-collapsed');left.setAttribute('aria-label',app.classList.contains('left-collapsed')?'Déployer la navigation':'Rétracter la navigation');};
+ right.onclick=()=>app.classList.toggle('right-collapsed');
+ $('#close-right-rail').onclick=()=>app.classList.add('right-collapsed');
+ $('#open-map').onclick=()=>$('#map-dialog').showModal();
+ $('#close-map').onclick=()=>$('#map-dialog').close();
+ $('#clear-search-history').onclick=()=>{localStorage.removeItem('luvia_recent_searches');renderRecentSearches();};
+ $('#calendar-prev').onclick=()=>{calendarCursor.setMonth(calendarCursor.getMonth()-1);renderMiniCalendar();};
+ $('#calendar-next').onclick=()=>{calendarCursor.setMonth(calendarCursor.getMonth()+1);renderMiniCalendar();};
+ renderRecentSearches();renderMiniCalendar();
+}
+function recordRecentSearch(type,summary){
+ const rows=JSON.parse(localStorage.getItem('luvia_recent_searches')||'[]');
+ rows.unshift({type,summary,at:new Date().toISOString()});
+ localStorage.setItem('luvia_recent_searches',JSON.stringify(rows.slice(0,8)));
+ renderRecentSearches();
+}
+function renderRecentSearches(){
+ const root=$('#recent-searches');if(!root)return;
+ const rows=JSON.parse(localStorage.getItem('luvia_recent_searches')||'[]');
+ root.innerHTML=rows.length?rows.map(x=>'<div class="recent-search"><i>'+(x.type==='Vols'?'✈':x.type==='Hôtels'?'⌂':'⌖')+'</i><span>'+esc(x.summary)+'<small>'+esc(x.type)+' · '+new Date(x.at).toLocaleDateString('fr-FR')+'</small></span></div>').join(''):'<p class="utility-empty">Vos recherches apparaîtront ici.</p>';
+}
+function renderMiniCalendar(){
+ const root=$('#mini-calendar'),label=$('#calendar-month');if(!root||!label)return;
+ const y=calendarCursor.getFullYear(),m=calendarCursor.getMonth(),first=new Date(y,m,1),offset=(first.getDay()+6)%7,days=new Date(y,m+1,0).getDate(),today=new Date();
+ label.textContent=calendarCursor.toLocaleDateString('fr-FR',{month:'short',year:'numeric'});
+ const heads=['L','M','M','J','V','S','D'];let out=heads.map(x=>'<span class="weekday">'+x+'</span>').join('');
+ for(let i=0;i<offset;i++)out+='<span></span>';
+ for(let d=1;d<=days;d++){const key=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'),isToday=y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();out+='<button type="button" data-calendar-date="'+key+'" class="'+(isToday?'today ':'')+(calendarSelected===key?'selected':'')+'" aria-label="'+key+'">'+d+'</button>';}
+ root.innerHTML=out;root.querySelectorAll('[data-calendar-date]').forEach(b=>b.onclick=()=>{calendarSelected=b.dataset.calendarDate;renderMiniCalendar();});
+}
+
 /* Unified sales workspace: one catalogue, one cart, one dossier */
 let saleCart=[],saleFlightOffers=[],saleHotelOffers=[],saleCustomers=[],saleCustomerId='';
 const saleCurrency=()=>String(me&&me.default_currency||'USD').toUpperCase();
@@ -374,6 +410,7 @@ async function salesWorkspace(active,preset){
  $('#sale-flight-form').onsubmit=async e=>{
   e.preventDefault();const b=Object.fromEntries(new FormData(e.target)),o=b.origin.trim().toUpperCase(),d=b.destination.trim().toUpperCase();
   if(o===d)return toast('Les aéroports doivent être différents.');if(b.returnDate&&b.returnDate<b.departureDate)return toast('La date retour doit suivre la date aller.');
+  recordRecentSearch('Vols',o+' → '+d+' · '+b.departureDate+(b.returnDate?' / '+b.returnDate:''));
   const btn=$('#sale-flight-submit');btn.disabled=true;btn.textContent='Recherche…';$('#sale-results').innerHTML=empty('Recherche des vols…','Interrogation de LiteAPI.');
   try{const legs=[{origin:o,destination:d,date:b.departureDate}];if(b.returnDate)legs.push({origin:d,destination:o,date:b.returnDate});
    const r=await send('/integrations/liteapi/flights/search',{legs,adults:Number(b.adults),children:Number(b.children),infants:Number(b.infants),cabinClass:b.cabinClass,currency:cur,country:(me&&me.country_code||'CD').toUpperCase()});
@@ -384,6 +421,7 @@ async function salesWorkspace(active,preset){
  };
  $('#sale-hotel-form').onsubmit=async e=>{
   e.preventDefault();const b=Object.fromEntries(new FormData(e.target));if(b.checkout<=b.checkin)return toast('La date de départ doit être après l’arrivée.');
+  recordRecentSearch('Hôtels',b.cityName+' · '+b.checkin+' au '+b.checkout);
   const btn=$('#sale-hotel-submit');btn.disabled=true;btn.textContent='Recherche…';$('#sale-results').innerHTML=empty('Recherche des hôtels…','Interrogation de LiteAPI.');
   try{const r=await send('/integrations/liteapi/hotels/search',{cityName:b.cityName.trim(),countryCode:b.countryCode.toUpperCase(),checkin:b.checkin,checkout:b.checkout,currency:cur,guestNationality:(b.guestNationality||'CD').toUpperCase(),occupancies:Array.from({length:Number(b.rooms)},()=>({adults:Number(b.adults)})),maxRatesPerHotel:3});
    saleHotelOffers=r.data||[];$('#sale-results-count').textContent=saleHotelOffers.length+' hôtel(s) disponibles';

@@ -49,7 +49,8 @@ function ask(title, fields, onSubmit, cta = 'Enregistrer') {
 /* ---------- auth ---------- */
 function enter(u) {
   me = u; $('#auth').hidden = true; $('#app').hidden = false;
-  $('#org').textContent = u.organization_name || ''; $('#user').textContent = (u.full_name || '') + ' · ' + (ROLE[u.role] || u.role);
+  $('#org').textContent = u.organization_name || 'Mon agence'; $('#user').textContent = u.full_name || '';
+  $('#user-role').textContent = ROLE[u.role] || u.role; $('#user-avatar').textContent = (u.full_name || 'U').trim().charAt(0).toUpperCase(); $('#top-user').textContent = (u.full_name || 'U').trim().charAt(0).toUpperCase();
   route();
 }
 function logout() { token = ''; localStorage.removeItem('luvia_pos_token'); me = null; $('#app').hidden = true; $('#auth').hidden = false; }
@@ -62,20 +63,34 @@ $('#login').onsubmit = async e => {
 
 /* ---------- router ---------- */
 const pages = {
-  dashboard: ['Tableau de bord', dashboard], dossiers: ['Dossiers', orders], devis: ['Devis', quotes],
-  clients: ['Clients', customers], fournisseurs: ['Fournisseurs', suppliers]
+  dashboard: ['Dashboard', dashboard], flights: ['Vols', () => servicePlaceholder('Vols', 'Recherchez et gérez les demandes de billets d’avion depuis votre espace de vente.', 'flight')],
+  hotels: ['Hôtels', () => servicePlaceholder('Hôtels', 'Centralisez les demandes, options et réservations hôtelières.', 'hotel')],
+  experiences: ['Expériences', () => servicePlaceholder('Expériences', 'Gérez les excursions, activités et expériences proposées à vos clients.', 'tour')],
+  cars: ['Voitures', () => servicePlaceholder('Voitures', 'Gérez les demandes de location et les prestations de transport.', 'car')],
+  insurance: ['Assurances', () => servicePlaceholder('Assurances', 'Suivez les demandes et les contrats d’assurance voyage.', 'insurance')],
+  dossiers: ['Dossiers', orders], devis: ['Devis', quotes], clients: ['CRM / Clients', customers],
+  balance: ['Balance & factures', invoices], history: ['Historique', historyPage],
+  email: ['Email', () => servicePlaceholder('Email', 'La boîte de réception et les échanges clients seront intégrés dans cette section.', 'mail')],
+  'luvia-ai': ['Luvia AI', () => servicePlaceholder('Luvia AI', 'Votre assistant de travail pour préparer des voyages, retrouver des dossiers et accélérer les opérations.', 'sparkles')],
+  support: ['Support', () => servicePlaceholder('Support', 'Retrouvez ici les demandes d’assistance et le centre d’aide Luvia.', 'life-buoy')],
+  fournisseurs: ['Fournisseurs', suppliers]
 };
 async function route() {
   if (!me) return;
   const [, p = 'dashboard', id] = location.hash.split('/');
   const page = pages[p] || pages.dashboard, key = pages[p] ? p : 'dashboard';
   document.querySelectorAll('.rail a[data-p]').forEach(a => a.classList.toggle('on', a.dataset.p === key));
-  $('#title').textContent = page[0]; document.title = page[0] + ' — Luvia POS';
+  $('#title').textContent = page[0]; $('#top-context').textContent = page[0]; $('#page-kicker').textContent = key === 'dashboard' ? 'OVERVIEW' : 'AGENCY WORKSPACE'; $('#page-subtitle').textContent = key === 'dashboard' ? 'La vue d’ensemble de votre agence.' : 'Gérez vos opérations depuis un espace unique.'; document.title = page[0] + ' — LuviaPlace OS';
   $('#view').innerHTML = empty('Chargement…');
   try { await page[1](); } catch (x) { $('#view').innerHTML = empty('Impossible de charger cette page', x.message); }
   if (key === 'dossiers' && id) openOrder(id); else closePanel();
 }
 window.addEventListener('hashchange', route);
+$('#workspace-trigger').onclick = openWorkspace;
+$('#workspace-settings').onclick = openWorkspace;
+$('#feedback').onclick = () => openFeedback();
+$('#global-search').addEventListener('input', e => { const q = e.target.value; const local = $('#q'); if (local) { local.value = q; local.dispatchEvent(new Event('input')); } });
+document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('#global-search').focus(); } });
 
 /* ---------- dashboard ---------- */
 async function dashboard() {
@@ -164,6 +179,59 @@ async function suppliers() {
     `<tr><td>${esc(s.name)}</td><td>${SUPPLIER[s.type] || s.type}</td><td>${esc(s.contact_name || '—')}</td><td>${esc(s.phone || '—')}</td><td>${esc(s.email || '—')}</td></tr>`), empty('Aucun fournisseur', 'Enregistrez vos compagnies, hôtels et prestataires pour suivre vos réservations.'));
   $('#add').onclick = () => ask('Nouveau fournisseur', [{ n: 'name', l: 'Nom', req: 1 }, { n: 'type', l: 'Type', opts: Object.entries(SUPPLIER) }, { n: 'contactName', l: 'Personne à contacter' }, { n: 'phone', l: 'Téléphone' }, { n: 'email', l: 'E-mail', t: 'email' }],
     async b => { await send('/suppliers', b); toast('Fournisseur ajouté'); suppliers(); });
+}
+
+
+async function servicePlaceholder(title, description, kind) {
+  const symbols = {flight:'✈',hotel:'⌂',tour:'✧',car:'▣',insurance:'◇',mail:'✉',sparkles:'✦','life-buoy':'?'};
+  $('#view').innerHTML = `<section class="service-placeholder"><div class="service-symbol">${symbols[kind] || '✧'}</div><span class="eyebrow">LUVIA WORKSPACE</span><h2>${esc(title)}</h2><p>${esc(description)}</p><a class="btn primary" href="/pos/counter/">Ouvrir le comptoir de vente →</a><small>Cette section sera connectée progressivement aux workflows de réservation.</small></section>`;
+}
+async function invoices() {
+  const all = (await api('/invoices')).data;
+  $('#view').innerHTML = table([['Facture'],['Dossier'],['Client'],['Date'],['Montant','n'],['Statut']], all.map(x => `<tr><td>${esc(x.invoice_number)}</td><td>${esc(x.order_number)}</td><td>${name(x)}</td><td>${day(x.issued_at)}</td><td class="n">${money(x.total,x.currency)}</td><td>${pill({issued:['Émise','blue'],paid:['Payée','green'],draft:['Brouillon','grey'],void:['Annulée','red']},x.status)}</td></tr>`), empty('Aucune facture','Les factures émises depuis les dossiers apparaîtront ici.'));
+}
+async function historyPage() {
+  const all = (await api('/audit')).data;
+  $('#view').innerHTML = table([['Événement'],['Type'],['Date'],['Utilisateur']], all.map(x => `<tr><td>${esc(x.action.replace(/[._]/g,' '))}</td><td>${esc(x.entity_type)}</td><td>${day(x.created_at)}</td><td>${esc(x.actor_name || 'Système')}</td></tr>`), empty('Aucune activité','Les événements de votre agence apparaîtront ici.'));
+}
+async function openWorkspace() {
+  const d = $('#workspace-dialog');
+  d.innerHTML = '<div class="workspace-head"><div><span class="eyebrow">WORKSPACE SETTINGS</span><h2>Votre espace agence</h2><p class="hint">Profil de l’agence et accès de votre équipe.</p></div><button class="btn small" id="workspace-close">Fermer</button></div><div class="workspace-tabs"><button class="active" data-tab="agency">Agence</button><button data-tab="team">Équipe & rôles</button></div><div class="workspace-body" id="workspace-content">Chargement…</div>';
+  d.showModal();
+  $('#workspace-close').onclick = () => d.close();
+  let organization, team;
+  try { [organization, team] = await Promise.all([api('/organization'), api('/team')]); }
+  catch (x) { $('#workspace-content').innerHTML = empty('Impossible de charger le workspace',x.message); return; }
+  const canManage = ['owner','admin'].includes(me.role);
+  const showAgency = () => {
+    const o=organization.data;
+    $('#workspace-content').innerHTML = `<form id="agency-form"><div class="dialog-grid">
+      <label>Nom de l’agence<input name="name" maxlength="120" required value="${esc(o.name)}"></label>
+      <label>Identifiant agence<input value="${esc(o.slug)}" disabled><small class="hint">L’identifiant ne peut pas être modifié.</small></label>
+      <label>E-mail professionnel<input name="email" type="email" value="${esc(o.email || '')}"></label>
+      <label>Téléphone<input name="phone" value="${esc(o.phone || '')}"></label>
+      <label>Pays (code ISO)<input name="countryCode" maxlength="2" value="${esc(o.country_code || 'CD')}"></label>
+      <label>Devise par défaut<input name="currency" maxlength="3" value="${esc(o.default_currency || 'USD')}"></label>
+      <label class="wide">Adresse<input name="address" value="${esc(o.address || '')}"></label>
+      <label>Site web<input name="website" type="url" value="${esc(o.website || '')}"></label>
+      <label>URL du logo<input name="logoUrl" type="url" value="${esc(o.logo_url || '')}"></label>
+    </div>${canManage ? '<div class="dialog-actions"><button class="btn primary">Enregistrer les informations</button></div>' : '<p class="hint">Seuls les propriétaires et administrateurs peuvent modifier ces informations.</p>'}</form>`;
+    const f=$('#agency-form'); if(canManage) f.onsubmit=async e=>{e.preventDefault();try{const b=Object.fromEntries(new FormData(f));b.countryCode=b.countryCode.toUpperCase();b.currency=b.currency.toUpperCase();const r=await send('/organization',b,'PATCH');organization=r;$('#org').textContent=r.data.name;toast('Informations agence enregistrées');}catch(x){toast(x.message);}};
+  };
+  const showTeam = () => {
+    const rows=team.data || [];
+    $('#workspace-content').innerHTML = `<div class="team-list">${rows.map(m=>`<div class="team-row"><span class="user-avatar">${esc(m.full_name.charAt(0).toUpperCase())}</span><span class="member-info"><b>${esc(m.full_name)}</b><small>${esc(m.email)} · ${m.active?'Actif':'Désactivé'}</small></span><span class="role-pill">${esc(ROLE[m.role] || m.role)}</span></div>`).join('') || empty('Aucun membre','Vous êtes le premier membre de cette agence.')}</div>
+      ${canManage ? '<form id="member-form" class="member-form"><h3>Ajouter un collaborateur</h3><div class="dialog-grid"><label>Nom complet<input name="fullName" required></label><label>E-mail<input name="email" type="email" required></label><label>Mot de passe temporaire<input name="password" type="password" minlength="12" required><small class="hint">12 caractères minimum.</small></label><label>Rôle<select name="role"><option value="agent">Agent</option><option value="manager">Responsable</option><option value="accountant">Comptable</option><option value="admin">Administrateur</option></select></label></div><div class="dialog-actions"><button class="btn primary">Ajouter à l’équipe</button></div></form>' : '<p class="hint">Vous pouvez consulter l’équipe. La gestion des accès est réservée aux Owner et Admin.</p>'}`;
+    const f=$('#member-form');if(f)f.onsubmit=async e=>{e.preventDefault();try{await send('/team',Object.fromEntries(new FormData(f)));team=await api('/team');showTeam();toast('Collaborateur ajouté');}catch(x){toast(x.message);}};
+  };
+  showAgency();
+  d.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{d.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));b.dataset.tab==='agency'?showAgency():showTeam();});
+}
+function openFeedback() {
+  const d=$('#feedback-dialog');
+  d.innerHTML='<form id="feedback-form"><span class="eyebrow">PRODUCT FEEDBACK</span><h2>Votre avis compte</h2><p class="hint">Décrivez un problème ou une amélioration souhaitée. Votre application ouvrira votre client e-mail.</p><label>Votre feedback<textarea name="message" required placeholder="Décrivez votre retour…"></textarea></label><div class="dialog-actions"><button type="button" class="btn" id="feedback-cancel">Annuler</button><button class="btn primary">Continuer</button></div></form>';
+  d.showModal();$('#feedback-cancel').onclick=()=>d.close();
+  $('#feedback-form').onsubmit=e=>{e.preventDefault();const message=new FormData(e.target).get('message');location.href='mailto:christopher-ag@cerbereag.site?subject='+encodeURIComponent('LuviaPlace OS feedback')+'&body='+encodeURIComponent(message);d.close();};
 }
 
 /* ---------- start ---------- */

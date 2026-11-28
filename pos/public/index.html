@@ -17,14 +17,25 @@
     <label>Mot de passe<input name="password" type="password" autocomplete="current-password" required></label>
     <button class="btn primary">Accéder à mon espace <span>→</span></button>
     <p id="auth-error" class="error" role="alert"></p>
-    <p class="hint">Pas encore d'espace ? <a href="/pos/counter/">Créer mon agence</a></p>
+    <p class="hint">Pas encore d'espace ? <button type="button" class="auth-link" id="show-register">Créer mon agence</button></p>
+  </form>
+
+  <form id="register" class="auth-box" hidden>
+    <img class="mark" src="/pos/icon.svg" alt="" width="54" height="54"><span class="eyebrow">CRÉATION D’ESPACE</span><h1>Créer votre agence</h1>
+    <label>Nom de l’agence<input name="organizationName" id="register-org" maxlength="120" required></label>
+    <label>Identifiant agence<input name="slug" id="register-slug" maxlength="60" pattern="[a-z0-9]+(-[a-z0-9]+)*" required><small class="hint">Lettres minuscules, chiffres et tirets.</small></label>
+    <label>Votre nom complet<input name="fullName" maxlength="120" required></label>
+    <label>E-mail professionnel<input name="email" type="email" required></label>
+    <label>Mot de passe<input name="password" type="password" minlength="12" maxlength="128" required><small class="hint">12 caractères minimum.</small></label>
+    <div class="auth-register-grid"><label>Pays<select name="countryCode"><option value="CD">RDC</option><option value="CG">Congo</option><option value="AO">Angola</option><option value="ZM">Zambie</option><option value="FR">France</option><option value="BE">Belgique</option><option value="US">États-Unis</option></select></label><label>Devise<select name="currency"><option>USD</option><option>CDF</option><option>EUR</option></select></label></div>
+    <button class="btn primary">Créer mon espace</button><p id="register-error" class="error" role="alert"></p><p class="hint">Vous avez déjà un espace ? <button type="button" class="auth-link" id="show-login">Se connecter</button></p>
   </form>
 </main>
 <div id="app" class="app" hidden>
   <aside class="rail" aria-label="Navigation principale">
     <a class="brand" href="#/dashboard"><img src="/pos/icon.svg" alt="" width="36" height="36"><span><b>LuviaPlace</b><small>OPERATING SYSTEM</small></span></a>
     <button id="workspace-trigger" class="workspace-switch"><span class="workspace-avatar">A</span><span class="workspace-meta"><b id="org">Mon agence</b><small>Workspace</small></span><span class="switch-chevron">⌄</span></button>
-    <a href="/pos/counter/" class="sell"><span>＋</span> Nouvelle vente</a>
+    <a href="#/sales" class="sell"><span>＋</span> Nouvelle vente</a>
     <div class="nav-label">WORKSPACE</div>
     <a data-p="dashboard" href="#/dashboard"><i>◫</i> Dashboard</a>
     <a data-p="flights" href="#/flights"><i>✈</i> Vols</a>

@@ -395,12 +395,15 @@ function renderCalendarDay(date){
  box.innerHTML='<strong>'+new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long'})+'</strong>'+(rows.length?rows.map(e=>'<p>'+esc(e.title)+'<small>'+esc(e.type)+' · '+esc(e.status)+'</small></p>').join(''):'<p class="utility-empty">Aucun départ ou réservation prévu.</p>');
 }
 async function openWorkspaceMap(destination){
- const dialog=$('#map-dialog');let q=destination||'Kinshasa';
- if(!destination){try{const r=await api('/workspace/map-context');q=r.data?.[0]?.destination||'Kinshasa';}catch(e){}}
- const frame=$('#workspace-map-frame'),label=$('#map-destination-label');
- if(label)label.textContent=q;
- if(frame)frame.src='https://www.openstreetmap.org/export/embed.html?query='+encodeURIComponent(q);
+ const dialog=$('#map-dialog'),frame=$('#workspace-map-frame'),label=$('#map-destination-label');
+ if(label)label.textContent=destination||'Chargement de la destination…';
  dialog.showModal();
+ try{
+  const r=await api('/workspace/map-context'+(destination?'?destination='+encodeURIComponent(destination):''));
+  if(label)label.textContent=(r.location&&r.location.label)||r.destination||'Carte indisponible pour cette destination';
+  if(frame&&r.location&&r.location.embedUrl)frame.src=r.location.embedUrl;
+  else if(frame)frame.src='https://www.openstreetmap.org/export/embed.html?bbox=15.20%2C-4.40%2C15.45%2C-4.20&layer=mapnik&marker=-4.325%2C15.322';
+ }catch(e){if(label)label.textContent='Impossible de charger la destination';}
 }
 /* Unified sales workspace: one catalogue, one cart, one dossier */
 let saleCart=[],saleFlightOffers=[],saleHotelOffers=[],saleCustomers=[],saleCustomerId='';

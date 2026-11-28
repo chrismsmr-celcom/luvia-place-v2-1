@@ -61,19 +61,27 @@ $('#login').onsubmit = async e => {
   catch (x) { $('#auth-error').textContent = x.message === 'Invalid credentials' ? 'Identifiant, e-mail ou mot de passe incorrect.' : x.message; }
 };
 
+$('#show-register').onclick = () => { $('#login').hidden = true; $('#register').hidden = false; };
+$('#show-login').onclick = () => { $('#register').hidden = true; $('#login').hidden = false; };
+$('#register-org').addEventListener('input', e => {
+  const slug=$('#register-slug'); if(slug.dataset.edited) return;
+  slug.value=e.target.value.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60);
+});
+$('#register-slug').addEventListener('input',e=>{e.target.dataset.edited='1';e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');});
+$('#register').onsubmit=async e=>{
+ e.preventDefault();$('#register-error').textContent='';
+ try{const d=await send('/auth/register',Object.fromEntries(new FormData(e.target)));token=d.token;localStorage.setItem('luvia_pos_token',token);enter(d.user);toast('Espace agence créé');}
+ catch(x){$('#register-error').textContent=x.message;}
+};
+
 /* ---------- router ---------- */
 const pages = {
-  dashboard: ['Dashboard', dashboard], flights: ['Vols', flightSearch],
-  hotels: ['Hôtels', hotelSearch],
-  experiences: ['Expériences', () => serviceRequest('Expériences', 'package', 'Décrivez l’activité ou l’excursion recherchée.')],
-  cars: ['Voitures', () => serviceRequest('Voitures', 'transfer', 'Décrivez le trajet, le véhicule et les dates souhaités.')],
-  insurance: ['Assurances', () => serviceRequest('Assurances', 'other', 'Décrivez la destination, les dates et le type de couverture souhaité.')],
+  dashboard: ['Dashboard', dashboard], sales: ['Nouvelle vente', () => salesWorkspace('flights')],
+  flights: ['Vols', () => salesWorkspace('flights')], hotels: ['Hôtels', () => salesWorkspace('hotels')],
+  experiences: ['Expériences', () => salesWorkspace('services','tour')], cars: ['Voitures', () => salesWorkspace('services','transfer')], insurance: ['Assurances', () => salesWorkspace('services','other')],
   dossiers: ['Dossiers', orders], devis: ['Devis', quotes], requests: ['Demandes', requestsPage], clients: ['CRM / Clients', customers],
-  balance: ['Balance & factures', invoices], history: ['Historique', historyPage],
-  email: ['Email', emailWorkspace],
-  'luvia-ai': ['Luvia AI', luviaAssistant],
-  support: ['Support', supportWorkspace],
-  fournisseurs: ['Fournisseurs', suppliers]
+  balance: ['Balance & factures', invoices], history: ['Historique', historyPage], email: ['Email', emailWorkspace],
+  'luvia-ai': ['Luvia AI', luviaAssistant], support: ['Support', supportWorkspace], fournisseurs: ['Fournisseurs', suppliers]
 };
 async function route() {
   if (!me) return;
@@ -324,6 +332,84 @@ function openFeedback() {
   d.showModal();$('#feedback-cancel').onclick=()=>d.close();
   $('#feedback-form').onsubmit=e=>{e.preventDefault();const message=new FormData(e.target).get('message');location.href='mailto:christopher-ag@cerbereag.site?subject='+encodeURIComponent('LuviaPlace OS feedback')+'&body='+encodeURIComponent(message);d.close();};
 }
+
+
+/* Unified sales workspace: one catalogue, one cart, one dossier */
+let saleCart=[],saleFlightOffers=[],saleHotelOffers=[],saleCustomers=[],saleCustomerId='';
+const saleCurrency=()=>String(me&&me.default_currency||'USD').toUpperCase();
+const saleToday=()=>new Date().toISOString().slice(0,10);
+const saleDate=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
+function saleMoney(v,c){return money(v,c||saleCurrency());}
+async function salesWorkspace(active,preset){
+ saleCustomers=(await api('/customers')).data||[];
+ const cur=saleCurrency(),today=saleToday();
+ $('#view').innerHTML=
+ '<section class="sale-workspace"><div class="sale-catalog">'+
+ '<div class="sale-intro"><div><span class="eyebrow">ESPACE DE VENTE UNIFIÉ</span><h2>Construire un dossier de voyage</h2><p>Recherchez les prestations, ajoutez-les au même panier et créez un devis ou un dossier sans changer d’application.</p></div><span class="sale-currency">'+esc(cur)+'</span></div>'+
+ '<nav class="sale-tabs"><button type="button" data-sale-tab="flights">✈ Vols</button><button type="button" data-sale-tab="hotels">⌂ Hôtels</button><button type="button" data-sale-tab="services">＋ Autres prestations</button></nav>'+
+ '<section class="sale-pane" data-sale-pane="flights"><form id="sale-flight-form" class="sale-search-form"><div class="sale-fields">'+
+ '<label>Départ (IATA)<input name="origin" maxlength="3" value="FIH" required></label><label>Destination (IATA)<input name="destination" maxlength="3" placeholder="CDG" required></label>'+
+ '<label>Aller<input name="departureDate" type="date" min="'+today+'" value="'+saleDate(20)+'" required></label><label>Retour<input name="returnDate" type="date" min="'+saleDate(20)+'" value="'+saleDate(27)+'"></label>'+
+ '<label>Adultes<select name="adults"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label><label>Enfants<input name="children" type="number" min="0" max="8" value="0"></label><label>Bébés<input name="infants" type="number" min="0" max="8" value="0"></label>'+
+ '<label>Cabine<select name="cabinClass"><option value="ECONOMY">Économique</option><option value="PREMIUM_ECONOMY">Économique premium</option><option value="BUSINESS">Affaires</option><option value="FIRST">Première</option></select></label></div>'+
+ '<div class="sale-search-actions"><span>Tarifs fournisseurs · LiteAPI</span><button class="btn primary" id="sale-flight-submit">Rechercher les vols</button></div></form></section>'+
+ '<section class="sale-pane" data-sale-pane="hotels" hidden><form id="sale-hotel-form" class="sale-search-form"><div class="sale-fields">'+
+ '<label class="sale-span2">Ville / destination<input name="cityName" value="Kinshasa" placeholder="Paris, Kinshasa…" required></label><label>Pays (ISO)<input name="countryCode" maxlength="2" value="'+esc(me&&me.country_code||'CD')+'" required></label>'+
+ '<label>Arrivée<input name="checkin" type="date" min="'+today+'" value="'+saleDate(20)+'" required></label><label>Départ<input name="checkout" type="date" min="'+saleDate(21)+'" value="'+saleDate(23)+'" required></label>'+
+ '<label>Chambres<select name="rooms"><option>1</option><option>2</option><option>3</option></select></label><label>Adultes / chambre<select name="adults"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label><label>Nationalité<input name="guestNationality" maxlength="2" value="'+esc(me&&me.country_code||'CD')+'"></label></div>'+
+ '<div class="sale-search-actions"><span>Disponibilités et tarifs LiteAPI</span><button class="btn primary" id="sale-hotel-submit">Rechercher les hôtels</button></div></form></section>'+
+ '<section class="sale-pane" data-sale-pane="services" hidden><div class="sale-service-intro"><h3>Autres prestations</h3><p>Ajoutez une prestation au même dossier que vos vols et hôtels.</p></div><div class="sale-service-grid">'+
+ '<button type="button" data-sale-service="transfer"><b>Transfert / voiture</b><small>Chauffeur, trajet ou location</small></button><button type="button" data-sale-service="tour"><b>Expérience / excursion</b><small>Activité, visite ou circuit</small></button>'+
+ '<button type="button" data-sale-service="visa"><b>Visa & assistance</b><small>Frais de dossier et assistance</small></button><button type="button" data-sale-service="other"><b>Assurance / autre</b><small>Couverture et prestation personnalisée</small></button></div></section>'+
+ '<div class="sale-results-head"><h3 id="sale-results-title">Offres de vols</h3><span id="sale-results-count">Renseignez les critères pour commencer</span></div><div id="sale-results">'+empty('Prêt pour votre recherche','Les offres apparaîtront ici. Ajoutez-les au dossier à droite.')+'</div></div>'+
+ '<aside class="sale-basket"><div class="sale-basket-head"><div><span class="eyebrow">DOSSIER EN CONSTRUCTION</span><h3>Panier du voyage</h3></div><button class="sale-text-button" id="sale-clear">Vider</button></div>'+
+ '<label class="sale-customer-label">Client<select id="sale-customer"><option value="">Sélectionner un client…</option>'+saleCustomers.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.first_name+' '+c.last_name)+'</option>').join('')+'</select></label>'+
+ '<div class="sale-customer-actions"><button type="button" class="sale-text-button" id="sale-new-customer">＋ Nouveau client</button><a href="#/clients">CRM</a></div><div id="sale-cart" class="sale-cart"></div>'+
+ '<div class="sale-totals"><label>Taxes / frais fournisseur<input id="sale-tax" type="number" min="0" step=".01" value="0"></label><label>Frais d’agence<input id="sale-fee" type="number" min="0" step=".01" value="0"></label><label>Remise<input id="sale-discount" type="number" min="0" step=".01" value="0"></label>'+
+ '<div class="sale-grand-total"><span>Total estimé</span><strong id="sale-total">'+saleMoney(0)+'</strong></div></div><div class="sale-actions"><button class="btn" id="sale-create-quote" disabled>Créer un devis</button><button class="btn primary" id="sale-create-order" disabled>Créer le dossier</button></div>'+
+ '<p class="sale-disclaimer">Une offre affichée n’est pas une réservation confirmée. La confirmation fournisseur reste une étape distincte.</p></aside></section>';
+ const tabs=[...$('#view').querySelectorAll('[data-sale-tab]')],panes=[...$('#view').querySelectorAll('[data-sale-pane]')];
+ const selectTab=t=>{tabs.forEach(b=>b.classList.toggle('active',b.dataset.saleTab===t));panes.forEach(p=>p.hidden=p.dataset.salePane!==t);const label=t==='flights'?'Vols':t==='hotels'?'Hôtels':'Autres prestations';$('#sale-results-title').textContent=t==='flights'?'Offres de vols':t==='hotels'?'Offres hôtelières':'Autres prestations';$('#title').textContent=label;$('#top-context').textContent=label;document.title=label+' — LuviaPlace OS';document.querySelectorAll('.rail a[data-p]').forEach(a=>a.classList.toggle('on',a.dataset.p===(t==='services'?'experiences':t)));};
+ tabs.forEach(b=>b.onclick=()=>selectTab(b.dataset.saleTab));selectTab(active==='services'?'services':active||'flights');
+ $('#sale-flight-form').onsubmit=async e=>{
+  e.preventDefault();const b=Object.fromEntries(new FormData(e.target)),o=b.origin.trim().toUpperCase(),d=b.destination.trim().toUpperCase();
+  if(o===d)return toast('Les aéroports doivent être différents.');if(b.returnDate&&b.returnDate<b.departureDate)return toast('La date retour doit suivre la date aller.');
+  const btn=$('#sale-flight-submit');btn.disabled=true;btn.textContent='Recherche…';$('#sale-results').innerHTML=empty('Recherche des vols…','Interrogation de LiteAPI.');
+  try{const legs=[{origin:o,destination:d,date:b.departureDate}];if(b.returnDate)legs.push({origin:d,destination:o,date:b.returnDate});
+   const r=await send('/integrations/liteapi/flights/search',{legs,adults:Number(b.adults),children:Number(b.children),infants:Number(b.infants),cabinClass:b.cabinClass,currency:cur,country:(me&&me.country_code||'CD').toUpperCase()});
+   saleFlightOffers=r.data||[];$('#sale-results-count').textContent=saleFlightOffers.length+' offre(s) LiteAPI';
+   $('#sale-results').innerHTML=saleFlightOffers.map((f,i)=>{const airline=f.owner&&f.owner.name||f.airline&&f.airline.name||f.airline||'Compagnie aérienne',price=Number((f.price&&f.price.amount)??f.totalAmount??f.amount??f.price??0),code=f.owner&&f.owner.iataCode||'';return '<article class="sale-offer"><div class="sale-offer-main"><span class="eyebrow">'+esc(code||'VOL')+'</span><h4>'+esc(airline)+'</h4><p>'+esc(o)+' → '+esc(d)+' · '+esc(b.departureDate)+(b.returnDate?' · retour '+esc(b.returnDate):'')+'</p><small>'+esc(f.departureTime||'Horaires à confirmer')+' · '+esc(f.duration||'Durée à confirmer')+'</small></div><div class="sale-offer-price"><strong>'+(price>0?saleMoney(price):'Prix à confirmer')+'</strong><button type="button" class="btn small primary" data-sale-add-flight="'+i+'" '+(price<=0?'disabled':'')+'>Ajouter au dossier</button></div></article>';}).join('')||empty('Aucun vol trouvé','Essayez d’autres dates ou aéroports.');
+   $('#sale-results').querySelectorAll('[data-sale-add-flight]').forEach(button=>button.onclick=()=>{const f=saleFlightOffers[Number(button.dataset.saleAddFlight)],price=Number((f.price&&f.price.amount)??f.totalAmount??f.amount??f.price??0);if(price>0)addSaleItem({serviceType:'flight',description:(f.owner&&f.owner.name||f.airline&&f.airline.name||'Vol')+' · '+o+' → '+d+' · '+b.departureDate+(b.returnDate?' / '+b.returnDate:''),unitCost:0,unitPrice:price,provider:'liteapi',providerOfferId:f.offerId||f.id||null,details:{offer:f,legs:legs}});});
+  }catch(x){$('#sale-results').innerHTML=empty('Recherche impossible',x.message);$('#sale-results-count').textContent='Erreur fournisseur';}finally{btn.disabled=false;btn.textContent='Rechercher les vols';}
+ };
+ $('#sale-hotel-form').onsubmit=async e=>{
+  e.preventDefault();const b=Object.fromEntries(new FormData(e.target));if(b.checkout<=b.checkin)return toast('La date de départ doit être après l’arrivée.');
+  const btn=$('#sale-hotel-submit');btn.disabled=true;btn.textContent='Recherche…';$('#sale-results').innerHTML=empty('Recherche des hôtels…','Interrogation de LiteAPI.');
+  try{const r=await send('/integrations/liteapi/hotels/search',{cityName:b.cityName.trim(),countryCode:b.countryCode.toUpperCase(),checkin:b.checkin,checkout:b.checkout,currency:cur,guestNationality:(b.guestNationality||'CD').toUpperCase(),occupancies:Array.from({length:Number(b.rooms)},()=>({adults:Number(b.adults)})),maxRatesPerHotel:3});
+   saleHotelOffers=r.data||[];$('#sale-results-count').textContent=saleHotelOffers.length+' hôtel(s) disponibles';
+   $('#sale-results').innerHTML=saleHotelOffers.map((h,i)=>'<article class="sale-offer sale-hotel-offer">'+(h.main_photo?'<img src="'+esc(h.main_photo)+'" alt="" loading="lazy">':'')+'<div class="sale-offer-main"><span class="eyebrow">'+esc(h.city||b.cityName)+(h.starRating?' · '+h.starRating+' étoiles':'')+'</span><h4>'+esc(h.name)+'</h4><p>'+esc(h.address||'Adresse non renseignée')+' · '+esc(h.roomName||'Chambre disponible')+'</p><small>'+h.nights+' nuit(s) · '+(h.refundable?'Remboursable':'Conditions à vérifier')+' · '+esc(h.boardName||'')+'</small></div><div class="sale-offer-price"><strong>'+saleMoney(h.price,h.currency||cur)+'</strong><button type="button" class="btn small primary" data-sale-add-hotel="'+i+'">Ajouter au dossier</button></div></article>').join('')||empty('Aucun hôtel disponible','Essayez une autre ville ou d’autres dates.');
+   $('#sale-results').querySelectorAll('[data-sale-add-hotel]').forEach(button=>button.onclick=()=>{const h=saleHotelOffers[Number(button.dataset.saleAddHotel)];addSaleItem({serviceType:'hotel',description:h.name+' · '+b.cityName+' · '+b.checkin+' au '+b.checkout+' · '+h.roomName,unitCost:0,unitPrice:Number(h.price),provider:'liteapi',providerOfferId:h.offerId||h.hotelId||h.id,details:{rate:h.rate,hotelId:h.hotelId,checkin:b.checkin,checkout:b.checkout,rooms:Number(b.rooms),adults:Number(b.adults)}});});
+  }catch(x){$('#sale-results').innerHTML=empty('Recherche impossible',x.message);$('#sale-results-count').textContent='Erreur fournisseur';}finally{btn.disabled=false;btn.textContent='Rechercher les hôtels';}
+ };
+ $('#view').querySelectorAll('[data-sale-service]').forEach(b=>b.onclick=()=>addManualSaleService(b.dataset.saleService));
+ $('#sale-new-customer').onclick=()=>ask('Ajouter un client au dossier',[{n:'firstName',l:'Prénom',req:1},{n:'lastName',l:'Nom',req:1},{n:'email',l:'E-mail',t:'email'},{n:'phone',l:'Téléphone'},{n:'nationality',l:'Nationalité',v:me&&me.country_code||'CD'}],async b=>{const r=await send('/customers',b);saleCustomers.unshift(r.data);$('#sale-customer').insertAdjacentHTML('beforeend','<option value="'+esc(r.data.id)+'">'+esc(r.data.first_name+' '+r.data.last_name)+'</option>');$('#sale-customer').value=r.data.id;saleCustomerId=r.data.id;renderSaleTotals();toast('Client ajouté');},'Ajouter le client');
+ $('#sale-customer').value=saleCustomerId;$('#sale-customer').onchange=()=>{saleCustomerId=$('#sale-customer').value;renderSaleTotals();};$('#sale-clear').onclick=()=>{saleCart=[];renderSaleCart();};
+ ['sale-tax','sale-fee','sale-discount'].forEach(id=>$('#'+id).oninput=renderSaleTotals);
+ $('#sale-create-quote').onclick=createSaleQuote;$('#sale-create-order').onclick=createSaleOrder;renderSaleCart();
+}
+function addSaleItem(item){saleCart.push(item);renderSaleCart();toast('Prestation ajoutée au dossier');}
+function renderSaleCart(){
+ const root=$('#sale-cart');if(!root)return;
+ root.innerHTML=saleCart.map((i,n)=>'<article class="sale-cart-item"><div><b>'+esc(i.description)+'</b><small>'+esc(i.serviceType)+' · '+esc(i.provider==='liteapi'?'LiteAPI':'Agence')+'</small></div><label>Prix de vente<input type="number" min="0" step=".01" data-sale-price="'+n+'" value="'+Number(i.unitPrice).toFixed(2)+'"></label><button type="button" data-sale-remove="'+n+'" aria-label="Retirer">×</button></article>').join('')||empty('Aucune prestation','Ajoutez un vol, un hôtel ou un service depuis le catalogue.');
+ root.querySelectorAll('[data-sale-price]').forEach(x=>x.onchange=()=>{saleCart[Number(x.dataset.salePrice)].unitPrice=Math.max(0,Number(x.value)||0);renderSaleTotals();});
+ root.querySelectorAll('[data-sale-remove]').forEach(x=>x.onclick=()=>{saleCart.splice(Number(x.dataset.saleRemove),1);renderSaleCart();});renderSaleTotals();
+}
+function saleTotals(){const subtotal=saleCart.reduce((n,i)=>n+Number(i.unitPrice||0),0),tax=Math.max(0,Number($('#sale-tax')&&$('#sale-tax').value)||0),fee=Math.max(0,Number($('#sale-fee')&&$('#sale-fee').value)||0),discount=Math.max(0,Number($('#sale-discount')&&$('#sale-discount').value)||0);return{subtotal,tax,fee,discount,total:Math.max(0,subtotal+tax+fee-discount)};}
+function renderSaleTotals(){if(!$('#sale-total'))return;const t=saleTotals();$('#sale-total').textContent=saleMoney(t.total);const enabled=saleCart.length&&$('#sale-customer').value&&t.total>0;$('#sale-create-quote').disabled=!enabled;$('#sale-create-order').disabled=!enabled;}
+function saleOrderLines(){return saleCart.map(i=>({description:i.description,serviceType:i.serviceType,quantity:1,unitCost:i.unitCost||0,unitPrice:i.unitPrice,provider:i.provider||'manual',providerOfferId:i.providerOfferId||undefined,details:i.details||{}}));}
+async function createSaleQuote(){const customerId=$('#sale-customer').value;if(!customerId)return toast('Sélectionnez un client.');const t=saleTotals();try{const r=await send('/quotes',{customerId,currency:saleCurrency(),tax:t.tax,discount:t.discount,items:saleOrderLines()});saleCart=[];toast('Devis '+r.data.quote_number+' créé');location.hash='#/devis';}catch(x){toast('Création du devis impossible : '+x.message);}}
+async function createSaleOrder(){const customerId=$('#sale-customer').value;if(!customerId)return toast('Sélectionnez un client.');const t=saleTotals();try{const r=await send('/orders',{customerId,currency:saleCurrency(),tax:t.tax,agencyFee:t.fee,discount:t.discount,items:saleOrderLines()});const order=r.data;saleCart=[];ask('Dossier créé — paiement initial (facultatif)',[{n:'amount',l:'Montant à encaisser (0 pour plus tard)',t:'number',step:'.01',v:t.total},{n:'method',l:'Mode de paiement',opts:[['cash','Espèces'],['mobile_money','Mobile Money'],['card','Carte bancaire'],['bank_transfer','Virement'],['other','Autre']]},{n:'reference',l:'Référence de paiement'}],async b=>{const amount=Number(b.amount)||0;if(amount<0||amount>Number(order.total))throw Error('Montant de paiement invalide.');if(amount>0)await send('/orders/'+order.id+'/payments',{amount,method:b.method,reference:b.reference});toast(amount>0?'Dossier et paiement enregistrés':'Dossier enregistré');location.hash='#/dossiers/'+order.id;},'Terminer');}catch(x){toast('Création du dossier impossible : '+x.message);}}
+function addManualSaleService(type){const labels={transfer:'Transfert / voiture',tour:'Expérience / excursion',visa:'Visa & assistance',other:'Assurance / autre prestation'};ask('Ajouter '+labels[type],[{n:'description',l:'Description',req:1},{n:'quantity',l:'Quantité',t:'number',v:'1',req:1},{n:'unitCost',l:'Coût fournisseur',t:'number',step:'.01',v:'0'},{n:'unitPrice',l:'Prix de vente',t:'number',step:'.01',req:1}],async b=>{const q=Math.max(1,Number(b.quantity)||1),p=Number(b.unitPrice),c=Number(b.unitCost)||0;if(!Number.isFinite(p)||p<=0||c<0)throw Error('Vérifiez les prix saisis.');addSaleItem({serviceType:type,description:labels[type]+' · '+b.description+' (x'+q+')',unitCost:c*q,unitPrice:p*q,provider:'manual'});},'Ajouter au dossier');}
 
 /* ---------- start ---------- */
 (async () => {

@@ -61,6 +61,19 @@ $('#login').onsubmit = async e => {
   catch (x) { $('#auth-error').textContent = x.message === 'Invalid credentials' ? 'Identifiant, e-mail ou mot de passe incorrect.' : x.message; }
 };
 
+$('#show-register').onclick = () => { $('#login').hidden = true; $('#register').hidden = false; };
+$('#show-login').onclick = () => { $('#register').hidden = true; $('#login').hidden = false; };
+$('#register-org').addEventListener('input', e => {
+  const slug=$('#register-slug'); if(slug.dataset.edited) return;
+  slug.value=e.target.value.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60);
+});
+$('#register-slug').addEventListener('input',e=>{e.target.dataset.edited='1';e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');});
+$('#register').onsubmit=async e=>{
+ e.preventDefault();$('#register-error').textContent='';
+ try{const d=await send('/auth/register',Object.fromEntries(new FormData(e.target)));token=d.token;localStorage.setItem('luvia_pos_token',token);enter(d.user);toast('Espace agence créé');}
+ catch(x){$('#register-error').textContent=x.message;}
+};
+
 /* ---------- router ---------- */
 const pages = {
   dashboard: ['Dashboard', dashboard], sales: ['Nouvelle vente', () => salesWorkspace('flights')],

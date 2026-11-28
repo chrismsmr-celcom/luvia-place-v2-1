@@ -22,7 +22,7 @@ router.get('/health',asyncRoute(async(req,res)=>{
  const missing=[];if(!process.env.DATABASE_URL)missing.push('DATABASE_URL');if(!secret||secret.length<32)missing.push('POS_JWT_SECRET');
  if(missing.length)return res.status(503).json({success:false,error:'Configuration manquante : '+missing.join(', ')});
  try{await pool.query('SELECT 1')}catch(e){throw fail(503,'Connexion PostgreSQL impossible. Vérifiez DATABASE_URL et les paramètres de connexion Supabase.')}
- const requiredTables=['organizations','users','customers','suppliers','travel_requests','quotes','quote_items','orders','bookings','payments','invoices','audit_logs','order_items'];
+ const requiredTables=['organizations','users','customers','suppliers','travel_requests','quotes','quote_items','orders','bookings','payments','invoices','audit_logs','order_items','workspace_searches'];
  const checks=await pool.query(
   "SELECT name, to_regclass('pos.' || quote_ident(name)) IS NOT NULL AS present FROM unnest($1::text[]) AS required(name)",
   [requiredTables]
@@ -175,6 +175,64 @@ router.get('/invoices',asyncRoute(async(req,res)=>{const q=await pool.query('SEL
 router.post('/orders/:id/invoices',asyncRoute(async(req,res)=>{const b=req.body||{};const q=await pool.query('SELECT * FROM orders WHERE id=$1 AND organization_id=$2',[req.params.id,org(req)]);if(!q.rowCount)throw fail(404,'Order not found');const number=await nextNumber(pool,org(req),'invoice','F');const invoice=await pool.query("INSERT INTO invoices(organization_id,order_id,invoice_number,status,currency,total,due_date) VALUES($1,$2,$3,'issued',$4,$5,$6) RETURNING *",[org(req),req.params.id,number,q.rows[0].currency,q.rows[0].total,b.dueDate||null]);await audit(pool,req,'invoice.issued','invoice',invoice.rows[0].id);res.status(201).json({success:true,data:invoice.rows[0]});}));
 router.patch('/orders/:id/status',allow('owner','admin','manager'),asyncRoute(async(req,res)=>{const allowed=['pending','confirmed','in_progress','completed','cancelled','refunded'];if(!allowed.includes(req.body?.status))throw fail(400,'Invalid order status');const q=await pool.query('UPDATE orders SET status=$1 WHERE id=$2 AND organization_id=$3 RETURNING *',[req.body.status,req.params.id,org(req)]);if(!q.rowCount)throw fail(404,'Order not found');await audit(pool,req,'order.status_changed','order',req.params.id,{status:req.body.status});res.json({success:true,data:q.rows[0]});}));
 
+// ---- Workspace context: saved searches, real booking calendar, map destination context ----
+router.get('/workspace/search-history',asyncRoute(async(req,res)=>{
+ const q=await pool.query('SELECT id,service_type,summary,search_params,searched_at FROM workspace_searches WHERE organization_id=$1 AND user_id=$2 ORDER BY searched_at DESC LIMIT 12',[org(req),req.user.id]);
+ res.json({success:true,data:q.rows});
+}));
+router.post('/workspace/search-history',asyncRoute(async(req,res)=>{
+ const b=req.body||{},type=String(b.serviceType||''),summary=String(b.summary||'').trim();
+ if(!['flight','hotel'].includes(type)||!summary||summary.length>240)throw fail(400,'Type de recherche ou résumé invalide.');
+ const params=b.searchParams&&typeof b.searchParams==='object'&&!Array.isArray(b.searchParams)?b.searchParams:{};
+ const q=await pool.query('INSERT INTO workspace_searches(organization_id,user_id,service_type,summary,search_params) VALUES($1,$2,$3,$4,$5) RETURNING id,service_type,summary,search_params,searched_at',[org(req),req.user.id,type,summary,params]);
+ res.status(201).json({success:true,data:q.rows[0]});
+}));
+router.delete('/workspace/search-history',asyncRoute(async(req,res)=>{
+ await pool.query('DELETE FROM workspace_searches WHERE organization_id=$1 AND user_id=$2',[org(req),req.user.id]);
+ res.json({success:true});
+}));
+router.get('/workspace/calendar',asyncRoute(async(req,res)=>{
+ const from=String(req.query.from||''),to=String(req.query.to||'');
+ if(!dateOK(from)||!dateOK(to)||to<from)throw fail(400,'Période calendrier invalide.');
+ const q=await pool.query(`
+  SELECT b.id,'booking' AS source,b.service_type AS type,
+   COALESCE(NULLIF(b.traveler_name,''),o.order_number) AS title,
+   b.start_date::text AS start_date,b.end_date::text AS end_date,b.status,
+   COALESCE(b.details->>'destination',b.details->>'city',b.details->>'hotelName') AS destination,
+   o.order_number
+  FROM bookings b JOIN orders o ON o.id=b.order_id
+  WHERE b.organization_id=$1 AND b.start_date BETWEEN $2::date AND $3::date
+  UNION ALL
+  SELECT r.id,'request' AS source,r.request_type AS type,
+   COALESCE(NULLIF(c.first_name||' '||c.last_name,' '),'Demande de voyage') AS title,
+   r.departure_date::text AS start_date,r.return_date::text AS end_date,r.status,
+   r.destination,NULL::text AS order_number
+  FROM travel_requests r JOIN customers c ON c.id=r.customer_id
+  WHERE r.organization_id=$1 AND r.departure_date BETWEEN $2::date AND $3::date
+  ORDER BY start_date ASC
+ `,[org(req),from,to]);
+ res.json({success:true,data:q.rows});
+}));
+router.get('/workspace/map-context',asyncRoute(async(req,res)=>{
+ const q=await pool.query('SELECT service_type,summary,search_params,searched_at FROM workspace_searches WHERE organization_id=$1 AND user_id=$2 ORDER BY searched_at DESC LIMIT 12',[org(req),req.user.id]);
+ const destinations=q.rows.map(x=>({type:x.service_type,summary:x.summary,destination:x.search_params.destination||x.search_params.cityName||x.search_params.to||null,searchedAt:x.searched_at})).filter(x=>x.destination);
+ const requested=String(req.query.destination||'').trim();
+ const destination=(requested||(destinations[0]&&destinations[0].destination)||'Kinshasa').slice(0,180);
+ let location=null;
+ try{
+  const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(destination);
+  const geo=await fetch(url,{headers:{'User-Agent':'LuviaPlaceOS/1.0','Accept-Language':'fr'},signal:AbortSignal.timeout(7000)});
+  const rows=geo.ok?await geo.json():[];
+  if(Array.isArray(rows)&&rows[0]){
+   const lat=Number(rows[0].lat),lon=Number(rows[0].lon),delta=.12;
+   if(Number.isFinite(lat)&&Number.isFinite(lon)){
+    const bbox=[lon-delta,lat-delta,lon+delta,lat+delta].join('%2C');
+    location={lat,lon,label:rows[0].display_name,embedUrl:'https://www.openstreetmap.org/export/embed.html?bbox='+bbox+'&layer=mapnik&marker='+lat+'%2C'+lon};
+   }
+  }
+ }catch(e){console.warn('[Luvia POS] map geocoding unavailable:',e.message);}
+ res.json({success:true,destination,location,recentDestinations:destinations});
+}));
 router.post('/integrations/liteapi/hotels/search',asyncRoute(async(req,res)=>{const b=req.body||{};if(!dateOK(b.checkin)||!dateOK(b.checkout)||b.checkout<=b.checkin)throw fail(400,'Valid checkin and checkout required');if(!b.placeId&&!(b.cityName&&b.countryCode)&&!Array.isArray(b.hotelIds))throw fail(400,'placeId, cityName+countryCode or hotelIds required');const payload={checkin:b.checkin,checkout:b.checkout,currency:(b.currency||'USD').toUpperCase(),guestNationality:(b.guestNationality||'CD').toUpperCase(),occupancies:Array.isArray(b.occupancies)&&b.occupancies.length?b.occupancies:[{adults:1}],roomMapping:true,maxRatesPerHotel:Math.min(10,Math.max(1,Number(b.maxRatesPerHotel)||3)),includeHotelData:true,timeout:25};for(const k of ['placeId','cityName','countryCode','hotelIds','limit','offset'])if(b[k]!==undefined)payload[k]=b[k];const d=await lite('hotels/rates',payload);const rates=Array.isArray(d.data)?d.data:[];const hotelRows=Array.isArray(d.hotels)?d.hotels:[];const infoById=new Map(hotelRows.map(h=>[String(h.id||h.hotelId),h]));const hotels=rates.map(entry=>{const id=String(entry.hotelId||entry.id||entry.hotel?.hotelId||'');const info=infoById.get(id)||entry.hotel||{};const room=(entry.roomTypes||[]).find(r=>Array.isArray(r.rates)&&r.rates.length)||entry.roomTypes?.[0]||{};const rate=room.rates?.[0]||{};const total=rate.retailRate?.total?.[0]||{};return{id:id||crypto.randomUUID(),hotelId:id,name:info.name||entry.name||'Hôtel',address:info.address||'',city:info.city||'',country:info.country||'',main_photo:info.main_photo||info.mainPhoto||info.thumbnail||'',rating:Number(info.rating||0),reviewCount:Number(info.reviewCount||info.review_count||0),starRating:Number(info.stars??info.starRating??entry.stars??entry.starRating??0),price:Number(total.amount||0),currency:total.currency||payload.currency,roomName:room.name||rate.name||'Chambre disponible',offerId:room.offerId||entry.offerId||null,refundable:rate.cancellationPolicies?.refundableTag==='RFN',boardName:rate.boardName||'Conditions fournisseur',nights:Math.max(1,(Date.parse(b.checkout)-Date.parse(b.checkin))/86400000),rate:rate};}).filter(h=>h.price>0).sort((a,b)=>a.price-b.price);await audit(pool,req,'provider.search','liteapi_hotels',null,{checkin:b.checkin,checkout:b.checkout,resultCount:hotels.length});res.json({success:true,provider:'liteapi',data:hotels,total:hotels.length,currency:payload.currency,meta:{guestLevel:d.guestLevel??null}});}));
 router.post('/integrations/liteapi/flights/search',asyncRoute(async(req,res)=>{const b=req.body||{};if(!Array.isArray(b.legs)||!b.legs.length||Number(b.adults)<1)throw fail(400,'legs and adults >= 1 required');for(const l of b.legs)if(!l.origin||!l.destination||!dateOK(l.date))throw fail(400,'Each leg needs origin, destination and YYYY-MM-DD date');const payload={legs:b.legs,adults:Number(b.adults),currency:(b.currency||'USD').toUpperCase(),country:(b.country||'CD').toUpperCase()};for(const k of ['children','infants','childrenAges','infantAges','cabinClass','filters','sort'])if(b[k]!==undefined)payload[k]=b[k];const d=await lite('flights/rates',payload);await audit(pool,req,'provider.search','liteapi_flights',null,{legs:b.legs});res.json({success:true,provider:'liteapi',data:d.data||[]});}));
 // ---- B2C -> POS link: called in-process by server.js after a confirmed B2C booking (no public endpoint) ----

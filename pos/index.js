@@ -214,13 +214,24 @@ router.get('/workspace/calendar',asyncRoute(async(req,res)=>{
  res.json({success:true,data:q.rows});
 }));
 router.get('/workspace/map-context',asyncRoute(async(req,res)=>{
- const q=await pool.query(`
-  SELECT service_type,summary,search_params,searched_at
-  FROM workspace_searches WHERE organization_id=$1 AND user_id=$2
-  ORDER BY searched_at DESC LIMIT 12
- `,[org(req),req.user.id]);
+ const q=await pool.query('SELECT service_type,summary,search_params,searched_at FROM workspace_searches WHERE organization_id=$1 AND user_id=$2 ORDER BY searched_at DESC LIMIT 12',[org(req),req.user.id]);
  const destinations=q.rows.map(x=>({type:x.service_type,summary:x.summary,destination:x.search_params.destination||x.search_params.cityName||x.search_params.to||null,searchedAt:x.searched_at})).filter(x=>x.destination);
- res.json({success:true,data:destinations});
+ const requested=String(req.query.destination||'').trim();
+ const destination=(requested||(destinations[0]&&destinations[0].destination)||'Kinshasa').slice(0,180);
+ let location=null;
+ try{
+  const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(destination);
+  const geo=await fetch(url,{headers:{'User-Agent':'LuviaPlaceOS/1.0','Accept-Language':'fr'},signal:AbortSignal.timeout(7000)});
+  const rows=geo.ok?await geo.json():[];
+  if(Array.isArray(rows)&&rows[0]){
+   const lat=Number(rows[0].lat),lon=Number(rows[0].lon),delta=.12;
+   if(Number.isFinite(lat)&&Number.isFinite(lon)){
+    const bbox=[lon-delta,lat-delta,lon+delta,lat+delta].join('%2C');
+    location={lat,lon,label:rows[0].display_name,embedUrl:'https://www.openstreetmap.org/export/embed.html?bbox='+bbox+'&layer=mapnik&marker='+lat+'%2C'+lon};
+   }
+  }
+ }catch(e){console.warn('[Luvia POS] map geocoding unavailable:',e.message);}
+ res.json({success:true,destination,location,recentDestinations:destinations});
 }));
 router.post('/integrations/liteapi/hotels/search',asyncRoute(async(req,res)=>{const b=req.body||{};if(!dateOK(b.checkin)||!dateOK(b.checkout)||b.checkout<=b.checkin)throw fail(400,'Valid checkin and checkout required');if(!b.placeId&&!(b.cityName&&b.countryCode)&&!Array.isArray(b.hotelIds))throw fail(400,'placeId, cityName+countryCode or hotelIds required');const payload={checkin:b.checkin,checkout:b.checkout,currency:(b.currency||'USD').toUpperCase(),guestNationality:(b.guestNationality||'CD').toUpperCase(),occupancies:Array.isArray(b.occupancies)&&b.occupancies.length?b.occupancies:[{adults:1}],roomMapping:true,maxRatesPerHotel:Math.min(10,Math.max(1,Number(b.maxRatesPerHotel)||3)),includeHotelData:true,timeout:25};for(const k of ['placeId','cityName','countryCode','hotelIds','limit','offset'])if(b[k]!==undefined)payload[k]=b[k];const d=await lite('hotels/rates',payload);const rates=Array.isArray(d.data)?d.data:[];const hotelRows=Array.isArray(d.hotels)?d.hotels:[];const infoById=new Map(hotelRows.map(h=>[String(h.id||h.hotelId),h]));const hotels=rates.map(entry=>{const id=String(entry.hotelId||entry.id||entry.hotel?.hotelId||'');const info=infoById.get(id)||entry.hotel||{};const room=(entry.roomTypes||[]).find(r=>Array.isArray(r.rates)&&r.rates.length)||entry.roomTypes?.[0]||{};const rate=room.rates?.[0]||{};const total=rate.retailRate?.total?.[0]||{};return{id:id||crypto.randomUUID(),hotelId:id,name:info.name||entry.name||'Hôtel',address:info.address||'',city:info.city||'',country:info.country||'',main_photo:info.main_photo||info.mainPhoto||info.thumbnail||'',rating:Number(info.rating||0),reviewCount:Number(info.reviewCount||info.review_count||0),starRating:Number(info.stars??info.starRating??entry.stars??entry.starRating??0),price:Number(total.amount||0),currency:total.currency||payload.currency,roomName:room.name||rate.name||'Chambre disponible',offerId:room.offerId||entry.offerId||null,refundable:rate.cancellationPolicies?.refundableTag==='RFN',boardName:rate.boardName||'Conditions fournisseur',nights:Math.max(1,(Date.parse(b.checkout)-Date.parse(b.checkin))/86400000),rate:rate};}).filter(h=>h.price>0).sort((a,b)=>a.price-b.price);await audit(pool,req,'provider.search','liteapi_hotels',null,{checkin:b.checkin,checkout:b.checkout,resultCount:hotels.length});res.json({success:true,provider:'liteapi',data:hotels,total:hotels.length,currency:payload.currency,meta:{guestLevel:d.guestLevel??null}});}));
 router.post('/integrations/liteapi/flights/search',asyncRoute(async(req,res)=>{const b=req.body||{};if(!Array.isArray(b.legs)||!b.legs.length||Number(b.adults)<1)throw fail(400,'legs and adults >= 1 required');for(const l of b.legs)if(!l.origin||!l.destination||!dateOK(l.date))throw fail(400,'Each leg needs origin, destination and YYYY-MM-DD date');const payload={legs:b.legs,adults:Number(b.adults),currency:(b.currency||'USD').toUpperCase(),country:(b.country||'CD').toUpperCase()};for(const k of ['children','infants','childrenAges','infantAges','cabinClass','filters','sort'])if(b[k]!==undefined)payload[k]=b[k];const d=await lite('flights/rates',payload);await audit(pool,req,'provider.search','liteapi_flights',null,{legs:b.legs});res.json({success:true,provider:'liteapi',data:d.data||[]});}));

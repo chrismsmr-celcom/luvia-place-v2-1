@@ -186,6 +186,20 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 CREATE INDEX IF NOT EXISTS audit_org_created_idx ON audit_logs(organization_id, created_at DESC);
 
+-- Workspace search history is private to each agency and user.
+CREATE TABLE IF NOT EXISTS workspace_searches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  service_type TEXT NOT NULL CHECK (service_type IN ('flight','hotel')),
+  summary TEXT NOT NULL,
+  search_params JSONB NOT NULL DEFAULT '{}'::jsonb,
+  searched_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS workspace_searches_user_idx
+  ON workspace_searches(organization_id, user_id, searched_at DESC);
+
+
 -- ============================================================
 -- Increment 2 — core sales flow (idempotent, safe to re-run)
 -- Order lines with supplier cost, margin per order, source channel,

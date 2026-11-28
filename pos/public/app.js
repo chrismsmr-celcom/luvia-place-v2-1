@@ -89,6 +89,7 @@ window.addEventListener('hashchange', route);
 $('#workspace-trigger').onclick = openWorkspace;
 $('#workspace-settings').onclick = openWorkspace;
 $('#feedback').onclick = () => openFeedback();
+$('#notifications').onclick = () => { location.hash = '#/history'; };
 $('#global-search').addEventListener('input', e => { const q = e.target.value; const local = $('#q'); if (local) { local.value = q; local.dispatchEvent(new Event('input')); } });
 document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('#global-search').focus(); } });
 

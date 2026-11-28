@@ -32,7 +32,7 @@
   </form>
 </main>
 <div id="app" class="app" hidden>
-  <aside class="rail" aria-label="Navigation principale">
+  <aside class="rail" id="main-rail" aria-label="Navigation principale">
     <a class="brand" href="#/dashboard"><img src="/pos/icon.svg" alt="" width="36" height="36"><span><b>LuviaPlace</b><small>OPERATING SYSTEM</small></span></a>
     <button id="workspace-trigger" class="workspace-switch"><span class="workspace-avatar">A</span><span class="workspace-meta"><b id="org">Mon agence</b><small>Workspace</small></span><span class="switch-chevron">⌄</span></button>
     <a href="#/sales" class="sell"><span>＋</span> Nouvelle vente</a>
@@ -60,10 +60,11 @@
   </aside>
   <main class="main">
     <header class="topbar">
-      <div class="mobile-brand"><img src="/pos/icon.svg" width="30" height="30" alt=""><b>LuviaPlace OS</b></div>
+      <div class="topbar-leading"><button class="icon-button" id="toggle-left-rail" aria-label="Rétracter la navigation" title="Rétracter la navigation">☰</button><div class="mobile-brand"><img src="/pos/icon.svg" width="30" height="30" alt=""><b>LuviaPlace OS</b></div></div>
       <div class="topbar-context"><span>Workspace</span><b id="top-context">Dashboard</b></div>
       <div class="topbar-actions">
         <label class="global-search"><span>⌕</span><input id="global-search" type="search" placeholder="Rechercher dans cet espace…" aria-label="Recherche globale"><kbd>⌘ K</kbd></label>
+        <button class="icon-button" id="toggle-right-rail" aria-label="Afficher les outils" title="Afficher les outils">▤</button>
         <button class="icon-button" id="feedback" title="Envoyer un feedback" aria-label="Feedback">♡</button>
         <button class="icon-button notification" id="notifications" title="Voir l’activité" aria-label="Voir l’activité">♧</button>
         <span class="top-user" id="top-user">U</span>
@@ -74,11 +75,13 @@
       <div id="view"></div>
     </section>
   </main>
+  <aside id="utility-rail" class="utility-rail" aria-label="Outils contextuels"><div class="utility-head"><div><span class="eyebrow">QUICK ACCESS</span><h2>Votre espace</h2></div><button class="utility-close" id="close-right-rail" aria-label="Fermer le panneau">×</button></div><section class="utility-section"><div class="utility-section-head"><h3>Recherches récentes</h3><button id="clear-search-history" class="utility-link">Effacer</button></div><div id="recent-searches" class="recent-searches"><p class="utility-empty">Vos recherches apparaîtront ici.</p></div></section><section class="utility-section"><div class="utility-section-head"><h3>Calendrier</h3><div class="calendar-controls"><button id="calendar-prev" aria-label="Mois précédent">‹</button><span id="calendar-month"></span><button id="calendar-next" aria-label="Mois suivant">›</button></div></div><div id="mini-calendar" class="mini-calendar"></div></section><section class="utility-section"><div class="utility-section-head"><h3>Carte</h3><span class="utility-muted">Explorer</span></div><button id="open-map" class="map-preview"><span class="map-preview-art"><i></i><i></i><i></i><b>⌖</b></span><span><strong>Ouvrir la carte</strong><small>Afficher en grand format</small></span><span class="map-arrow">↗</span></button></section><div class="utility-foot">Les outils restent accessibles pendant votre travail.</div></aside>
   <aside id="panel" class="panel" hidden aria-label="Détail du dossier"></aside>
 </div>
 <dialog id="dlg"></dialog>
 <dialog id="workspace-dialog" class="workspace-dialog"></dialog>
 <dialog id="feedback-dialog" class="feedback-dialog"></dialog>
+<dialog id="map-dialog" class="map-dialog"><div class="map-dialog-head"><div><span class="eyebrow">EXPLORATION</span><h2>Carte du monde</h2><p>Repérez les destinations et préparez vos itinéraires.</p></div><button class="icon-button" id="close-map" aria-label="Fermer la carte">×</button></div><iframe title="Carte OpenStreetMap" src="https://www.openstreetmap.org/export/embed.html?bbox=15.20%2C-4.40%2C15.45%2C-4.20&amp;layer=mapnik&amp;marker=-4.325%2C15.322" loading="lazy"></iframe><div class="map-dialog-foot"><span>Vue initiale : Kinshasa</span><a href="https://www.openstreetmap.org/#map=12/-4.325/15.322" target="_blank" rel="noopener">Ouvrir OpenStreetMap ↗</a></div></dialog>
 <div id="toast" role="status"></div>
 <script src="/pos/app.js"></script>
 </body>

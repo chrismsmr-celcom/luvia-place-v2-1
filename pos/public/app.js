@@ -63,16 +63,16 @@ $('#login').onsubmit = async e => {
 
 /* ---------- router ---------- */
 const pages = {
-  dashboard: ['Dashboard', dashboard], flights: ['Vols', () => servicePlaceholder('Vols', 'Recherchez et gérez les demandes de billets d’avion depuis votre espace de vente.', 'flight')],
-  hotels: ['Hôtels', () => servicePlaceholder('Hôtels', 'Centralisez les demandes, options et réservations hôtelières.', 'hotel')],
-  experiences: ['Expériences', () => servicePlaceholder('Expériences', 'Gérez les excursions, activités et expériences proposées à vos clients.', 'tour')],
-  cars: ['Voitures', () => servicePlaceholder('Voitures', 'Gérez les demandes de location et les prestations de transport.', 'car')],
-  insurance: ['Assurances', () => servicePlaceholder('Assurances', 'Suivez les demandes et les contrats d’assurance voyage.', 'insurance')],
+  dashboard: ['Dashboard', dashboard], flights: ['Vols', flightSearch],
+  hotels: ['Hôtels', hotelSearch],
+  experiences: ['Expériences', () => serviceRequest('Expériences', 'package', 'Décrivez l’activité ou l’excursion recherchée.')],
+  cars: ['Voitures', () => serviceRequest('Voitures', 'transfer', 'Décrivez le trajet, le véhicule et les dates souhaités.')],
+  insurance: ['Assurances', () => serviceRequest('Assurances', 'other', 'Décrivez la destination, les dates et le type de couverture souhaité.')],
   dossiers: ['Dossiers', orders], devis: ['Devis', quotes], clients: ['CRM / Clients', customers],
   balance: ['Balance & factures', invoices], history: ['Historique', historyPage],
-  email: ['Email', () => servicePlaceholder('Email', 'La boîte de réception et les échanges clients seront intégrés dans cette section.', 'mail')],
-  'luvia-ai': ['Luvia AI', () => servicePlaceholder('Luvia AI', 'Votre assistant de travail pour préparer des voyages, retrouver des dossiers et accélérer les opérations.', 'sparkles')],
-  support: ['Support', () => servicePlaceholder('Support', 'Retrouvez ici les demandes d’assistance et le centre d’aide Luvia.', 'life-buoy')],
+  email: ['Email', emailWorkspace],
+  'luvia-ai': ['Luvia AI', luviaAssistant],
+  support: ['Support', supportWorkspace],
   fournisseurs: ['Fournisseurs', suppliers]
 };
 async function route() {
@@ -181,6 +181,85 @@ async function suppliers() {
     async b => { await send('/suppliers', b); toast('Fournisseur ajouté'); suppliers(); });
 }
 
+
+
+/* ---------- provider search and operations ---------- */
+function searchShell(title, description, fields) {
+  $('#view').innerHTML = '<section class="search-panel"><span class="eyebrow">FOURNISSEURS · LITEAPI</span><h2>' + title + '</h2><p>' + esc(description) + '</p><form id="provider-search" class="provider-form">' + fields + '<div class="form-actions"><button class="btn primary">Rechercher les offres</button></div></form></section><div id="provider-results" aria-live="polite"></div>';
+}
+const customerOptions = list => list.map(c => [c.id, c.first_name + ' ' + c.last_name + (c.email ? ' · ' + c.email : '')]);
+async function makeOfferQuote(customers, description, serviceType, price, currency) {
+  if (!customers.length) { toast('Ajoutez d’abord un client dans le CRM.'); return; }
+  ask('Créer un devis à partir de cette offre', [
+    {n:'customerId',l:'Client',opts:customerOptions(customers),req:1},
+    {n:'unitPrice',l:'Prix de vente ('+currency+')',t:'number',step:'.01',req:1,v:price},
+    {n:'notes',l:'Note pour le devis'}
+  ], async b => {
+    const amount=Number(b.unitPrice);
+    if (!Number.isFinite(amount)||amount<=0) throw Error('Le prix doit être supérieur à zéro.');
+    const r=await send('/quotes',{customerId:b.customerId,currency:currency,notes:b.notes,items:[{description:description,serviceType:serviceType,quantity:1,unitCost:price,unitPrice:amount}]});
+    toast('Devis '+r.data.quote_number+' créé'); location.hash='#/devis';
+  },'Créer le devis');
+}
+async function flightSearch() {
+  const today=new Date().toISOString().slice(0,10);
+  searchShell('Rechercher un vol','Résultats de LiteAPI. Une recherche ne constitue pas une réservation.',
+    '<div class="form-grid"><label>Départ (IATA)<input name="origin" maxlength="3" placeholder="FIH" required></label><label>Arrivée (IATA)<input name="destination" maxlength="3" placeholder="CDG" required></label><label>Date aller<input name="departureDate" type="date" min="'+today+'" required></label><label>Date retour<input name="returnDate" type="date"></label><label>Adultes<input name="adults" type="number" min="1" max="9" value="1" required></label><label>Cabine<select name="cabinClass"><option value="economy">Économique</option><option value="premium_economy">Économique premium</option><option value="business">Affaires</option><option value="first">Première</option></select></label><label>Devise<input name="currency" maxlength="3" value="'+esc(me.default_currency||'USD')+'"></label></div>');
+  $('#provider-search').onsubmit=async e=>{
+    e.preventDefault();const b=Object.fromEntries(new FormData(e.target)),legs=[{origin:b.origin.trim().toUpperCase(),destination:b.destination.trim().toUpperCase(),date:b.departureDate}];
+    if(b.returnDate)legs.push({origin:b.destination.trim().toUpperCase(),destination:b.origin.trim().toUpperCase(),date:b.returnDate});
+    const target=$('#provider-results');target.innerHTML=empty('Recherche en cours…','Interrogation de LiteAPI.');
+    try{
+      const pair=await Promise.all([send('/integrations/liteapi/flights/search',{legs:legs,adults:Number(b.adults),cabinClass:b.cabinClass,currency:(b.currency||'USD').toUpperCase(),country:'CD'}),api('/customers')]);
+      const rows=Array.isArray(pair[0].data)?pair[0].data:[],clients=pair[1].data;
+      if(!rows.length){target.innerHTML=empty('Aucun vol retourné','Essayez d’autres dates ou aéroports.');return;}
+      target.innerHTML='<div class="results-heading"><h2>'+rows.length+' résultat(s)</h2><span class="hint">Prix indicatifs · reconfirmation fournisseur obligatoire</span></div><div class="offer-grid">'+rows.map((x,i)=>{
+        const airline=x.owner?.name||x.airline?.name||x.airline||'Compagnie aérienne';
+        const amount=Number(x.price?.total??x.total??x.amount??x.pricing?.total??x.price??0),currency=x.price?.currency||x.currency||b.currency||'USD';
+        return '<article class="offer-card"><span class="eyebrow">OPTION '+(i+1)+'</span><h3>'+esc(airline)+' · '+esc(b.origin.toUpperCase())+' → '+esc(b.destination.toUpperCase())+'</h3><p>'+esc(b.departureDate)+(b.returnDate?' · retour '+esc(b.returnDate):'')+' · '+b.adults+' adulte(s)</p><div class="offer-bottom"><strong>'+(amount>0?money(amount,currency):'Prix à confirmer')+'</strong><button class="btn small primary" data-flight="'+i+'" '+(amount<=0?'disabled':'')+'>Créer un devis</button></div></article>';
+      }).join('')+'</div>';
+      target.querySelectorAll('[data-flight]').forEach(btn=>btn.onclick=()=>{
+        const x=rows[Number(btn.dataset.flight)],amount=Number(x.price?.total??x.total??x.amount??x.pricing?.total??x.price??0);
+        makeOfferQuote(clients,(x.owner?.name||x.airline?.name||'Vol')+' · '+b.origin.toUpperCase()+'–'+b.destination.toUpperCase()+' · '+b.departureDate+(b.returnDate?' / '+b.returnDate:''),'flight',amount,x.price?.currency||x.currency||b.currency||'USD');
+      });
+    }catch(x){target.innerHTML=empty('Recherche impossible',x.message);}
+  };
+}
+async function hotelSearch() {
+  const today=new Date().toISOString().slice(0,10);
+  searchShell('Rechercher un hôtel','Les tarifs et disponibilités sont fournis par LiteAPI et doivent être reconfirmés.',
+    '<div class="form-grid"><label>Ville<input name="cityName" placeholder="Paris" required></label><label>Pays (ISO)<input name="countryCode" maxlength="2" value="FR" required></label><label>Arrivée<input name="checkin" type="date" min="'+today+'" required></label><label>Départ<input name="checkout" type="date" required></label><label>Adultes<input name="adults" type="number" min="1" max="8" value="2"></label><label>Enfants<input name="children" type="number" min="0" max="6" value="0"></label><label>Devise<input name="currency" maxlength="3" value="'+esc(me.default_currency||'USD')+'"></label><label>Nationalité<input name="guestNationality" maxlength="2" value="CD"></label></div>');
+  $('#provider-search').onsubmit=async e=>{
+    e.preventDefault();const b=Object.fromEntries(new FormData(e.target));if(b.checkout<=b.checkin){toast('La date de départ doit être après l’arrivée.');return;}
+    const target=$('#provider-results');target.innerHTML=empty('Recherche en cours…','Interrogation de LiteAPI.');
+    try{
+      const pair=await Promise.all([send('/integrations/liteapi/hotels/search',{cityName:b.cityName.trim(),countryCode:b.countryCode.toUpperCase(),checkin:b.checkin,checkout:b.checkout,currency:b.currency.toUpperCase(),guestNationality:b.guestNationality.toUpperCase(),occupancies:[{adults:Number(b.adults),children:Number(b.children)}]}),api('/customers')]);
+      const rows=pair[0].data||[],clients=pair[1].data;if(!rows.length){target.innerHTML=empty('Aucun hôtel disponible','Essayez une autre ville ou d’autres dates.');return;}
+      target.innerHTML='<div class="results-heading"><h2>'+rows.length+' hôtel(s)</h2><span class="hint">Tarifs fournisseur · disponibilité non garantie</span></div><div class="offer-grid">'+rows.map((h,i)=>'<article class="offer-card hotel-offer">'+(h.main_photo?'<img src="'+esc(h.main_photo)+'" alt="" loading="lazy">':'')+'<span class="eyebrow">'+esc(h.city||b.cityName)+(h.starRating?' · '+h.starRating+' étoiles':'')+'</span><h3>'+esc(h.name)+'</h3><p>'+esc(h.address||h.roomName||'Détails fournisseur')+' · '+h.nights+' nuit(s) · '+(h.refundable?'Remboursable':'Conditions à vérifier')+'</p><div class="offer-bottom"><strong>'+money(h.price,h.currency)+'</strong><button class="btn small primary" data-hotel="'+i+'">Créer un devis</button></div></article>').join('')+'</div>';
+      target.querySelectorAll('[data-hotel]').forEach(btn=>btn.onclick=>{});
+      target.querySelectorAll('[data-hotel]').forEach(btn=>btn.onclick=()=>{const h=rows[Number(btn.dataset.hotel)];makeOfferQuote(clients,h.name+' · '+b.cityName+' · '+b.checkin+' au '+b.checkout+' · '+h.roomName,'hotel',Number(h.price),h.currency);});
+    }catch(x){target.innerHTML=empty('Recherche impossible',x.message);}
+  };
+}
+async function serviceRequest(title, requestType, prompt) {
+  const clients=(await api('/customers')).data;
+  if(!clients.length){$('#view').innerHTML='<section class="service-placeholder"><h2>Ajoutez d’abord un client</h2><p>Chaque demande doit être associée à un client.</p><a class="btn primary" href="#/clients">Ouvrir le CRM</a></section>';return;}
+  $('#view').innerHTML='<section class="search-panel"><span class="eyebrow">DEMANDE DE PRESTATION</span><h2>'+esc(title)+'</h2><p>'+esc(prompt)+'</p><form id="service-request" class="provider-form"><div class="form-grid"><label>Client<select name="customerId" required>'+customerOptions(clients).map(o=>'<option value="'+esc(o[0])+'">'+esc(o[1])+'</option>').join('')+'</select></label><label>Destination<input name="destination" required></label><label>Date de départ<input name="departureDate" type="date"></label><label>Date de fin<input name="returnDate" type="date"></label><label class="wide">Détails<textarea name="notes" rows="4" placeholder="Besoins, budget, préférences et contraintes"></textarea></label></div><div class="form-actions"><button class="btn primary">Enregistrer la demande</button></div></form></section><p class="hint">La demande est enregistrée dans le pipeline. Aucune réservation fournisseur n’est effectuée.</p>';
+  $('#service-request').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.target));try{await send('/travel-requests',{customerId:b.customerId,requestType:requestType,destination:b.destination,departureDate:b.departureDate||null,returnDate:b.returnDate||null,notes:title+': '+(b.notes||'')});toast('Demande enregistrée');location.hash='#/dossiers';}catch(x){toast(x.message);}};
+}
+async function emailWorkspace() {
+  const clients=(await api('/customers')).data;
+  $('#view').innerHTML='<section class="search-panel"><span class="eyebrow">COMMUNICATION CLIENT</span><h2>Préparer un e-mail</h2><p>L’envoi est effectué par votre application e-mail. LuviaPlace OS ne stocke pas encore les messages.</p><form id="email-compose" class="provider-form"><div class="form-grid"><label>Client<select name="customerId" required>'+customerOptions(clients).map(o=>'<option value="'+esc(o[0])+'">'+esc(o[1])+'</option>').join('')+'</select></label><label>Objet<input name="subject" required value="Votre demande de voyage — LuviaPlace"></label><label class="wide">Message<textarea name="body" rows="6" required>Bonjour,\\n\\nNous revenons vers vous concernant votre demande.\\n\\nCordialement,\\nVotre agence</textarea></label></div><div class="form-actions"><button class="btn primary" '+(clients.length?'':'disabled')+'>Ouvrir mon application e-mail</button></div></form></section>';
+  $('#email-compose').onsubmit=e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.target)),c=clients.find(x=>x.id===b.customerId);if(!c?.email){toast('Ce client ne possède pas d’adresse e-mail.');return;}location.href='mailto:'+encodeURIComponent(c.email)+'?subject='+encodeURIComponent(b.subject)+'&body='+encodeURIComponent(b.body);};
+}
+async function luviaAssistant() {
+  const pair=await Promise.all([api('/orders'),api('/customers'),api('/quotes')]),open=pair[0].data.filter(x=>+x.balance_due>0&&!['cancelled','refunded'].includes(x.status));
+  $('#view').innerHTML='<section class="search-panel"><span class="eyebrow">ASSISTANCE OPÉRATIONNELLE</span><h2>Luvia AI — aperçu de l’activité</h2><p>Cette version affiche des indicateurs calculés depuis vos données. Elle n’utilise pas encore de modèle IA ni de conversation générative.</p><div class="assistant-metrics"><article><strong>'+pair[1].data.length+'</strong><span>Clients</span></article><article><strong>'+pair[0].data.length+'</strong><span>Dossiers</span></article><article><strong>'+pair[2].data.length+'</strong><span>Devis</span></article><article><strong>'+open.length+'</strong><span>Soldes à relancer</span></article></div><h3>Actions recommandées</h3><ul class="action-list">'+(open.slice(0,5).map(o=>'<li><span><b>'+esc(o.order_number)+'</b> · '+name(o)+' — '+money(o.balance_due,o.currency)+'</span><a href="#/dossiers/'+o.id+'">Ouvrir</a></li>').join('')||'<li>Aucun solde en attente.</li>')+'</ul><div class="actions"><a class="btn" href="#/clients">Clients</a><a class="btn" href="#/devis">Devis</a><a class="btn primary" href="#/history">Historique</a></div></section>';
+}
+async function supportWorkspace() {
+  $('#view').innerHTML='<section class="service-placeholder"><div class="service-symbol">?</div><span class="eyebrow">CENTRE D’ASSISTANCE</span><h2>Support LuviaPlace</h2><p>Décrivez votre incident et joignez l’identifiant du dossier concerné.</p><button class="btn primary" id="support-feedback">Contacter le support</button><small>Le formulaire ouvre votre application e-mail. Aucun ticket n’est encore stocké dans LuviaPlace OS.</small></section>';
+  $('#support-feedback').onclick=()=>openFeedback();
+}
 
 async function servicePlaceholder(title, description, kind) {
   const symbols = {flight:'✈',hotel:'⌂',tour:'✧',car:'▣',insurance:'◇',mail:'✉',sparkles:'✦','life-buoy':'?'};

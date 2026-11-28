@@ -1,1 +1,175 @@
-const API='/api/pos/v1';let token=localStorage.getItem('luvia_pos_token')||'';let currentUser=null;let currentPage='overview';const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const money=(v,c='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency:c,maximumFractionDigits:2}).format(Number(v||0));async function api(path,options={}){const r=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...(options.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Request failed');return d}function toast(s){const t=$('#toast');t.textContent=s;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}function showAuth(){ $('#auth-screen').classList.remove('hidden');$('#app').classList.add('hidden')}function showApp(user){currentUser=user;$('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#org-name').textContent=user.organization_name||user.organizationName||user.organization_slug||'Agency';$('#user-name').textContent=user.full_name||user.fullName||user.email;$('#user-role').textContent=user.role||'agent';$('#user-avatar').textContent=($('#user-name').textContent[0]||'A').toUpperCase();$('#top-avatar').textContent=$('#user-avatar').textContent;$('#today-label').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});navigate('overview')}async function login(e){e.preventDefault();const b=Object.fromEntries(new FormData(e.target));try{const d=await api('/auth/login',{method:'POST',body:JSON.stringify(b)});token=d.token;localStorage.setItem('luvia_pos_token',token);showApp(d.user)}catch(err){$('#auth-error').textContent=err.message}}function navigate(page){currentPage=page;document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===page));$('#crumb').textContent=({overview:'Overview',customers:'Customers',requests:'Travel requests',quotes:'Quotes',orders:'Orders & bookings',suppliers:'Suppliers',hotels:'Hotel search',flights:'Flight search'})[page]||page;render()}function head(title,sub,action=''){return '<div class="page-head"><div><div class="eyebrow blue">AGENCY OPERATIONS</div><h1>'+title+'</h1><p>'+sub+'</p></div>'+action+'</div>'}function button(label,action){return '<button class="primary" data-action="'+action+'">'+label+' ＋</button>'}async function render(){const c=$('#content');c.innerHTML='<div class="loading">Loading…</div>';try{if(currentPage==='overview')await overview(c);else if(currentPage==='customers')await customers(c);else if(currentPage==='orders')await orders(c);else if(currentPage==='requests')await requests(c);else if(currentPage==='quotes')await quotes(c);else if(currentPage==='suppliers')await suppliers(c);else if(currentPage==='hotels')hotelSearch(c);else if(currentPage==='flights')flightSearch(c)}catch(e){c.innerHTML='<div class="panel empty"><b>Could not load this section</b>'+esc(e.message)+'</div>'}}async function overview(c){const d=await api('/dashboard/summary');const m=d.metrics;c.innerHTML=head('Good day, '+esc((currentUser.full_name||'').split(' ')[0]||'there')+'.','Here is what is happening across your agency today.')+'<div class="metric-grid">'+[['Customers',m.customers,'♙'],['Open requests',m.openRequests,'⌕'],['Active orders',m.activeOrders,'▣'],['Revenue this month',money(m.monthRevenue),'$']].map(x=>'<div class="metric"><div class="metric-top">'+x[0]+'<span class="metric-icon">'+x[2]+'</span></div><div class="metric-value">'+x[1]+'</div><div class="metric-note">Across this workspace</div></div>').join('')+'</div><div class="dashboard-grid"><div class="panel"><div class="panel-head"><h3>Recent orders</h3><button class="btn" data-page="orders">View all</button></div>'+orderTable(d.recentOrders)+'</div><div class="panel"><div class="panel-head"><h3>Quick actions</h3><span>Get work done</span></div><div class="quick-list"><button class="btn" data-page="customers">＋ Add a customer</button><button class="btn" data-page="requests">＋ Create travel request</button><button class="btn" data-page="hotels">⌕ Search hotel inventory</button><button class="btn" data-page="flights">✈ Search flights</button></div><p class="muted" style="font-size:11px;margin-top:22px">Provider search is connected through your server-side LiteAPI credentials. Availability and final booking are confirmed by the supplier.</p></div></div>'}function orderTable(rows){if(!rows?.length)return '<div class="empty"><b>No orders yet</b>Orders created by your agency will appear here.</div>';return '<table class="table"><thead><tr><th>Order</th><th>Status</th><th>Total</th></tr></thead><tbody>'+rows.map(o=>'<tr><td><b>'+esc(o.order_number)+'</b></td><td>'+status(o.status)+'</td><td>'+money(o.total,o.currency)+'</td></tr>').join('')+'</tbody></table>'}function status(s){return '<span class="pill '+(['pending','on_request','open','quoted'].includes(s)?'pending':['cancelled','failed','refunded'].includes(s)?'cancelled':'')+'">'+esc(s||'pending').replaceAll('_',' ')+'</span>'}async function customers(c){const d=await api('/customers');c.innerHTML=head('Customers','Manage traveler profiles, contact details and travel documents.',button('Add customer','add-customer'))+'<div class="table-card"><div class="table-toolbar"><b>Customer directory</b><input id="customer-filter" placeholder="Search customers…"></div><div id="customer-table">'+customerTable(d.data)+'</div></div>';$('#customer-filter').oninput=e=>{const q=e.target.value.toLowerCase();$('#customer-table').innerHTML=customerTable(d.data.filter(x=>(x.first_name+' '+x.last_name+' '+(x.email||'')).toLowerCase().includes(q)))}}function customerTable(rows){if(!rows.length)return '<div class="empty"><b>No customers yet</b>Add your first traveler to start a client record.</div>';return '<table class="table"><thead><tr><th>Customer</th><th>Email</th><th>Phone</th><th>Nationality</th><th>Added</th></tr></thead><tbody>'+rows.map(x=>'<tr><td><div class="person"><span class="mini-avatar">'+esc(x.first_name[0]+x.last_name[0])+'</span>'+esc(x.first_name+' '+x.last_name)+'</div></td><td>'+esc(x.email||'—')+'</td><td>'+esc(x.phone||'—')+'</td><td>'+esc(x.nationality||'—')+'</td><td>'+new Date(x.created_at).toLocaleDateString()+'</td></tr>').join('')+'</tbody></table>'}function formPage(title,sub,fields,submit){$('#content').innerHTML=head(title,sub)+'<form id="data-form" class="form-card"><h3>'+title+'</h3><p>Fields marked required must be completed.</p><div class="form-grid">'+fields.map(f=>'<label>'+f.label+(f.required?' *':'')+(f.type==='select'?'<select name="'+f.name+'" '+(f.required?'required':'')+'>'+f.options.map(o=>'<option value="'+o[0]+'">'+o[1]+'</option>').join('')+'</select>':'<input name="'+f.name+'" type="'+(f.type||'text')+'" placeholder="'+(f.placeholder||'')+'" '+(f.required?'required':'')+'>')+'</label>').join('')+'</div><div class="form-actions"><button type="button" class="btn" data-page="'+currentPage+'">Cancel</button><button class="primary">Save record →</button></div></form>';$('#data-form').onsubmit=async e=>{e.preventDefault();try{await submit(Object.fromEntries(new FormData(e.target)));toast('Record saved');navigate(currentPage)}catch(err){toast(err.message)}}}function addCustomer(){formPage('Add customer','Create a traveler profile.',[{name:'firstName',label:'First name',required:true},{name:'lastName',label:'Last name',required:true},{name:'email',label:'Email',type:'email'},{name:'phone',label:'Phone'},{name:'nationality',label:'Nationality (ISO code)'},{name:'passportNumber',label:'Passport number'},{name:'passportExpiry',label:'Passport expiry',type:'date'}],b=>api('/customers',{method:'POST',body:JSON.stringify(b)}))}async function orders(c){const d=await api('/orders');c.innerHTML=head('Orders & bookings','Track customer orders, supplier confirmations and payment balances.')+'<div class="table-card">'+orderTable(d.data)+'</div>'}async function requests(c){const d=await api('/travel-requests');c.innerHTML=head('Travel requests','Capture what each traveler needs before preparing a quote.',button('New request','add-request'))+'<div class="table-card">'+(d.data.length?'<table class="table"><thead><tr><th>Customer</th><th>Type</th><th>Route / destination</th><th>Travel dates</th><th>Status</th></tr></thead><tbody>'+d.data.map(r=>'<tr><td>'+esc(r.first_name+' '+r.last_name)+'</td><td>'+esc(r.request_type)+'</td><td>'+esc((r.origin||'')+(r.origin?' → ':'')+(r.destination||'—'))+'</td><td>'+esc(r.departure_date||'—')+'</td><td>'+status(r.status)+'</td></tr>').join('')+'</tbody></table>':'<div class="empty"><b>No travel requests yet</b>Requests will be tracked here.</div>')+'</div>'}async function addRequest(){const d=await api('/customers');if(!d.data.length){toast('Create a customer first');return}formPage('New travel request','Record the traveler’s requirements.',[{name:'customerId',label:'Customer',type:'select',required:true,options:d.data.map(x=>[x.id,x.first_name+' '+x.last_name])},{name:'requestType',label:'Service',type:'select',required:true,options:[['flight','Flight'],['hotel','Hotel'],['package','Package'],['transfer','Transfer'],['visa','Visa'],['other','Other']]},{name:'origin',label:'Origin'},{name:'destination',label:'Destination'},{name:'departureDate',label:'Departure date',type:'date'},{name:'returnDate',label:'Return date',type:'date'},{name:'adults',label:'Adults',type:'number',placeholder:'1'},{name:'currency',label:'Currency',placeholder:'USD'}],b=>api('/travel-requests',{method:'POST',body:JSON.stringify(b)}))}async function quotes(c){const d=await api('/quotes');c.innerHTML=head('Quotes','Prepare and track offers sent to your customers.',button('Create quote','add-quote'))+'<div class="table-card">'+(d.data.length?'<table class="table"><thead><tr><th>Quote</th><th>Customer</th><th>Status</th><th>Total</th><th>Created</th></tr></thead><tbody>'+d.data.map(q=>'<tr><td>'+esc(q.quote_number)+'</td><td>'+esc(q.first_name+' '+q.last_name)+'</td><td>'+status(q.status)+'</td><td>'+money(q.total,q.currency)+'</td><td>'+new Date(q.created_at).toLocaleDateString()+'</td></tr>').join('')+'</tbody></table>':'<div class="empty"><b>No quotes yet</b>Create a quote after capturing a customer request.</div>')+'</div>'}async function addQuote(){const d=await api('/customers');if(!d.data.length){toast('Create a customer first');return}formPage('Create quote','Add one service line to get your first quote into the system.',[{name:'customerId',label:'Customer',type:'select',required:true,options:d.data.map(x=>[x.id,x.first_name+' '+x.last_name])},{name:'description',label:'Service description',required:true},{name:'serviceType',label:'Service type',type:'select',options:[['flight','Flight'],['hotel','Hotel'],['transfer','Transfer'],['visa','Visa'],['other','Other']]},{name:'quantity',label:'Quantity',type:'number',placeholder:'1'},{name:'unitCost',label:'Supplier cost',type:'number',placeholder:'0'},{name:'unitPrice',label:'Customer price',type:'number',placeholder:'0'},{name:'currency',label:'Currency',placeholder:'USD'},{name:'validUntil',label:'Valid until',type:'date'}],b=>api('/quotes',{method:'POST',body:JSON.stringify({...b,items:[{description:b.description,serviceType:b.serviceType,quantity:b.quantity,unitCost:b.unitCost,unitPrice:b.unitPrice}]})}))}async function suppliers(c){const d=await api('/suppliers');c.innerHTML=head('Suppliers','Maintain the providers your agency works with.',button('Add supplier','add-supplier'))+'<div class="table-card">'+(d.data.length?'<table class="table"><thead><tr><th>Supplier</th><th>Type</th><th>Contact</th><th>Phone</th><th>Status</th></tr></thead><tbody>'+d.data.map(s=>'<tr><td><b>'+esc(s.name)+'</b></td><td>'+esc(s.type)+'</td><td>'+esc(s.email||'—')+'</td><td>'+esc(s.phone||'—')+'</td><td>'+status(s.active?'active':'inactive')+'</td></tr>').join('')+'</tbody></table>':'<div class="empty"><b>No suppliers yet</b>Add hotels, airlines, transport and service partners.</div>')+'</div>'}function addSupplier(){formPage('Add supplier','Save a provider in your agency directory.',[{name:'name',label:'Supplier name',required:true},{name:'type',label:'Type',type:'select',required:true,options:[['airline','Airline'],['hotel','Hotel'],['transport','Transport'],['visa','Visa service'],['tour_operator','Tour operator'],['other','Other']]},{name:'contactName',label:'Contact person'},{name:'email',label:'Email',type:'email'},{name:'phone',label:'Phone'},{name:'currency',label:'Currency',placeholder:'USD'}],b=>api('/suppliers',{method:'POST',body:JSON.stringify(b)}))}function hotelSearch(c){c.innerHTML=head('Hotel search','Search live hotel availability through your LiteAPI connection.')+'<form id="hotel-form" class="form-card"><div class="form-grid"><label>City<input name="cityName" placeholder="Kinshasa" required></label><label>Country code<input name="countryCode" value="CD" maxlength="2" required></label><label>Check-in<input name="checkin" type="date" required></label><label>Check-out<input name="checkout" type="date" required></label><label>Adults<input name="adults" type="number" value="1" min="1"></label><label>Currency<select name="currency"><option>USD</option><option>EUR</option></select></label></div><div class="form-actions"><button class="primary">Search availability →</button></div></form><div id="search-results"></div>';$('#hotel-form').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.target));$('#search-results').innerHTML='<div class="loading">Searching LiteAPI…</div>';try{const d=await api('/integrations/liteapi/hotels/search',{method:'POST',body:JSON.stringify({...b,occupancies:[{adults:Number(b.adults)}]})});$('#search-results').innerHTML=(d.data||[]).map(h=>{const r=h.roomTypes?.[0]?.rates?.[0],p=r?.retailRate?.total?.[0];return '<div class="result-card"><span class="result-price">'+(p?money(p.amount,p.currency):'Rate unavailable')+'</span><strong>'+esc(h.hotel?.name||h.hotelId)+'</strong><small>'+esc(h.hotel?.address||h.hotel?.city||'')+' · '+esc(r?.name||'No room details')+'</small><small>Offer ID: '+esc(h.roomTypes?.[0]?.offerId||'—')+'</small></div>'}).join('')||'<div class="empty">No live rates found for these dates.</div>'}catch(err){$('#search-results').innerHTML='<div class="error">'+esc(err.message)+'</div>'}}}function flightSearch(c){c.innerHTML=head('Flight search','Search live flight offers. LiteAPI flight access must be enabled for your key.')+'<form id="flight-form" class="form-card"><div class="form-grid"><label>Origin (IATA)<input name="origin" value="FIH" maxlength="3" required></label><label>Destination (IATA)<input name="destination" placeholder="JNB" maxlength="3" required></label><label>Departure date<input name="date" type="date" required></label><label>Adults<input name="adults" type="number" value="1" min="1"></label><label>Cabin<select name="cabinClass"><option value="ECONOMY">Economy</option><option value="BUSINESS">Business</option><option value="FIRST">First</option></select></label><label>Currency<select name="currency"><option>USD</option><option>EUR</option></select></label></div><div class="form-actions"><button class="primary">Search flights →</button></div></form><div id="search-results"></div>';$('#flight-form').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.target));$('#search-results').innerHTML='<div class="loading">Searching flight providers…</div>';try{const d=await api('/integrations/liteapi/flights/search',{method:'POST',body:JSON.stringify({legs:[{origin:b.origin.toUpperCase(),destination:b.destination.toUpperCase(),date:b.date}],adults:Number(b.adults),currency:b.currency,cabinClass:b.cabinClass})});$('#search-results').innerHTML=(d.data||[]).map(f=>'<div class="result-card"><span class="result-price">'+(f.price?.amount?money(f.price.amount,f.price.currency):'Offer')+'</span><strong>'+esc(f.airline?.name||f.owner?.name||'Flight offer')+'</strong><small>'+esc(f.offerId||f.id||'Provider offer')+'</small><small>Review offer details with the provider before confirming a booking.</small></div>').join('')||'<div class="empty">No flight offers returned.</div>'}catch(err){$('#search-results').innerHTML='<div class="error">'+esc(err.message)+'</div>'}}}document.addEventListener('click',e=>{const n=e.target.closest('[data-page]');if(n){navigate(n.dataset.page);return}const a=e.target.closest('[data-action]');if(a){const actions={'add-customer':addCustomer,'add-request':addRequest,'add-quote':addQuote,'add-supplier':addSupplier};actions[a.dataset.action]?.()}});$('#login-form').addEventListener('submit',login);$('#logout').onclick=()=>{token='';localStorage.removeItem('luvia_pos_token');showAuth()};async function init(){if(!token){showAuth();return}try{const d=await api('/auth/me');showApp(d.user)}catch{token='';localStorage.removeItem('luvia_pos_token');showAuth()}}init();
+const API = '/api/pos/v1';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let token = localStorage.getItem('luvia_pos_token') || '', me = null;
+
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) } });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 && token && path !== '/auth/login') { logout(); throw Error('Session expirée. Reconnectez-vous.'); }
+  if (!r.ok) throw Error(d.error || 'Erreur serveur');
+  return d;
+}
+const send = (path, body, method = 'POST') => api(path, { method, body: JSON.stringify(body || {}) });
+const money = (v, c = 'USD') => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: c, currencyDisplay: 'narrowSymbol' }).format(+v || 0);
+const day = v => v ? new Date(v).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const ago = v => Math.max(0, Math.floor((Date.now() - new Date(v)) / 864e5));
+function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.add('show'); setTimeout(() => e.classList.remove('show'), 2600); }
+
+const ORDER = { pending: ['En attente', 'amber'], confirmed: ['Confirmé', 'green'], in_progress: ['En cours', 'blue'], completed: ['Terminé', 'grey'], cancelled: ['Annulé', 'red'], refunded: ['Remboursé', 'red'] };
+const BOOKING = { pending: 'En attente', on_request: 'Sur demande', confirmed: 'Confirmée', ticketed: 'Billet émis', cancelled: 'Annulée', failed: 'Échec' };
+const QUOTE = { draft: ['Brouillon', 'grey'], sent: ['Envoyé', 'blue'], accepted: ['Accepté', 'green'], rejected: ['Refusé', 'red'], expired: ['Expiré', 'grey'], converted: ['Converti en dossier', 'green'] };
+const SERVICE = { flight: 'Vol', hotel: 'Hôtel', transfer: 'Transfert', visa: 'Visa', tour: 'Excursion', other: 'Autre' };
+const METHOD = { cash: 'Espèces', mobile_money: 'Mobile Money', card: 'Carte bancaire', bank_transfer: 'Virement', other: 'Autre' };
+const SUPPLIER = { airline: 'Compagnie aérienne', hotel: 'Hôtel', transport: 'Transport', visa: 'Visa', tour_operator: 'Tour-opérateur', other: 'Autre' };
+const ROLE = { owner: 'Propriétaire', admin: 'Administrateur', manager: 'Responsable', agent: 'Agent', accountant: 'Comptable' };
+const SOURCE = { pos: 'Comptoir', b2c: 'Site luviaplace.com' };
+const pill = (map, k) => { const [t, c] = map[k] || [k, 'grey']; return `<span class="pill ${c}">${esc(t)}</span>`; };
+const name = r => esc((r.first_name || '') + ' ' + (r.last_name || ''));
+const empty = (t, s) => `<div class="empty"><b>${esc(t)}</b>${esc(s || '')}</div>`;
+const table = (head, rows, none) => rows.length
+  ? `<div class="tablewrap"><table><thead><tr>${head.map(h => `<th class="${h[1] || ''}">${esc(h[0])}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`
+  : `<div class="tablewrap">${none}</div>`;
+
+/* ---------- dialog form helper ---------- */
+function ask(title, fields, onSubmit, cta = 'Enregistrer') {
+  const d = $('#dlg');
+  d.innerHTML = `<form method="dialog"><h2>${esc(title)}</h2>${fields.map(f => `<label>${esc(f.l)}${f.opts
+    ? `<select name="${f.n}">${f.opts.map(o => `<option value="${o[0]}">${esc(o[1])}</option>`).join('')}</select>`
+    : `<input name="${f.n}" type="${f.t || 'text'}" ${f.req ? 'required' : ''} ${f.step ? `step="${f.step}"` : ''} value="${esc(f.v ?? '')}">`}</label>`).join('')}
+    <p class="error" id="dlg-error" role="alert"></p><menu><button type="button" class="btn" value="x">Annuler</button><button class="btn primary">${esc(cta)}</button></menu></form>`;
+  d.querySelector('[value=x]').onclick = () => d.close();
+  d.querySelector('form').onsubmit = async e => {
+    e.preventDefault();
+    try { await onSubmit(Object.fromEntries(new FormData(e.target))); d.close(); } catch (x) { $('#dlg-error').textContent = x.message; }
+  };
+  d.showModal();
+}
+
+/* ---------- auth ---------- */
+function enter(u) {
+  me = u; $('#auth').hidden = true; $('#app').hidden = false;
+  $('#org').textContent = u.organization_name || ''; $('#user').textContent = (u.full_name || '') + ' · ' + (ROLE[u.role] || u.role);
+  route();
+}
+function logout() { token = ''; localStorage.removeItem('luvia_pos_token'); me = null; $('#app').hidden = true; $('#auth').hidden = false; }
+$('#logout').onclick = logout;
+$('#login').onsubmit = async e => {
+  e.preventDefault(); $('#auth-error').textContent = '';
+  try { const d = await send('/auth/login', Object.fromEntries(new FormData(e.target))); token = d.token; localStorage.setItem('luvia_pos_token', token); enter(d.user); }
+  catch (x) { $('#auth-error').textContent = x.message === 'Invalid credentials' ? 'Identifiant, e-mail ou mot de passe incorrect.' : x.message; }
+};
+
+/* ---------- router ---------- */
+const pages = {
+  dashboard: ['Tableau de bord', dashboard], dossiers: ['Dossiers', orders], devis: ['Devis', quotes],
+  clients: ['Clients', customers], fournisseurs: ['Fournisseurs', suppliers]
+};
+async function route() {
+  if (!me) return;
+  const [, p = 'dashboard', id] = location.hash.split('/');
+  const page = pages[p] || pages.dashboard, key = pages[p] ? p : 'dashboard';
+  document.querySelectorAll('.rail a[data-p]').forEach(a => a.classList.toggle('on', a.dataset.p === key));
+  $('#title').textContent = page[0]; document.title = page[0] + ' — Luvia POS';
+  $('#view').innerHTML = empty('Chargement…');
+  try { await page[1](); } catch (x) { $('#view').innerHTML = empty('Impossible de charger cette page', x.message); }
+  if (key === 'dossiers' && id) openOrder(id); else closePanel();
+}
+window.addEventListener('hashchange', route);
+
+/* ---------- dashboard ---------- */
+async function dashboard() {
+  const [ord, rep] = await Promise.all([api('/orders'), api('/reports/sales').catch(() => null)]);
+  const o = ord.data, live = o.filter(x => !['cancelled', 'refunded'].includes(x.status));
+  const owed = live.filter(x => +x.balance_due > 0).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const s = rep && rep.summary, sources = rep ? rep.bySource.map(b => `${SOURCE[b.source] || b.source} ${money(b.revenue)}`).join(' · ') : '';
+  const L = (k, v, sub) => `<div><dt>${k}${sub ? `<span class="sub">${sub}</span>` : ''}</dt><dd>${v}</dd></div>`;
+  const ledger = s
+    ? L('Ventes', money(s.revenue), `${s.orders} dossier${s.orders > 1 ? 's' : ''} · 30 derniers jours`) + L('Encaissé', money(s.collected)) + L('Reste à encaisser', money(s.outstanding))
+      + L('Marge brute', money(s.margin), s.orders_without_margin ? `${s.orders_without_margin} dossier${s.orders_without_margin > 1 ? 's' : ''} sans coût fournisseur renseigné` : '')
+    : L('Dossiers', live.length) + L('Reste à encaisser', money(owed.reduce((t, x) => t + +x.balance_due, 0)));
+  $('#view').innerHTML = `<div class="cols"><section><h2>Situation</h2><dl class="ledger">${ledger}</dl>${sources ? `<p class="hint">${esc(sources)}</p>` : ''}</section>
+    <section><h2>Soldes à relancer</h2>${table([['Dossier'], ['Client'], ['Solde', 'n'], ['Depuis']], owed.slice(0, 6).map(x =>
+      `<tr data-open="${x.id}"><td>${esc(x.order_number)}</td><td>${name(x)}</td><td class="n">${money(x.balance_due, x.currency)}</td><td class="${ago(x.created_at) > 14 ? 'late' : ''}">${ago(x.created_at)} j</td></tr>`), empty('Aucun solde en attente', 'Tous les dossiers sont soldés.'))}</section></div>
+    <h2>Derniers dossiers</h2>${ordersTable(o.slice(0, 8))}`;
+}
+
+/* ---------- dossiers ---------- */
+const ordersTable = list => table([['Dossier'], ['Client'], ['Date'], ['Total', 'n'], ['Payé', 'n'], ['Solde', 'n'], ['Statut']], list.map(x =>
+  `<tr data-open="${x.id}"><td>${esc(x.order_number)}</td><td>${name(x)}</td><td>${day(x.created_at)}</td><td class="n">${money(x.total, x.currency)}</td><td class="n">${money(x.amount_paid, x.currency)}</td><td class="n">${+x.balance_due ? money(x.balance_due, x.currency) : '—'}</td><td>${pill(ORDER, x.status)}</td></tr>`),
+  empty('Aucun dossier pour le moment', 'Créez votre première vente depuis « Nouvelle vente ».'));
+async function orders() {
+  const all = (await api('/orders')).data;
+  $('#view').innerHTML = `<div class="tools"><input id="q" class="grow" type="search" placeholder="Rechercher un dossier ou un client" aria-label="Rechercher"><select id="f" aria-label="Filtrer par statut"><option value="">Tous les statuts</option>${Object.entries(ORDER).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select></div><div id="list"></div>`;
+  const draw = () => { const q = $('#q').value.toLowerCase(), f = $('#f').value; $('#list').innerHTML = ordersTable(all.filter(x => (!f || x.status === f) && (x.order_number + ' ' + x.first_name + ' ' + x.last_name).toLowerCase().includes(q))); };
+  $('#q').oninput = draw; $('#f').onchange = draw; draw();
+}
+document.addEventListener('click', e => { const r = e.target.closest('tr[data-open]'); if (r) location.hash = '#/dossiers/' + r.dataset.open; });
+function closePanel() { $('#panel').hidden = true; }
+async function openOrder(id) {
+  const p = $('#panel'); p.hidden = false;
+  try {
+    const o = (await api('/orders/' + id)).data, canStatus = ['owner', 'admin', 'manager'].includes(me.role);
+    const kv = (k, v, c = '') => `<dt class="${c}">${k}</dt><dd class="${c}">${v}</dd>`;
+    p.innerHTML = `<header><div><h1>${esc(o.order_number)}</h1><span>${name(o)} · ${esc(o.phone || o.email || '')}</span></div><button class="btn small" id="x">Fermer</button></header>
+    <div>${canStatus ? `<select id="st" aria-label="Statut du dossier">${Object.entries(ORDER).map(([k, v]) => `<option value="${k}" ${k === o.status ? 'selected' : ''}>${v[0]}</option>`).join('')}</select>` : pill(ORDER, o.status)}
+      <span class="hint"> Créé le ${day(o.created_at)} · ${esc(SOURCE[o.source] || o.source)}${o.agent_name ? ' · ' + esc(o.agent_name) : ''}</span></div>
+    <section><h2>Prestations</h2>${table([['Service'], ['Détail'], ['Prix', 'n']], o.items.map(i => `<tr><td>${SERVICE[i.service_type] || ''}</td><td>${esc(i.description)}</td><td class="n">${money(i.line_total, o.currency)}</td></tr>`), empty('Aucune ligne'))}</section>
+    <section><h2>Réservations fournisseurs</h2>${table([['Service'], ['Référence'], ['Statut']], o.bookings.map(b => `<tr><td>${SERVICE[b.service_type] || ''}${b.traveler_name ? '<br><small>' + esc(b.traveler_name) + '</small>' : ''}</td><td>${esc(b.provider_reference || '—')}</td><td><select data-b="${b.id}" aria-label="Statut de la réservation">${Object.entries(BOOKING).map(([k, v]) => `<option value="${k}" ${k === b.status ? 'selected' : ''}>${v}</option>`).join('')}</select></td></tr>`), empty('Aucune réservation à suivre'))}
+      <p class="hint">Une réservation passe à « Confirmée » uniquement lorsque le fournisseur vous a donné sa référence.</p></section>
+    <section><h2>Montants</h2><dl class="kv">${kv('Sous-total', money(o.subtotal, o.currency))}${+o.tax ? kv('Taxes et frais fournisseur', money(o.tax, o.currency)) : ''}${+o.agency_fee ? kv('Frais d\'agence', money(o.agency_fee, o.currency)) : ''}${+o.discount ? kv('Remise', '− ' + money(o.discount, o.currency)) : ''}${kv('Total', money(o.total, o.currency), 'tot')}${kv('Payé', money(o.amount_paid, o.currency))}${kv('Solde', money(o.balance_due, o.currency))}${o.margin !== null ? kv('Marge brute', money(o.margin, o.currency)) : ''}</dl></section>
+    <section><h2>Paiements</h2>${table([['Date'], ['Mode'], ['Montant', 'n']], o.payments.map(x => `<tr><td>${day(x.received_at)}</td><td>${METHOD[x.method] || x.method}${x.reference ? ' · ' + esc(x.reference) : ''}</td><td class="n">${money(x.amount, x.currency)}</td></tr>`), empty('Aucun paiement enregistré'))}</section>
+    <div class="actions">${+o.balance_due > 0 && !['cancelled', 'refunded'].includes(o.status) ? '<button class="btn primary" id="pay">Encaisser un paiement</button>' : ''}<button class="btn" id="inv">Émettre une facture</button><button class="btn" id="print">Imprimer</button></div>
+    ${o.invoices.length ? `<p class="hint">Factures : ${o.invoices.map(i => esc(i.invoice_number)).join(', ')}</p>` : ''}`;
+    $('#x').onclick = () => { location.hash = '#/dossiers'; };
+    $('#print').onclick = () => window.print();
+    $('#inv').onclick = async () => { try { const r = await send('/orders/' + id + '/invoices'); toast('Facture ' + r.data.invoice_number + ' émise'); openOrder(id); } catch (x) { toast(x.message); } };
+    if ($('#pay')) $('#pay').onclick = () => ask('Encaisser un paiement', [{ n: 'amount', l: 'Montant (' + o.currency + ')', t: 'number', step: '.01', req: 1, v: o.balance_due }, { n: 'method', l: 'Mode de paiement', opts: Object.entries(METHOD).filter(m => m[0] !== 'other') }, { n: 'reference', l: 'Référence (numéro de transaction, reçu…)' }],
+      async b => { await send('/orders/' + id + '/payments', { ...b, amount: +b.amount }); toast('Paiement enregistré'); await route(); }, 'Enregistrer le paiement');
+    if ($('#st')) $('#st').onchange = async e => { try { await send('/orders/' + id + '/status', { status: e.target.value }, 'PATCH'); toast('Statut mis à jour'); route(); } catch (x) { toast(x.message); openOrder(id); } };
+    p.querySelectorAll('select[data-b]').forEach(s => s.onchange = async () => {
+      try { await send('/bookings/' + s.dataset.b, { status: s.value }, 'PATCH'); toast('Réservation mise à jour'); } catch (x) { toast(x.message); openOrder(id); }
+    });
+  } catch (x) { p.innerHTML = `<header><h1>Dossier introuvable</h1><button class="btn small" id="x">Fermer</button></header>${empty('Ce dossier n\'est pas accessible', x.message)}`; $('#x').onclick = () => { location.hash = '#/dossiers'; }; }
+}
+
+/* ---------- devis ---------- */
+async function quotes() {
+  const list = (await api('/quotes')).data;
+  $('#view').innerHTML = table([['Devis'], ['Client'], ['Date'], ['Total', 'n'], ['Statut'], ['']], list.map(q => `<tr><td>${esc(q.quote_number)}</td><td>${name(q)}</td><td>${day(q.created_at)}</td><td class="n">${money(q.total, q.currency)}</td><td>${pill(QUOTE, q.status)}</td><td class="n">${
+    ['draft', 'sent'].includes(q.status) ? `<button class="btn small" data-accept="${q.id}">Marquer accepté</button>` : q.status === 'accepted' ? `<button class="btn small primary" data-convert="${q.id}" data-c="${q.customer_id}">Créer le dossier</button>` : ''}</td></tr>`),
+    empty('Aucun devis', 'Les devis créés depuis « Nouvelle vente » (option Devis) apparaissent ici.'));
+  $('#view').onclick = async e => {
+    const a = e.target.closest('[data-accept]'), c = e.target.closest('[data-convert]');
+    try {
+      if (a) { await send('/quotes/' + a.dataset.accept + '/accept'); toast('Devis accepté'); quotes(); }
+      if (c) { const r = await send('/orders', { customerId: c.dataset.c, quoteId: c.dataset.convert }); toast('Dossier ' + r.data.order_number + ' créé'); location.hash = '#/dossiers/' + r.data.id; }
+    } catch (x) { toast(x.message); }
+  };
+}
+
+/* ---------- clients & fournisseurs ---------- */
+async function customers() {
+  const all = (await api('/customers')).data;
+  $('#view').innerHTML = `<div class="tools"><input id="q" class="grow" type="search" placeholder="Rechercher par nom ou e-mail" aria-label="Rechercher"><button class="btn primary" id="add">Ajouter un client</button></div><div id="list"></div>`;
+  const draw = () => { const q = $('#q').value.toLowerCase(); $('#list').innerHTML = table([['Nom'], ['Téléphone'], ['E-mail'], ['Nationalité'], ['Ajouté le']], all.filter(c => (c.first_name + ' ' + c.last_name + ' ' + (c.email || '')).toLowerCase().includes(q)).map(c =>
+    `<tr><td>${name(c)}</td><td>${esc(c.phone || '—')}</td><td>${esc(c.email || '—')}</td><td>${esc(c.nationality || '—')}</td><td>${day(c.created_at)}</td></tr>`), empty('Aucun client', 'Ajoutez un client ou créez-le pendant une vente.')); };
+  $('#q').oninput = draw; draw();
+  $('#add').onclick = () => ask('Nouveau client', [{ n: 'firstName', l: 'Prénom', req: 1 }, { n: 'lastName', l: 'Nom', req: 1 }, { n: 'phone', l: 'Téléphone / WhatsApp' }, { n: 'email', l: 'E-mail', t: 'email' }, { n: 'nationality', l: 'Nationalité (code pays, ex. CD)' }],
+    async b => { await send('/customers', b); toast('Client ajouté'); customers(); });
+}
+async function suppliers() {
+  const all = (await api('/suppliers')).data;
+  $('#view').innerHTML = `<div class="tools"><button class="btn primary" id="add">Ajouter un fournisseur</button></div>` + table([['Nom'], ['Type'], ['Contact'], ['Téléphone'], ['E-mail']], all.map(s =>
+    `<tr><td>${esc(s.name)}</td><td>${SUPPLIER[s.type] || s.type}</td><td>${esc(s.contact_name || '—')}</td><td>${esc(s.phone || '—')}</td><td>${esc(s.email || '—')}</td></tr>`), empty('Aucun fournisseur', 'Enregistrez vos compagnies, hôtels et prestataires pour suivre vos réservations.'));
+  $('#add').onclick = () => ask('Nouveau fournisseur', [{ n: 'name', l: 'Nom', req: 1 }, { n: 'type', l: 'Type', opts: Object.entries(SUPPLIER) }, { n: 'contactName', l: 'Personne à contacter' }, { n: 'phone', l: 'Téléphone' }, { n: 'email', l: 'E-mail', t: 'email' }],
+    async b => { await send('/suppliers', b); toast('Fournisseur ajouté'); suppliers(); });
+}
+
+/* ---------- start ---------- */
+(async () => {
+  if (!token) return;
+  try { enter((await api('/auth/me')).user); } catch { logout(); }
+})();
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/pos/sw.js',{scope:'/pos/'}).catch(()=>{});

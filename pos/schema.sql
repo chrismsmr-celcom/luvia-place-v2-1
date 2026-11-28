@@ -185,3 +185,47 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS audit_org_created_idx ON audit_logs(organization_id, created_at DESC);
+
+-- ============================================================
+-- Increment 2 — core sales flow (idempotent, safe to re-run)
+-- Order lines with supplier cost, margin per order, source channel,
+-- link order lines to bookings, B2C ingestion idempotency.
+-- ============================================================
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS subtotal NUMERIC(14,2) NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS tax NUMERIC(14,2) NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS agency_fee NUMERIC(14,2) NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount NUMERIC(14,2) NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS cost_total NUMERIC(14,2) NOT NULL DEFAULT 0;
+-- margin = subtotal + agency_fee - discount - cost_total (taxes are pass-through). NULL when supplier cost is unknown.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS margin NUMERIC(14,2);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'pos';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS external_ref TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS agent_id UUID REFERENCES users(id);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS due_date DATE;
+UPDATE orders SET agent_id = created_by WHERE agent_id IS NULL AND created_by IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_external_ref_uq ON orders(organization_id, source, external_ref) WHERE external_ref IS NOT NULL;
+CREATE INDEX IF NOT EXISTS orders_agent_idx ON orders(organization_id, agent_id);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  service_type TEXT NOT NULL DEFAULT 'other' CHECK (service_type IN ('flight','hotel','transfer','visa','tour','other')),
+  description TEXT NOT NULL,
+  supplier_id UUID REFERENCES suppliers(id),
+  quantity NUMERIC(12,2) NOT NULL DEFAULT 1,
+  unit_cost NUMERIC(14,2) NOT NULL DEFAULT 0,
+  unit_price NUMERIC(14,2) NOT NULL DEFAULT 0,
+  line_total NUMERIC(14,2) NOT NULL DEFAULT 0,
+  provider TEXT NOT NULL DEFAULT 'manual',
+  provider_offer_id TEXT,
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS order_item_id UUID REFERENCES order_items(id) ON DELETE SET NULL;
+
+-- Numérotation lisible et séquentielle par agence : D-2026-00001, DV-2026-00001, F-2026-00001
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS order_seq INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS quote_seq INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS invoice_seq INTEGER NOT NULL DEFAULT 0;

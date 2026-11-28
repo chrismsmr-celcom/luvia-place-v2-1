@@ -1,0 +1,23 @@
+/* Habillage commun avec la console /pos : mêmes couleurs, même police, mêmes tailles lisibles. */
+:root{--bg:#f5f6f8;--ink:#14233b;--muted:#5b6b82;--line:#dce2ea;--blue:#1f55c2;--sky:#1f55c2;--violet:#1f55c2;--green:#157a4b;--amber:#9a5b05}
+body,body *{font-family:"IBM Plex Sans",system-ui,sans-serif!important}
+body{font-size:14px;font-variant-numeric:tabular-nums}
+small,.eyebrow,.brand small,kbd,.note,.foot{font-size:12.5px!important}
+.prices span,.prices b,.carthead,.carthead b,.baskethead .link,.empty b,.modes label,.secure{font-size:13px!important}
+.client>small{font-weight:500!important;color:var(--muted)!important}
+.carthead b,.prices span{color:var(--muted)!important;font-weight:500!important}
+.eyebrow,.brand small,.brand b{text-transform:none!important;letter-spacing:0!important}
+.eyebrow{font-weight:500!important;color:var(--muted)!important}
+.brand b{font-size:15px!important;font-weight:600!important}
+h1,h2,h3{letter-spacing:-.01em!important;font-weight:600!important}
+img.logo{width:36px;height:36px;border-radius:9px;display:block;background:none;box-shadow:none;padding:0}
+.auth{background:#0f2742!important}
+.auth>.brand,.auth>.brand b{color:#fff}.auth>.brand small,.auth .foot{color:#9fb2c9!important}
+.auth-card,.modal,.search,.offer,.client,.receipt{border-radius:8px!important}
+.auth-card,.modal{box-shadow:0 16px 48px rgba(15,39,66,.25)!important}
+.primary,.checkoutbtn:not(:disabled){background:var(--blue)!important;border-color:var(--blue)!important;box-shadow:none!important;border-radius:6px!important}
+.primary:hover,.checkoutbtn:not(:disabled):hover{background:#173f92!important}
+#grandtotal{color:var(--ink)!important;font-weight:600!important}
+.top .back{color:var(--blue);text-decoration:none;font-weight:500;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;margin-left:12px;white-space:nowrap}
+.top .back:hover{border-color:var(--blue)}
+:focus-visible{outline:2px solid var(--blue)!important;outline-offset:2px}

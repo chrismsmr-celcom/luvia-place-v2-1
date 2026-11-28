@@ -21,3 +21,8 @@ Tableau de bord, dossiers (détail, paiements, suivi des réservations, facture,
 ## Données de démonstration (agence existante)
 DATABASE_URL=... node pos/seed-demo.js https://votre-site.onrender.com mon-agence owner@agence.com 'motdepasse'
 Les références fournisseur sont préfixées DEMO- : ne pas les présenter comme de vraies réservations.
+
+## Identité visuelle et installation (increment 4)
+- Icône Luvia (L + vague du fleuve) : favicon, icônes 192/512 et maskable, `manifest.webmanifest`, `sw.js`. Dans Edge ou Chrome : menu > « Installer l'application » (ou icône d'installation dans la barre d'adresse). Aucun avertissement Windows, aucune signature nécessaire. Aucune donnée n'est mise en cache.
+- Comptoir (`/pos/counter/`) habillé comme la console : même police (IBM Plex Sans), mêmes couleurs, textes plus lisibles, lien « Gestion », connexion partagée avec la console.
+- Numérotation lisible et séquentielle par agence : D-2026-00001 (dossiers), DV-… (devis), F-… (factures). Ré-exécuter `pos/schema.sql`.

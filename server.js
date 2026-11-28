@@ -78,19 +78,23 @@ function getTransporter() {
 // ============================================================
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    callback(null, true); // filtrage réel fait par corsDelegate ci-dessous
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'X-Nationality']
 };
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+// Autorise les origines listées ET les requêtes de même origine (ex. le POS servi par ce serveur).
+const corsDelegate = (req, callback) => {
+  const origin = req.headers.origin;
+  let sameOrigin = false;
+  try { sameOrigin = !!origin && new URL(origin).host === req.headers.host; } catch (e) {}
+  if (!origin || sameOrigin || ALLOWED_ORIGINS.includes(origin)) return callback(null, { ...corsOptions, origin: true });
+  callback(new Error('Not allowed by CORS'));
+};
+app.use(cors(corsDelegate));
+app.options('*', cors(corsDelegate));
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -98,7 +102,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
   }
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With, X-Nationality');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
@@ -119,6 +123,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // LOG MIDDLEWARE
 // ============================================================
 app.use((req, res, next) => {
+  // Never log POS traffic: bodies contain passwords, passport numbers and payments.
+  if (req.url.startsWith('/api/pos')) return next();
   console.log(`\n📥 ${req.method} ${req.url}`);
   if (req.method === 'POST' && req.body && Object.keys(req.body).length > 0) {
     const bodyLog = JSON.stringify(req.body, null, 2);
@@ -904,6 +910,7 @@ app.post("/book", async (req, res) => {
 
     // ✅ 4. Envoyer l'email de confirmation
     await sendConfirmationEmail(confirmationData);
+    posRouter.ingestB2C({ ...confirmationData, bookingId: bookingData.bookingId, guestFirstName, guestLastName, guestEmail, guestPhone, paymentMethod: 'CARD', transactionId }).catch(e => console.warn('⚠️ Sync POS:', e.message));
 
     // ✅ 5. Retourner la réponse
     res.json({ 
@@ -1880,6 +1887,7 @@ app.post("/api/book-with-payment", async (req, res) => {
     });
 
     await sendConfirmationEmail(confirmationData);
+    posRouter.ingestB2C({ ...confirmationData, bookingId: bookingData.bookingId, guestFirstName, guestLastName, guestEmail, guestPhone, paymentMethod, transactionId }).catch(e => console.warn('⚠️ Sync POS:', e.message));
 
     res.json({
       success: true,
@@ -2219,6 +2227,13 @@ app.get('/pos/*', (req, res) => {
 // ============================================
 // ROUTES FRONTEND
 // ============================================
+// Do not expose backend source/config through the root static handler.
+app.use((req, res, next) => {
+  if (/^\/(server\.js|package(-lock)?\.json|render\.yaml|README\.md|node_modules|\.git|pos\/(index\.js|schema\.sql|README\.md))/i.test(req.path)) {
+    return res.status(404).json({ success: false, error: "Route non trouvée" });
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname)));
 
 app.get("/", (req, res) => {

@@ -68,7 +68,7 @@ const pages = {
   experiences: ['Expériences', () => serviceRequest('Expériences', 'package', 'Décrivez l’activité ou l’excursion recherchée.')],
   cars: ['Voitures', () => serviceRequest('Voitures', 'transfer', 'Décrivez le trajet, le véhicule et les dates souhaités.')],
   insurance: ['Assurances', () => serviceRequest('Assurances', 'other', 'Décrivez la destination, les dates et le type de couverture souhaité.')],
-  dossiers: ['Dossiers', orders], devis: ['Devis', quotes], clients: ['CRM / Clients', customers],
+  dossiers: ['Dossiers', orders], devis: ['Devis', quotes], requests: ['Demandes', requestsPage], clients: ['CRM / Clients', customers],
   balance: ['Balance & factures', invoices], history: ['Historique', historyPage],
   email: ['Email', emailWorkspace],
   'luvia-ai': ['Luvia AI', luviaAssistant],
@@ -244,7 +244,14 @@ async function serviceRequest(title, requestType, prompt) {
   const clients=(await api('/customers')).data;
   if(!clients.length){$('#view').innerHTML='<section class="service-placeholder"><h2>Ajoutez d’abord un client</h2><p>Chaque demande doit être associée à un client.</p><a class="btn primary" href="#/clients">Ouvrir le CRM</a></section>';return;}
   $('#view').innerHTML='<section class="search-panel"><span class="eyebrow">DEMANDE DE PRESTATION</span><h2>'+esc(title)+'</h2><p>'+esc(prompt)+'</p><form id="service-request" class="provider-form"><div class="form-grid"><label>Client<select name="customerId" required>'+customerOptions(clients).map(o=>'<option value="'+esc(o[0])+'">'+esc(o[1])+'</option>').join('')+'</select></label><label>Destination<input name="destination" required></label><label>Date de départ<input name="departureDate" type="date"></label><label>Date de fin<input name="returnDate" type="date"></label><label class="wide">Détails<textarea name="notes" rows="4" placeholder="Besoins, budget, préférences et contraintes"></textarea></label></div><div class="form-actions"><button class="btn primary">Enregistrer la demande</button></div></form></section><p class="hint">La demande est enregistrée dans le pipeline. Aucune réservation fournisseur n’est effectuée.</p>';
-  $('#service-request').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.target));try{await send('/travel-requests',{customerId:b.customerId,requestType:requestType,destination:b.destination,departureDate:b.departureDate||null,returnDate:b.returnDate||null,notes:title+': '+(b.notes||'')});toast('Demande enregistrée');location.hash='#/dossiers';}catch(x){toast(x.message);}};
+  $('#service-request').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.target));try{await send('/travel-requests',{customerId:b.customerId,requestType:requestType,destination:b.destination,departureDate:b.departureDate||null,returnDate:b.returnDate||null,notes:title+': '+(b.notes||'')});toast('Demande enregistrée');location.hash='#/requests';}catch(x){toast(x.message);}};
+}
+async function requestsPage() {
+  const rows=(await api('/travel-requests')).data;
+  const labels={flight:'Vol',hotel:'Hôtel',package:'Expérience / package',transfer:'Transport',visa:'Visa',other:'Autre'};
+  const states={open:['Ouverte','amber'],quoted:['Devis envoyé','blue'],confirmed:['Confirmée','green'],cancelled:['Annulée','red'],closed:['Clôturée','grey']};
+  $('#view').innerHTML=table([['Client'],['Type'],['Destination'],['Dates'],['Statut'],['Mise à jour']],rows.map(r=>'<tr><td>'+name(r)+'</td><td>'+esc(labels[r.request_type]||r.request_type)+'</td><td>'+esc(r.destination||'—')+'</td><td>'+day(r.departure_date)+(r.return_date?' → '+day(r.return_date):'')+'</td><td>'+pill(states,r.status)+'</td><td>'+(['owner','admin','manager'].includes(me.role)?'<select data-request="'+r.id+'" aria-label="Statut de la demande">'+Object.keys(states).map(k=>'<option value="'+k+'" '+(k===r.status?'selected':'')+'>'+states[k][0]+'</option>').join('')+'</select>':states[r.status]?.[0]||r.status)+'</td></tr>'),empty('Aucune demande','Les demandes de vols, expériences, voitures et assurances seront listées ici.'));
+  $('#view').querySelectorAll('[data-request]').forEach(sel=>sel.onchange=async()=>{try{await send('/travel-requests/'+sel.dataset.request,{status:sel.value},'PATCH');toast('Statut de la demande mis à jour');requestsPage();}catch(x){toast(x.message);requestsPage();}});
 }
 async function emailWorkspace() {
   const clients=(await api('/customers')).data;
